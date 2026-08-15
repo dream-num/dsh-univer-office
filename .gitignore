@@ -1,0 +1,6 @@
+# Generated build artifacts — never commit these.
+# Source lives in lib/, package.json, README*.md, cordis.patch.yml,
+# install.sh, and packaging/; rebuild with: bash scripts/build-dist.sh
+dist/
+*.tgz
+*.zip

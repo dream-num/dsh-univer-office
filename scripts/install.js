@@ -2,11 +2,11 @@
 /**
  * One-command installer for the DSH × Univer plugin.
  *
- * Usage:  npx @dsh-local/univer install
+ * Usage:  npx @univer-cli/dsh-univer-plugin install
  *         univer-dsh install
  *
  * What it does on the target machine:
- *   1. Copies this package into ~/.dsh/profiles/node_modules/@dsh-local/univer
+ *   1. Copies this package into ~/.dsh/profiles/node_modules/@univer-cli/dsh-univer-plugin
  *      (the DSH web profile module scope the loader resolves from).
  *   2. Appends the loader entry to ~/.dsh/profiles/web/cordis.patch.yml
  *      (idempotent — never duplicates).
@@ -24,10 +24,10 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url)); // <pkg>/scripts
 const PKG_ROOT = join(HERE, ".."); // <pkg>
 const PROFILES = join(homedir(), ".dsh", "profiles");
-const TARGET = join(PROFILES, "node_modules", "@dsh-local", "univer");
+const TARGET = join(PROFILES, "node_modules", "@univer-cli", "dsh-univer-plugin");
 const PATCH = join(PROFILES, "web", "cordis.patch.yml");
 const ENTRY_ID = "univer";
-const ENTRY_NAME = "@dsh-local/univer";
+const ENTRY_NAME = "@univer-cli/dsh-univer-plugin";
 const ROW = `    - id: ${ENTRY_ID}\n      name: '${ENTRY_NAME}'`;
 
 const PATCH_BLOCK = `# DSH × Univer integration: CLI/daemon management (node half) + preview UI (client half).
@@ -90,7 +90,13 @@ function patchLoader() {
 	}
 	const content = readFileSync(PATCH, "utf8");
 	if (content.includes(ROW)) return "already-present";
-	writeFileSync(PATCH, content.replace(/\s*$/, "\n") + "\n" + PATCH_BLOCK);
+	// The profile template ships as a lone `[]` empty array; appending an
+	// `- insert:` entry after it would be invalid YAML. Drop that template
+	// line first so the file stays a valid top-level array.
+	const base = content
+		.replace(/^\s*\[\]\s*$/m, "")
+		.replace(/\s*$/, "\n");
+	writeFileSync(PATCH, base + "\n" + PATCH_BLOCK);
 	return "appended";
 }
 
@@ -121,20 +127,20 @@ const cli = await detectCli();
 const gateway = await probeGateway();
 
 console.log("");
-console.log("✅ DSH × Univer 插件安装完成");
+console.log("✅ DSH × Univer plugin installed");
 console.log("────────────────────────────────────────────");
-console.log(`  插件位置: ${TARGET}`);
-console.log(`  加载条目: ${patchResult === "already-present" ? "已存在（未重复添加）" : "已写入 cordis.patch.yml"}`);
+console.log(`  Plugin location: ${TARGET}`);
+console.log(`  Loader entry:    ${patchResult === "already-present" ? "already present (not duplicated)" : "written to cordis.patch.yml"}`);
 if (cli.found) {
-	console.log(`  univer CLI: ✅ 已找到（版本 ${cli.version}）`);
+	console.log(`  univer CLI: ✅ found (version ${cli.version})`);
 } else {
-	console.log("  univer CLI: ⚠️ 未找到 — 预览功能需要它。可运行: npm i -g univer-cli");
+	console.log("  univer CLI: ⚠️ not found — required for preview. Install with: npm i -g univer-cli");
 }
-console.log(`  daemon: ${gateway !== null ? `✅ 运行中 (${gateway})` : "未运行（打开预览时会自动启动）"}`);
+console.log(`  daemon: ${gateway !== null ? `✅ running (${gateway})` : "not running (auto-starts when a preview opens)"}`);
 console.log("");
-console.log("👉 下一步: 在 DeepSeek Harness 窗口里按 Cmd+R 刷新，即可使用");
-console.log("   （跑 univer 命令的回合会自动出现预览卡片，点击全屏查看）");
-console.log("  卸载: univer-dsh uninstall");
+console.log("👉 Next: refresh the DeepSeek Harness window (Cmd+R) to use the plugin");
+console.log("   (turns that run univer commands show a preview card; click to expand full-screen)");
+console.log("   Uninstall: univer-dsh uninstall");
 
 /** Probe the univer gateway on known ports. */
 async function probeGateway() {

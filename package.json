@@ -1,7 +1,7 @@
 {
-  "name": "@dsh-local/univer",
+  "name": "@univer-cli/dsh-univer-plugin",
   "version": "0.1.0",
-  "description": "DSH × Univer integration plugin: univer CLI/daemon management (node half) + in-app spreadsheet preview UI (client half). One-command installer for DeepSeek Harness.",
+  "description": "DSH × Univer integration: preview Univer spreadsheets (and other units) inline in DeepSeek Harness — node half manages the univer CLI/daemon, client half renders a preview card at the turn tail with in-app fullscreen viewing.",
   "type": "module",
   "main": "./lib/index.js",
   "bin": {
@@ -9,8 +9,10 @@
   },
   "files": [
     "lib",
-    "scripts",
-    "README.md"
+    "scripts/install.js",
+    "README.md",
+    "README.zh-CN.md",
+    "cordis.patch.yml"
   ],
   "exports": {
     ".": "./lib/index.js",
@@ -19,7 +21,27 @@
     },
     "./package.json": "./package.json"
   },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "univer",
+    "spreadsheet",
+    "preview"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dream-num/dsh-univer-plugin.git"
+  },
+  "homepage": "https://github.com/dream-num/dsh-univer-plugin",
+  "bugs": {
+    "url": "https://github.com/dream-num/dsh-univer-plugin/issues"
+  },
   "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "inject": [

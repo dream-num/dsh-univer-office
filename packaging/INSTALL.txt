@@ -1,0 +1,44 @@
+# DSH × Univer Plugin — Installation Guide
+
+This plugin adds one capability to DeepSeek Harness: when the AI produces a Univer spreadsheet in a session, a **preview card appears right in the conversation** — click it to view the sheet fullscreen inside the app, no browser needed.
+
+## Install (three steps)
+
+1. **Double-click this zip** — macOS unzips it into a folder (e.g. `univer-dsh-plugin`)
+2. Open the folder, **double-click `install.command`** — a terminal window opens and installs automatically; it ends with 「🎉 Installation complete」— press any key to close
+3. Open **DeepSeek Harness** and press **Cmd + R** to refresh
+
+> If double-clicking does nothing (macOS security): right-click `install.command` → **Open** → **Open** again.
+
+## How to use
+
+1. Ask the AI to run univer commands in a session (e.g. "use univer to create a sales spreadsheet")
+2. When the turn finishes, a preview card appears automatically:
+
+```
+┌────────────────────────────────────────┐
+│ 📊 销售表格.univer  [wt-xxx]  [展开预览 ▾] │
+│ /Users/.../销售表格.univer              │
+└────────────────────────────────────────┘
+```
+
+3. **Click the card** → view fullscreen in-app; close with ✕, clicking outside, or Esc
+4. Multiple sessions work in parallel — each shows its own cards
+
+## Troubleshooting
+
+| Situation | What to do |
+| --- | --- |
+| Installer says "univer CLI not found" | Keep going; when the AI needs univer, ask it to install it (or run `npm i -g univer-cli` yourself) |
+| No card after install | Make sure you refreshed (Cmd+R); cards appear only **after** a turn ends and the AI ran a command mentioning a `.univer` file |
+| Card shows a **yellow dot** | The daemon is not running; click the dot to auto-start it |
+| Want to uninstall | Delete `~/.dsh/profiles/node_modules/@univer-cli/dsh-univer-plugin` and remove the matching lines from `~/.dsh/profiles/web/cordis.patch.yml` |
+
+## Requirements
+
+- macOS + DeepSeek Harness installed (required)
+- No terminal skills or Node needed — just double-click
+
+---
+
+For Chinese, see `INSTALL.zh-CN.txt` · 中文安装说明见 `INSTALL.zh-CN.txt`

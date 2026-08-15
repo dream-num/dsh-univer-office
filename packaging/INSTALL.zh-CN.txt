@@ -1,17 +1,14 @@
-# DSH × Univer 插件 — 安装说明（傻瓜版）
+# DSH × Univer 插件 — 安装说明
 
-这个插件让 DeepSeek Harness 多一个能力：
-AI 用 univer 生成表格后，**预览卡片直接出现在对话里**，
-点一下就能在应用内全屏看表格，不用开浏览器。
+这个插件让 DeepSeek Harness 多一个能力：AI 用 univer 生成表格后，**预览卡片直接出现在对话里**，点一下就能在应用内全屏看表格，不用开浏览器。
 
 ## 安装（三步）
 
 1. **双击这个 zip**，Mac 会自动解压成一个文件夹（名字类似 univer-dsh-plugin）
-2. 打开文件夹，**双击「安装.command」**，会弹出一个黑色终端窗口，自动安装，最后显示「🎉 安装完成」—— 按任意键关闭窗口
+2. 打开文件夹，**双击「install.command」**，会弹出一个终端窗口自动安装，最后显示「🎉 安装完成」——按任意键关闭窗口
 3. 打开 **DeepSeek Harness**，在窗口里按 **Cmd + R**（刷新）
 
-> 如果双击没反应（Mac 安全限制）：
-> 右键点「安装.command」→ 选「打开」→ 再点「打开」即可
+> 如果双击没反应（Mac 安全限制）：右键点「install.command」→ 选「打开」→ 再点「打开」即可。
 
 ## 怎么用
 
@@ -35,9 +32,13 @@ AI 用 univer 生成表格后，**预览卡片直接出现在对话里**，
 | 安装时提示"没找到 univer CLI" | 先正常用；等 AI 要跑 univer 命令时，让它帮你装（或手动运行 `npm i -g univer-cli`） |
 | 装完看不到卡片 | 确认刷新过（Cmd+R）；卡片只在该回合**结束后**出现，且 AI 跑过含 .univer 的命令 |
 | 卡片上是**黄色圆点** | daemon 没运行，点一下圆点会自动启动 |
-| 想卸载 | 删除 `~/.dsh/profiles/node_modules/@dsh-local/univer` 文件夹，并把 `~/.dsh/profiles/web/cordis.patch.yml` 里对应几行删掉 |
+| 想卸载 | 删除 `~/.dsh/profiles/node_modules/@univer-cli/dsh-univer-plugin` 文件夹，并把 `~/.dsh/profiles/web/cordis.patch.yml` 里对应几行删掉 |
 
 ## 需要电脑上有什么
 
 - macOS + 已安装 DeepSeek Harness（这是前提）
 - 不用会任何命令、不用装 Node —— 双击就行
+
+---
+
+English version: `INSTALL.txt` · 英文版见 `INSTALL.txt`

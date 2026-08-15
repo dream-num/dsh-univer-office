@@ -1,0 +1,4 @@
+# DSH × Univer integration: CLI/daemon management (node half) + preview UI (client half).
+- insert:
+    - id: univer
+      name: '@univer-cli/dsh-univer-plugin'
