@@ -66,9 +66,10 @@
     }
   },
   "scripts": {
-    "build": "pnpm run build:lib && pnpm run build:worker",
+    "build": "pnpm run build:lib && pnpm run build:worker && pnpm run build:gateway",
     "build:lib": "node scripts/build.mjs lib",
     "build:worker": "node scripts/build.mjs worker",
+    "build:gateway": "node scripts/build.mjs gateway",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test:integration": "node test/integration-smoke.mjs",
     "test:host": "node test/host-smoke.mjs",
@@ -104,13 +105,13 @@
     "@univer-cli/headless-univer": "1.0.0-insiders.20260813-7c9aa50",
     "@univer-cli/unit-exchange": "1.0.0-insiders.20260813-7c9aa50",
     "@univer-cli/univer-collaboration-runtime": "1.0.0-insiders.20260813-7c9aa50",
-    "@univerjs-pro/boards": "1.0.0-insiders.20260813-30ff2fe",
-    "@univerjs-pro/collaboration": "1.0.0-insiders.20260813-30ff2fe",
-    "@univerjs-pro/collaboration-service": "1.0.0-insiders.20260813-30ff2fe",
-    "@univerjs-pro/collaboration-transport-node": "1.0.0-insiders.20260813-30ff2fe",
-    "@univerjs-pro/collaboration-worktree-service": "1.0.0-insiders.20260813-30ff2fe",
-    "@univerjs-pro/embed": "1.0.0-insiders.20260813-30ff2fe",
-    "@univerjs-pro/slides": "1.0.0-insiders.20260813-30ff2fe",
+    "@univerjs-pro/boards": "1.0.0-insiders.20260813-7c9aa50",
+    "@univerjs-pro/collaboration": "1.0.0-insiders.20260813-7c9aa50",
+    "@univerjs-pro/collaboration-service": "1.0.0-insiders.20260813-7c9aa50",
+    "@univerjs-pro/collaboration-transport-node": "1.0.0-insiders.20260813-7c9aa50",
+    "@univerjs-pro/collaboration-worktree-service": "1.0.0-insiders.20260813-7c9aa50",
+    "@univerjs-pro/embed": "1.0.0-insiders.20260813-7c9aa50",
+    "@univerjs-pro/slides": "1.0.0-insiders.20260813-7c9aa50",
     "@univerjs/core": "1.0.0-insiders.20260813-7c9aa50",
     "@univerjs/protocol": "1.0.0-insiders.20260813-7c9aa50",
     "busboy": "^1.6.0",
@@ -121,8 +122,8 @@
     "sirv": "^3.0.2",
     "typescript": "^7.0.2",
     "ws": "^8.21.3",
-    "@univerjs-pro/bases": "1.0.0-insiders.20260813-30ff2fe",
-    "@univerjs-pro/collaboration-endpoint": "1.0.0-insiders.20260813-30ff2fe",
-    "@univerjs-pro/collaboration-worktree-endpoint": "1.0.0-insiders.20260813-30ff2fe"
+    "@univerjs-pro/bases": "1.0.0-insiders.20260813-7c9aa50",
+    "@univerjs-pro/collaboration-endpoint": "1.0.0-insiders.20260813-7c9aa50",
+    "@univerjs-pro/collaboration-worktree-endpoint": "1.0.0-insiders.20260813-7c9aa50"
   }
 }

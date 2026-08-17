@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 /** Vendored Gateway executable in the published package. */
-export const GATEWAY_ENTRY = fileURLToPath(new URL('../vendor/collaboration/artifacts/gateway.mjs', import.meta.url))
+export const GATEWAY_ENTRY = fileURLToPath(new URL('../vendor/collaboration/artifacts/gateway.cjs', import.meta.url))
 
 /** Vendored Viewer assets served by the Gateway. */
 export const VIEWER_ROOT = fileURLToPath(new URL('../vendor/collaboration/artifacts/viewer/', import.meta.url))

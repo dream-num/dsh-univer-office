@@ -1,15 +1,14 @@
 # Generated build artifacts — never commit these.
-# - lib/ : built from src/ (pnpm run build)
-# - dist/ : release bundles
-# - vendor/unit-content/artifacts : built worker
-# - vendor/*/upstream, vendor/unit-content/artifacts/node_modules : sync intermediates
-# vendor/collaboration/artifacts (gateway.mjs + viewer) IS committed: it is a
-# self-contained runtime artifact built from univer-cli sources that are not
-# available on any registry.
+# lib/, the worker, and gateway.cjs are built from src/ over the SDK:
+#   pnpm run build
+# vendor/collaboration/artifacts/viewer is a prebuilt front-end bundle from the
+# univer-cli collab-web app (44MB, 70-file vite app over 100+ SDK deps); it is
+# not rebuilt from this repo's src/ and is kept as a committed runtime asset.
 dist/
 lib/
 node_modules/
+vendor/unit-content/
+vendor/collaboration/upstream/
+vendor/collaboration/artifacts/gateway.cjs
 *.tgz
 *.zip
-vendor/collaboration/upstream/
-vendor/unit-content/

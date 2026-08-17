@@ -99,6 +99,33 @@ if (target === 'all' || target === 'worker') {
   console.log('built', workerOut)
 }
 
+if (target === 'all' || target === 'gateway') {
+  // Collaboration Gateway: a standalone server built from the vendored-in
+  // gateway application sources (src/gateway-app) over the collaboration SDK.
+  const gatewayOut = 'vendor/collaboration/artifacts/gateway.cjs'
+  const gatewayExternal = [
+    ...builtinModules.map((id) => `node:${id}`),
+    ...builtinModules,
+    'libsql',
+    '@univerjs-pro/uexcli',
+    '@univerjs-pro/engine-formula-rust-binding',
+    '@univerjs-pro/cli-assets',
+  ]
+  await build({
+    entryPoints: ['src/gateway-app/gateway-entry.ts'],
+    outfile: gatewayOut,
+    bundle: true,
+    packages: 'bundle',
+    external: gatewayExternal,
+    platform: 'node',
+    target: 'node22',
+    format: 'cjs',
+    legalComments: 'none',
+    sourcemap: false,
+  })
+  console.log('built', gatewayOut)
+}
+
 async function run(command, args) {
   await new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: 'inherit' })

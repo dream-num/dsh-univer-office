@@ -19,5 +19,5 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["src/workers/unit-content/**"]
+  "exclude": ["src/workers/unit-content/**", "src/gateway-app/**"]
 }
