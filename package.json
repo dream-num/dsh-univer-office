@@ -1,6 +1,6 @@
 {
   "name": "dsh-univer-office",
-  "version": "0.2.0",
+  "version": "0.2.0-alpha",
   "description": "DSH × Univer integration with a bundled collaboration Gateway and Viewer: inline previews, live floating Worktree windows, and session-end review actions in DeepSeek Harness.",
   "type": "module",
   "main": "./lib/index.js",
@@ -74,7 +74,8 @@
     "test:integration": "node test/integration-smoke.mjs",
     "test:host": "node test/host-smoke.mjs",
     "test:client": "node test/client-smoke.mjs",
-    "test": "pnpm run build && pnpm run test:host && pnpm run test:integration && pnpm run test:client"
+    "test": "pnpm run build && pnpm run test:host && pnpm run test:integration && pnpm run test:client",
+    "prepublishOnly": "pnpm run build && pnpm run test"
   },
   "dependencies": {
     "@univerjs-pro/cli-assets": "0.1.0",
