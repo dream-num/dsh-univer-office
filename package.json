@@ -66,20 +66,20 @@
     }
   },
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "pnpm run build:lib && pnpm run build:worker",
+    "build:lib": "node scripts/build.mjs lib",
+    "build:worker": "node scripts/build.mjs worker",
     "typecheck": "tsc --project tsconfig.json --noEmit",
-    "sync:collaboration": "node scripts/sync-collaboration.mjs",
-    "sync:unit-content": "node scripts/sync-unit-content.mjs",
     "test:integration": "node test/integration-smoke.mjs",
     "test:host": "node test/host-smoke.mjs",
     "test:client": "node test/client-smoke.mjs",
     "test": "pnpm run build && pnpm run test:host && pnpm run test:integration && pnpm run test:client"
   },
   "dependencies": {
-    "libsql": "^0.5.29",
-    "@univerjs-pro/uexcli": "0.3.2",
+    "@univerjs-pro/cli-assets": "0.1.0",
     "@univerjs-pro/engine-formula-rust-binding": "1.0.0-insiders.20260811-001a0e5",
-    "@univerjs-pro/cli-assets": "0.1.0"
+    "@univerjs-pro/uexcli": "0.3.2",
+    "libsql": "^0.5.29"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
@@ -104,12 +104,25 @@
     "@univer-cli/headless-univer": "1.0.0-insiders.20260813-7c9aa50",
     "@univer-cli/unit-exchange": "1.0.0-insiders.20260813-7c9aa50",
     "@univer-cli/univer-collaboration-runtime": "1.0.0-insiders.20260813-7c9aa50",
+    "@univerjs-pro/boards": "1.0.0-insiders.20260813-30ff2fe",
+    "@univerjs-pro/collaboration": "1.0.0-insiders.20260813-30ff2fe",
+    "@univerjs-pro/collaboration-service": "1.0.0-insiders.20260813-30ff2fe",
+    "@univerjs-pro/collaboration-transport-node": "1.0.0-insiders.20260813-30ff2fe",
+    "@univerjs-pro/collaboration-worktree-service": "1.0.0-insiders.20260813-30ff2fe",
+    "@univerjs-pro/embed": "1.0.0-insiders.20260813-30ff2fe",
+    "@univerjs-pro/slides": "1.0.0-insiders.20260813-30ff2fe",
     "@univerjs/core": "1.0.0-insiders.20260813-7c9aa50",
-    "react": "^19.2.8",
+    "@univerjs/protocol": "1.0.0-insiders.20260813-7c9aa50",
+    "busboy": "^1.6.0",
     "esbuild": "^0.28.2",
+    "jsdom": "^26.1.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sirv": "^3.0.2",
     "typescript": "^7.0.2",
-    "@univerjs-pro/collaboration": "1.0.0-insiders.20260813-7c9aa50",
-    "@univerjs-pro/embed": "1.0.0-insiders.20260813-7c9aa50",
-    "@univerjs/protocol": "1.0.0-insiders.20260813-7c9aa50"
+    "ws": "^8.21.3",
+    "@univerjs-pro/bases": "1.0.0-insiders.20260813-30ff2fe",
+    "@univerjs-pro/collaboration-endpoint": "1.0.0-insiders.20260813-30ff2fe",
+    "@univerjs-pro/collaboration-worktree-endpoint": "1.0.0-insiders.20260813-30ff2fe"
   }
 }

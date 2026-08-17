@@ -10,18 +10,16 @@ import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
+import { tmpdir } from 'node:os'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = dirname(here)
-const repoRoot = '/Users/otime/project/open-sources/deepseek-harness'
-// jsdom/react are resolved from a local deepseek-harness checkout so this
-// test runs from the plugin repo without its own devDependencies.
-const repoRequire = createRequire(join(repoRoot, 'package.json')) // jsdom (repo dev dep)
-const webRequire = createRequire(join(repoRoot, 'apps/web/package.json')) // react / react-dom
+// jsdom/react/react-dom come from this repo's devDependencies.
+const repoRequire = createRequire(import.meta.url)
 const { JSDOM } = repoRequire('jsdom')
 
 // ---- fake loopback API (node half's /univer-api) ----
-const DEMO_FILE = '/Users/otime/dev/learn/dsh-learn/.scratch-univer/demo.univer'
+const DEMO_FILE = join(tmpdir(), 'dsh-univer-client-smoke', 'demo.univer')
 const WORKTREE = 'wt-msvqmweb-47hcdg'
 const OPEN_URL = 'http://127.0.0.1:9123/?file=KEY&worktree=wt-msvqmweb-47hcdg'
 const VIEW_URL = 'http://127.0.0.1:9123/?file=KEY&worktree=wt-msvqmweb-47hcdg&mode=embedded&scope=worktree'
@@ -100,13 +98,24 @@ const origin = `http://127.0.0.1:${server.address().port}`
 
 // ---- jsdom + module loading ----
 const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', { url: origin + '/' })
+// jsdom does not implement PointerEvent; the dock drag simulation needs it.
+if (dom.window.PointerEvent === undefined) {
+  dom.window.PointerEvent = class PointerEvent extends dom.window.MouseEvent {
+    constructor(type, params = {}) {
+      super(type, params)
+      this.pointerId = params.pointerId ?? 0
+      this.pointerType = params.pointerType ?? 'mouse'
+      this.isPrimary = params.isPrimary ?? true
+    }
+  }
+}
 globalThis.window = dom.window
 globalThis.document = dom.window.document
 Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true })
 
-const React = webRequire('react')
-const jsxRuntime = webRequire('react/jsx-runtime')
-const { createRoot } = webRequire('react-dom/client')
+const React = repoRequire('react')
+const jsxRuntime = repoRequire('react/jsx-runtime')
+const { createRoot } = repoRequire('react-dom/client')
 
 let pluginExports = null
 dom.window.__ModuleLoader__ = {
@@ -195,7 +204,7 @@ const sessionWithTargets = (targets, running) => ({
 const rootEl = document.createElement('div')
 document.body.appendChild(rootEl)
 const reactRoot = createRoot(rootEl)
-const SESSION_CWD = '/Users/otime/cli-self-test/univer-cli-test'
+const SESSION_CWD = join(tmpdir(), 'dsh-univer-client-smoke', 'workdir')
 const REL_DEMO_FILE = SESSION_CWD + '/work_班级成绩表/班级管理.univer'
 let scenario = 0
 function render(session) {

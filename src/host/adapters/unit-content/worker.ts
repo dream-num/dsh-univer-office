@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
-import { UNIT_CONTENT_WORKER_ENTRY } from '../../artifacts/paths.ts'
+import { delimiter } from 'node:path'
+import { PLUGIN_NODE_MODULES, UNIT_CONTENT_WORKER_ENTRY } from '../../artifacts/paths.ts'
 import { UniverError } from '../../service/errors.ts'
 import type { JsonValue } from '../../service/types.ts'
 import { parseUnitContentWorkerEnvelope, type UnitContentWorkerRequest } from './protocol.ts'
@@ -71,8 +72,12 @@ function workerDiagnostic(stderr: readonly Buffer[], fallback: string): string {
 }
 
 function unitContentWorkerEnvironment(): NodeJS.ProcessEnv {
-  return Object.fromEntries(['HOME', 'LANG', 'LC_ALL', 'PATH', 'TMPDIR'].flatMap((key) => {
+  const env = Object.fromEntries(['HOME', 'LANG', 'LC_ALL', 'PATH', 'TMPDIR'].flatMap((key) => {
     const value = process.env[key]
     return value === undefined ? [] : [[key, value]]
   }))
+  // Let the worker resolve its native dependencies (@univerjs-pro/engine-formula-
+  // rust-binding and platform sub-packages) from this plugin's node_modules.
+  env.NODE_PATH = [PLUGIN_NODE_MODULES, process.env.NODE_PATH].filter((value): value is string => value !== undefined && value.length > 0).join(delimiter)
+  return env
 }
