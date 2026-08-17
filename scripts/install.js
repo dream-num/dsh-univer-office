@@ -2,11 +2,11 @@
 /**
  * One-command installer for the DSH × Univer plugin.
  *
- * Usage:  npx @univer-cli/dsh-univer-plugin install
+ * Usage:  npx dsh-univer-office install
  *         univer-dsh install
  *
  * What it does on the target machine:
- *   1. Copies this package into ~/.dsh/profiles/node_modules/@univer-cli/dsh-univer-plugin
+ *   1. Copies this package into ~/.dsh/profiles/node_modules/dsh-univer-office
  *      (the DSH web profile module scope the loader resolves from).
  *   2. Appends the loader entry to ~/.dsh/profiles/web/cordis.patch.yml
  *      (idempotent — never duplicates).
@@ -24,10 +24,10 @@ import { copyGatewayDependencies } from "./copy-gateway-dependencies.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url)); // <pkg>/scripts
 const PKG_ROOT = join(HERE, ".."); // <pkg>
 const PROFILES = join(homedir(), ".dsh", "profiles");
-const TARGET = join(PROFILES, "node_modules", "@univer-cli", "dsh-univer-plugin");
+const TARGET = join(PROFILES, "node_modules", "dsh-univer-office");
 const PATCH = join(PROFILES, "web", "cordis.patch.yml");
 const ENTRY_ID = "univer";
-const ENTRY_NAME = "@univer-cli/dsh-univer-plugin";
+const ENTRY_NAME = "dsh-univer-office";
 const ROW = `    - id: ${ENTRY_ID}\n      name: '${ENTRY_NAME}'`;
 
 const PATCH_BLOCK = `# DSH × Univer integration: Host services + browser client + bundled Gateway and Viewer.

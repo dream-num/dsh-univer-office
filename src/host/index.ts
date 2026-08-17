@@ -14,7 +14,7 @@ export * from '../shared/wire/actions.ts'
 export * from '../shared/wire/state.ts'
 export * from '../shared/wire/status.ts'
 
-export const name = 'dsh-univer-plugin'
+export const name = 'dsh-univer-office'
 
 /** Compose the Univer Provider and its Web/Tools Consumers. */
 export function apply(ctx: Context, config: UniverConfig = {}): void {

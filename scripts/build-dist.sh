@@ -36,8 +36,8 @@ mkdir -p "$PKG_DIR/scripts"
 cp "$ROOT/scripts/install.js" "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR/scripts/"
 cp "$ROOT/package.json" "$ROOT/README.md" "$ROOT/README.zh-CN.md" "$ROOT/cordis.patch.yml" "$ROOT/LICENSE" "$PKG_DIR/"
 
-# 2. npm tarball (univer-cli-dsh-univer-plugin-<version>.tgz) from the package manifest.
-rm -f "$DIST"/univer-cli-dsh-univer-plugin-*.tgz
+# 2. npm tarball (univer-office-<version>.tgz) from the package manifest.
+rm -f "$DIST"/univer-office-*.tgz
 (cd "$ROOT" && npm pack --pack-destination "$DIST" >/dev/null)
 
 # 3. End-user zip: package contents + double-click installer + install guide.

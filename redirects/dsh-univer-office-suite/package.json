@@ -1,14 +1,14 @@
 {
-  "name": "dsh-univer-plugin",
+  "name": "dsh-univer-office-suite",
   "version": "0.0.1",
-  "description": "Reserved name — the official DSH × Univer plugin is dsh-univer-office.",
+  "description": "Reserved name - the official DSH x Univer office plugin is dsh-univer-office.",
   "private": false,
   "license": "Apache-2.0",
   "files": [
     "README.md",
     "LICENSE"
   ],
-  "deprecated": "Use dsh-univer-office instead — this name is reserved to prevent typosquatting.",
+  "deprecated": "Use dsh-univer-office instead - this name is reserved to prevent typosquatting.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dream-num/dsh-univer-office.git"

@@ -32,7 +32,7 @@ This plugin lets DeepSeek Harness create, edit, inspect, export, preview, and re
 | No global univer CLI | Nothing else is required; creation, editing, inspection, export, preview, and Worktree review are bundled. |
 | No card after install | Make sure you refreshed (Cmd+R); cards appear only **after** a turn uses a structured `univer_*` tool. |
 | Card shows a **yellow dot** | The bundled Gateway is not running; click the dot to start it |
-| Want to uninstall | Delete `~/.dsh/profiles/node_modules/@univer-cli/dsh-univer-plugin` and remove the matching lines from `~/.dsh/profiles/web/cordis.patch.yml` |
+| Want to uninstall | Delete `~/.dsh/profiles/node_modules/dsh-univer-office` and remove the matching lines from `~/.dsh/profiles/web/cordis.patch.yml` |
 
 ## Requirements
 

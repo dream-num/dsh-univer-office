@@ -28,7 +28,7 @@ const client = await build({
 })
 const clientCode = client.outputFiles[0]?.text
 if (clientCode === undefined) throw new Error('client build produced no JavaScript')
-await writeFile('lib/client.js', `window.__ModuleLoader__.load({\n  id: "@univer-cli/dsh-univer-plugin",\n  factory: (require) => {\n    var module = { exports: {} };\n    var exports = module.exports;\n${indent(clientCode, 4)}\n    return module.exports;\n  }\n});\n`)
+await writeFile('lib/client.js', `window.__ModuleLoader__.load({\n  id: "dsh-univer-office",\n  factory: (require) => {\n    var module = { exports: {} };\n    var exports = module.exports;\n${indent(clientCode, 4)}\n    return module.exports;\n  }\n});\n`)
 
 async function run(command, args) {
   await new Promise((resolve, reject) => {

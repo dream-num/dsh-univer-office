@@ -13,7 +13,7 @@ export const inject = ['slots', 'locale', 'conversationEvents']
 
 /** Register the DSH browser projections for Univer files and worktrees. */
 export function apply(ctx: ClientContext): void {
-  injectStyles('@univer-cli/dsh-univer-plugin/styles', `${previewStyles}\n${worktreeStyles}`)
+  injectStyles('dsh-univer-office/styles', `${previewStyles}\n${worktreeStyles}`)
   try {
     ctx.conversationEvents.register(univerTargetDefinition)
   } catch (error) {
@@ -39,7 +39,7 @@ export function apply(ctx: ClientContext): void {
 function injectStyles(id: string, css: string): void {
   if (document.querySelector(`style[data-plugin-css=${JSON.stringify(id)}]`) !== null) return
   const style = document.createElement('style')
-  style.dataset.plugin = '@univer-cli/dsh-univer-plugin'
+  style.dataset.plugin = 'dsh-univer-office'
   style.dataset.pluginCss = id
   style.textContent = css
   document.head.appendChild(style)

@@ -1,5 +1,5 @@
 {
-  "name": "@univer-cli/dsh-univer-plugin",
+  "name": "dsh-univer-office",
   "version": "0.2.0",
   "description": "DSH × Univer integration with a bundled collaboration Gateway and Viewer: inline previews, live floating Worktree windows, and session-end review actions in DeepSeek Harness.",
   "type": "module",
@@ -46,11 +46,11 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dream-num/dsh-univer-plugin.git"
+    "url": "git+https://github.com/dream-num/dsh-univer-office.git"
   },
-  "homepage": "https://github.com/dream-num/dsh-univer-plugin",
+  "homepage": "https://github.com/dream-num/dsh-univer-office",
   "bugs": {
-    "url": "https://github.com/dream-num/dsh-univer-plugin/issues"
+    "url": "https://github.com/dream-num/dsh-univer-office/issues"
   },
   "dsh": {
     "bundle": {

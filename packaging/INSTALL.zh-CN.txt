@@ -32,7 +32,7 @@
 | 没有全局 univer CLI | 无需额外安装；创建、编辑、检查、导出、预览与 Worktree 审阅均已内置。 |
 | 装完看不到卡片 | 确认刷新过（Cmd+R）；卡片只会在该回合使用结构化 `univer_*` 工具后出现。 |
 | 卡片上是**黄色圆点** | 内置 Gateway 没运行，点一下圆点即可启动 |
-| 想卸载 | 删除 `~/.dsh/profiles/node_modules/@univer-cli/dsh-univer-plugin` 文件夹，并把 `~/.dsh/profiles/web/cordis.patch.yml` 里对应几行删掉 |
+| 想卸载 | 删除 `~/.dsh/profiles/node_modules/dsh-univer-office` 文件夹，并把 `~/.dsh/profiles/web/cordis.patch.yml` 里对应几行删掉 |
 
 ## 需要电脑上有什么
 

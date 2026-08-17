@@ -53,22 +53,22 @@
 ### 从 git 安装
 
 ```sh
-dsh plugin --profile web add github:dream-num/dsh-univer-plugin
+dsh plugin --profile web add github:dream-num/dsh-univer-office
 ```
 
 ### 从 npm 安装
 
 ```sh
-dsh plugin --profile web add @univer-cli/dsh-univer-plugin
+dsh plugin --profile web add dsh-univer-office
 ```
 
 ### 从本地 checkout 安装（开发用）
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-univer-plugin
+dsh plugin --profile web add /path/to/dsh-univer-office
 ```
 
-> profile 首次使用会自动初始化；`dsh` 会把该 bundle 追加到 `dsh.profile.bundles`，pnpm 链接包后，loader 自动应用插件的 `cordis.patch.yml` 层。可用 `dsh --profile web --dump-config` 验证（应能看到 `# == @univer-cli/dsh-univer-plugin` 层）。
+> profile 首次使用会自动初始化；`dsh` 会把该 bundle 追加到 `dsh.profile.bundles`，pnpm 链接包后，loader 自动应用插件的 `cordis.patch.yml` 层。可用 `dsh --profile web --dump-config` 验证（应能看到 `# == dsh-univer-office` 层）。
 
 ### 备用：一键安装脚本（无 dsh CLI 时）
 
@@ -98,7 +98,7 @@ bash install.sh
 univer-dsh uninstall
 ```
 
-或手动删除：删除 `~/.dsh/profiles/node_modules/@univer-cli/dsh-univer-plugin` 及 `cordis.patch.yml` 中对应条目。
+或手动删除：删除 `~/.dsh/profiles/node_modules/dsh-univer-office` 及 `cordis.patch.yml` 中对应条目。
 
 ## 结构
 
@@ -140,7 +140,7 @@ npm run sync:collaboration -- /path/to/univer-cli
 UNIVER_CLI_SOURCE=/path/to/univer-cli npm run sync:unit-content
 ```
 
-该脚本会重新生成 `dist/univer/`（发布包内容）、npm tarball `dist/univer-cli-dsh-univer-plugin-<version>.tgz` 与 zip 分发包 `univer-dsh-plugin.zip`（包内容 + 来自 `packaging/` 的 `install.command` + `INSTALL*.txt`）。
+该脚本会重新生成 `dist/univer/`（发布包内容）、npm tarball `dist/univer-office-<version>.tgz` 与 zip 分发包 `univer-dsh-plugin.zip`（包内容 + 来自 `packaging/` 的 `install.command` + `INSTALL*.txt`）。
 
 单独运行冒烟测试：
 
@@ -154,11 +154,19 @@ npm run test:integration
 
 ## 预留的 npm 包名
 
-无 scope 的裸名 [`dsh-univer-plugin`](https://www.npmjs.com/package/dsh-univer-plugin) 已由本项目预留，用于防 typosquatting（恶意仿冒）——`redirects/dsh-univer-plugin/` 存放占位包（deprecated，指向官方包名），不含任何代码。**请始终安装官方包：**
+以下无 scope 的裸名已由本项目预留，用于防 typosquatting（恶意仿冒）——`redirects/<name>/` 各目录存放占位包（deprecated，指向官方包名），不含任何代码：
+
+- [`dsh-univer-plugin`](https://www.npmjs.com/package/dsh-univer-plugin)
+- `dsh-univer-office-suite`
+- `dsh-univer-suite`
+- `univer-office-suite`
+- `univer-office`
+
+**请始终安装官方包：**
 
 ```sh
-dsh plugin --profile web add github:dream-num/dsh-univer-plugin   # 从 git
-dsh plugin --profile web add @univer-cli/dsh-univer-plugin        # 从 npm
+dsh plugin --profile web add github:dream-num/dsh-univer-office   # 从 git
+dsh plugin --profile web add dsh-univer-office                    # 从 npm
 ```
 
 ## 元数据

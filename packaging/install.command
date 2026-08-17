@@ -3,7 +3,7 @@
 # Double-click this file → a terminal opens → installation runs automatically
 cd "$(dirname "$0")"
 
-DEST="$HOME/.dsh/profiles/node_modules/@univer-cli/dsh-univer-plugin"
+DEST="$HOME/.dsh/profiles/node_modules/dsh-univer-office"
 PATCH="$HOME/.dsh/profiles/web/cordis.patch.yml"
 
 echo "==============================================="
@@ -27,7 +27,7 @@ cp -R "$(dirname "$0")/univer" "$DEST"
 echo "✅ Step 1/3: plugin files installed"
 
 # 3. Write the loader entry (idempotent; keeps cordis.patch.yml valid YAML)
-if ! grep -q "name: '@univer-cli/dsh-univer-plugin'" "$PATCH" 2>/dev/null; then
+if ! grep -q "name: 'dsh-univer-office'" "$PATCH" 2>/dev/null; then
   mkdir -p "$(dirname "$PATCH")"
   # Drop a lone empty-array template line ("[]") so the appended entry below
   # stays a valid top-level YAML array (the profile template ships as `[]`).
@@ -38,7 +38,7 @@ if ! grep -q "name: '@univer-cli/dsh-univer-plugin'" "$PATCH" 2>/dev/null; then
       grep -v '^\[\]$' "$PATCH" > "$PATCH.tmp" && mv "$PATCH.tmp" "$PATCH"
     fi
   fi
-  printf '\n# DSH × Univer integration: bundled Gateway, Viewer, and preview UI.\n- insert:\n    - id: univer\n      name: '"'"'@univer-cli/dsh-univer-plugin'"'"'\n' >> "$PATCH"
+  printf '\n# DSH × Univer integration: bundled Gateway, Viewer, and preview UI.\n- insert:\n    - id: univer\n      name: '"'"'dsh-univer-office'"'"'\n' >> "$PATCH"
   echo "✅ Step 2/3: loader entry written"
 else
   echo "✅ Step 2/3: loader entry already present"

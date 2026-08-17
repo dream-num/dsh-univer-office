@@ -53,25 +53,25 @@ This is a standard [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/
 ### From a git checkout
 
 ```sh
-dsh plugin --profile web add github:dream-num/dsh-univer-plugin
+dsh plugin --profile web add github:dream-num/dsh-univer-office
 ```
 
 ### From npm
 
 ```sh
-dsh plugin --profile web add @univer-cli/dsh-univer-plugin
+dsh plugin --profile web add dsh-univer-office
 ```
 
 ### From a local checkout (development)
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-univer-plugin
+dsh plugin --profile web add /path/to/dsh-univer-office
 ```
 
 > The first use of a profile initializes it; `dsh` appends the bundle to
 > `dsh.profile.bundles` and pnpm links the package, so the loader resolves the
 > plugin's `cordis.patch.yml` layer automatically. Verify with
-> `dsh --profile web --dump-config` (you should see a `# == @univer-cli/dsh-univer-plugin` layer).
+> `dsh --profile web --dump-config` (you should see a `# == dsh-univer-office` layer).
 
 ### Alternative: one-command installer (no dsh CLI)
 
@@ -101,7 +101,7 @@ After any install: **refresh DeepSeek Harness (Cmd+R / Ctrl+R)**.
 univer-dsh uninstall
 ```
 
-Or remove the plugin manually: delete `~/.dsh/profiles/node_modules/@univer-cli/dsh-univer-plugin` and the matching `cordis.patch.yml` entry.
+Or remove the plugin manually: delete `~/.dsh/profiles/node_modules/dsh-univer-office` and the matching `cordis.patch.yml` entry.
 
 ## Architecture
 
@@ -143,7 +143,7 @@ Refresh the Unit Content Worker, embedded Univer development credential, and cur
 UNIVER_CLI_SOURCE=/path/to/univer-cli npm run sync:unit-content
 ```
 
-This regenerates `dist/univer/` (the shipped package contents), the npm tarball `dist/univer-cli-dsh-univer-plugin-<version>.tgz`, and the zip distribution `univer-dsh-plugin.zip` (package contents + `install.command` + `INSTALL*.txt` from `packaging/`).
+This regenerates `dist/univer/` (the shipped package contents), the npm tarball `dist/univer-office-<version>.tgz`, and the zip distribution `univer-dsh-plugin.zip` (package contents + `install.command` + `INSTALL*.txt` from `packaging/`).
 
 Individual smoke tests:
 
@@ -155,13 +155,21 @@ npm run test:integration
 
 Publish the package with `npm publish` (respects the `files` allowlist); attach the zip/tgz to a GitHub Release for end users.
 
-## Reserved npm name
+## Reserved npm names
 
-The unscoped name [`dsh-univer-plugin`](https://www.npmjs.com/package/dsh-univer-plugin) is reserved by this project as a typosquatting guard — `redirects/dsh-univer-plugin/` holds a placeholder package (deprecated, pointing to the official name) that contains no code. **Always install the official package:**
+The following unscoped names are reserved by this project as typosquatting guards — each `redirects/<name>/` directory holds a placeholder package (deprecated, pointing to the official name) that contains no code:
+
+- [`dsh-univer-plugin`](https://www.npmjs.com/package/dsh-univer-plugin)
+- `dsh-univer-office-suite`
+- `dsh-univer-suite`
+- `univer-office-suite`
+- `univer-office`
+
+**Always install the official package:**
 
 ```sh
-dsh plugin --profile web add github:dream-num/dsh-univer-plugin   # from git
-dsh plugin --profile web add @univer-cli/dsh-univer-plugin        # from npm
+dsh plugin --profile web add github:dream-num/dsh-univer-office   # from git
+dsh plugin --profile web add dsh-univer-office                    # from npm
 ```
 
 ## Metadata
