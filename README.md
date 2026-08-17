@@ -73,17 +73,6 @@ dsh plugin --profile web add /path/to/dsh-univer-office
 > plugin's `cordis.patch.yml` layer automatically. Verify with
 > `dsh --profile web --dump-config` (you should see a `# == dsh-univer-office` layer).
 
-### Alternative: one-command installer (no dsh CLI)
-
-If you cannot run the `dsh` CLI, a convenience installer is provided:
-
-```sh
-pnpm install
-bash install.sh
-```
-
-The source-checkout installer copies the already-installed Gateway dependencies. For the macOS zip distribution they are already included; double-click `install.command` (see `packaging/INSTALL.txt`).
-
 After any install: **refresh DeepSeek Harness (Cmd+R / Ctrl+R)**.
 
 ## Usage
@@ -99,10 +88,8 @@ After any install: **refresh DeepSeek Harness (Cmd+R / Ctrl+R)**.
 ## Uninstall
 
 ```sh
-univer-dsh uninstall
+dsh plugin --profile web remove dsh-univer-office
 ```
-
-Or remove the plugin manually: delete `~/.dsh/profiles/node_modules/dsh-univer-office` and the matching `cordis.patch.yml` entry.
 
 ## Architecture
 
@@ -132,7 +119,7 @@ Then build the release artifacts:
 bash scripts/build-dist.sh
 ```
 
-This regenerates `dist/univer/` (the shipped package contents), the npm tarball `dist/univer-office-<version>.tgz`, and the zip distribution `univer-dsh-plugin.zip` (package contents + `install.command` + `INSTALL*.txt` from `packaging/`).
+This regenerates `dist/univer/` (the shipped package contents), the npm tarball `dist/univer-office-<version>.tgz`, and the zip distribution `univer-dsh-plugin.zip` (package contents).
 
 Individual smoke tests:
 

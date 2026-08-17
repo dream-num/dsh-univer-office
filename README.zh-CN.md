@@ -70,17 +70,6 @@ dsh plugin --profile web add /path/to/dsh-univer-office
 
 > profile 首次使用会自动初始化；`dsh` 会把该 bundle 追加到 `dsh.profile.bundles`，pnpm 链接包后，loader 自动应用插件的 `cordis.patch.yml` 层。可用 `dsh --profile web --dump-config` 验证（应能看到 `# == dsh-univer-office` 层）。
 
-### 备用：一键安装脚本（无 dsh CLI 时）
-
-无法运行 `dsh` CLI 时，可使用便利安装脚本：
-
-```sh
-pnpm install
-bash install.sh
-```
-
-源码 checkout 安装器会复制已安装的 Gateway 依赖。macOS zip 已包含这些依赖，可直接双击 `install.command`（见 `packaging/INSTALL.txt`）。
-
 任何方式安装后：在 DeepSeek Harness 窗口按 **Cmd+R / Ctrl+R** 刷新。
 
 ## 使用
@@ -96,10 +85,8 @@ bash install.sh
 ## 卸载
 
 ```sh
-univer-dsh uninstall
+dsh plugin --profile web remove dsh-univer-office
 ```
-
-或手动删除：删除 `~/.dsh/profiles/node_modules/dsh-univer-office` 及 `cordis.patch.yml` 中对应条目。
 
 ## 结构
 
@@ -129,7 +116,7 @@ pnpm run test
 bash scripts/build-dist.sh
 ```
 
-该脚本会重新生成 `dist/univer/`（发布包内容）、npm tarball `dist/univer-office-<version>.tgz` 与 zip 分发包 `univer-dsh-plugin.zip`（包内容 + 来自 `packaging/` 的 `install.command` + `INSTALL*.txt`）。
+该脚本会重新生成 `dist/univer/`（发布包内容）、npm tarball `dist/univer-office-<version>.tgz` 与 zip 分发包 `univer-dsh-plugin.zip`（包内容）。
 
 单独运行冒烟测试：
 

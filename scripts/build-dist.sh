@@ -3,11 +3,11 @@
 #
 # dist/ and the archives are GENERATED — never commit them, and never edit
 # files under dist/ by hand. Hand-written source lives in src/; lib/ is built.
-# Package metadata, docs, skills, generated executables, Viewer, and installers are copied below.
+# Package metadata, docs, skills, generated executables, and Viewer are copied below.
 # re-run this script and publish the artifacts (npm publish / GitHub Release).
 #
 #   npm publish              # the package (lib/, artifacts, skills, scripts, docs, patch)
-#   univer-dsh-plugin.zip    # end-user zip: package + install.command + INSTALL*.txt
+#   univer-dsh-plugin.zip    # end-user zip: package (install via `dsh plugin add`)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -37,17 +37,17 @@ for metadata in README.md SOURCE.json; do
 done
 node "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR"
 mkdir -p "$PKG_DIR/scripts"
-cp "$ROOT/scripts/install.js" "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR/scripts/"
+cp "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR/scripts/"
 cp "$ROOT/package.json" "$ROOT/README.md" "$ROOT/README.zh-CN.md" "$ROOT/cordis.patch.yml" "$ROOT/LICENSE" "$PKG_DIR/"
 
 # 2. npm tarball (univer-office-<version>.tgz) from the package manifest.
 rm -f "$DIST"/univer-office-*.tgz
 (cd "$ROOT" && npm pack --pack-destination "$DIST" >/dev/null)
 
-# 3. End-user zip: package contents + double-click installer + install guide.
+# 3. End-user zip: package contents (installed via `dsh plugin add`).
 rm -f "$ROOT/univer-dsh-plugin.zip"
 (cd "$DIST" && zip -Xrq "$ROOT/univer-dsh-plugin.zip" univer)
-(cd "$ROOT/packaging" && zip -Xrq "$ROOT/univer-dsh-plugin.zip" install.command INSTALL.txt INSTALL.zh-CN.txt)
+# End-user installs go through \`dsh plugin add\`; the zip carries the package only.
 
 echo "✅ dist/ built:"
 ls -la "$DIST"

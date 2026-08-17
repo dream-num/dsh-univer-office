@@ -5,9 +5,6 @@
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/types/host/index.d.ts",
-  "bin": {
-    "univer-dsh": "scripts/install.js"
-  },
   "files": [
     "lib",
     "docs",
@@ -16,7 +13,6 @@
     "vendor/collaboration/README.md",
     "vendor/collaboration/SOURCE.json",
     "vendor/unit-content/artifacts",
-    "scripts/install.js",
     "scripts/copy-gateway-dependencies.mjs",
     "README.md",
     "README.zh-CN.md",
