@@ -126,5 +126,6 @@
     "@univerjs-pro/bases": "1.0.0-insiders.20260813-7c9aa50",
     "@univerjs-pro/collaboration-endpoint": "1.0.0-insiders.20260813-7c9aa50",
     "@univerjs-pro/collaboration-worktree-endpoint": "1.0.0-insiders.20260813-7c9aa50"
-  }
+  },
+  "packageManager": "pnpm@11.20.0"
 }
