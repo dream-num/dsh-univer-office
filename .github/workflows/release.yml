@@ -52,16 +52,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set version
+      - name: Resolve version
         id: version
         shell: bash
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            pnpm version ${{ inputs.version }} --no-git-tag-version
-            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+            # Input overrides package.json (e.g. re-publishing a bumped version).
+            node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.version='${{ inputs.version }}';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
           fi
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Build
         run: pnpm run build
