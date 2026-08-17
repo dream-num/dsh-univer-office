@@ -18,9 +18,9 @@ import {
   type UnitDataByType,
 } from "@univer-cli/unit-exchange";
 import { UniverInstanceType } from "@univerjs/core";
-import { UNIVER_LICENSE } from "../../../vendor/unit-content/upstream/application/license.ts";
-import { createLocalReferencedUnitProviderRegistration } from "../../../vendor/unit-content/upstream/application/runtime/local-referenced-unit-provider.ts";
-import { LocalSnapshotServerAdapter } from "../../../vendor/unit-content/upstream/application/runtime/local-snapshot-server-adapter.ts";
+import { UNIVER_LICENSE } from "./license.ts";
+import { createLocalReferencedUnitProviderRegistration } from "./runtime/local-referenced-unit-provider.ts";
+import { LocalSnapshotServerAdapter } from "./runtime/local-snapshot-server-adapter.ts";
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 

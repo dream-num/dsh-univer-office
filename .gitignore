@@ -1,9 +1,15 @@
 # Generated build artifacts — never commit these.
-# Source lives under src/. Generated lib/ and the runtime build under vendor/
-# are intentionally versioned for DSH loading and release installs.
+# - lib/ : built from src/ (pnpm run build)
+# - dist/ : release bundles
+# - vendor/unit-content/artifacts : built worker
+# - vendor/*/upstream, vendor/unit-content/artifacts/node_modules : sync intermediates
+# vendor/collaboration/artifacts (gateway.mjs + viewer) IS committed: it is a
+# self-contained runtime artifact built from univer-cli sources that are not
+# available on any registry.
 dist/
+lib/
 node_modules/
-!vendor/unit-content/artifacts/node_modules/
-!vendor/unit-content/artifacts/node_modules/**
 *.tgz
 *.zip
+vendor/collaboration/upstream/
+vendor/unit-content/

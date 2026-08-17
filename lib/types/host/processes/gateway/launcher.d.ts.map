@@ -1,1 +1,0 @@
-{"version":3,"file":"launcher.d.ts","sourceRoot":"","sources":["../../../../../src/host/processes/gateway/launcher.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,oBAAoB,CAAA;AAItD,6EAA6E;AAC7E,wBAAgB,aAAa,CAAC,IAAI,EAAE,MAAM,GAAG;IAAE,QAAQ,CAAC,OAAO,EAAE,MAAM,CAAC;IAAC,QAAQ,CAAC,IAAI,EAAE,SAAS,MAAM,EAAE,CAAC;IAAC,QAAQ,CAAC,OAAO,EAAE,YAAY,CAAA;CAAE,CAoB1I"}

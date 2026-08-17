@@ -1,1 +1,0 @@
-{"version":3,"file":"state.d.ts","sourceRoot":"","sources":["../../../../../src/host/webServer/routes/state.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,0BAA0B,CAAA;AAC5D,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,iCAAiC,CAAA;AAGpE,8CAA8C;AAC9C,wBAAsB,UAAU,CAAC,OAAO,EAAE,aAAa,EAAE,QAAQ,EAAE,YAAY,EAAE,IAAI,EAAE,OAAO,EAAE,SAAS,EAAE,OAAO,+CAEjH"}

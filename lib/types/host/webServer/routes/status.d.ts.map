@@ -1,1 +1,0 @@
-{"version":3,"file":"status.d.ts","sourceRoot":"","sources":["../../../../../src/host/webServer/routes/status.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,iCAAiC,CAAA;AACpE,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,gCAAgC,CAAA;AAElE,+CAA+C;AAC/C,wBAAsB,WAAW,CAAC,OAAO,EAAE,aAAa,GAAG,OAAO,CAAC,YAAY,CAAC,CAM/E"}

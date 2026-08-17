@@ -8,6 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@univerjs-pro/cli-assets':
+        specifier: 0.1.0
+        version: 0.1.0
+      '@univerjs-pro/engine-formula-rust-binding':
+        specifier: 1.0.0-insiders.20260811-001a0e5
+        version: 1.0.0-insiders.20260811-001a0e5
+      '@univerjs-pro/uexcli':
+        specifier: 0.3.2
+        version: 0.3.2
       libsql:
         specifier: ^0.5.29
         version: 0.5.29
@@ -48,18 +57,18 @@ importers:
       '@univer-cli/univer-collaboration-runtime':
         specifier: 1.0.0-insiders.20260813-7c9aa50
         version: 1.0.0-insiders.20260813-7c9aa50(react@19.2.8)(rxjs@7.8.2)
-      '@univerjs-pro/cli-assets':
-        specifier: 0.1.0
-        version: 0.1.0
-      '@univerjs-pro/engine-formula-rust-binding':
-        specifier: 1.0.0-insiders.20260811-001a0e5
-        version: 1.0.0-insiders.20260811-001a0e5
-      '@univerjs-pro/uexcli':
-        specifier: 0.3.2
-        version: 0.3.2
+      '@univerjs-pro/collaboration':
+        specifier: 1.0.0-insiders.20260813-7c9aa50
+        version: 1.0.0-insiders.20260813-7c9aa50(react@19.2.8)(rxjs@7.8.2)
+      '@univerjs-pro/embed':
+        specifier: 1.0.0-insiders.20260813-7c9aa50
+        version: 1.0.0-insiders.20260813-7c9aa50(react@19.2.8)(rxjs@7.8.2)
       '@univerjs/core':
         specifier: 1.0.0-insiders.20260813-7c9aa50
         version: 1.0.0-insiders.20260813-7c9aa50(react@19.2.8)(rxjs@7.8.2)
+      '@univerjs/protocol':
+        specifier: 1.0.0-insiders.20260813-7c9aa50
+        version: 1.0.0-insiders.20260813-7c9aa50
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
