@@ -3,8 +3,6 @@
   "version": "0.2.1",
   "description": "DSH × Univer integration with a bundled collaboration Gateway and Viewer: inline previews, live floating Worktree windows, and session-end review actions in DeepSeek Harness.",
   "type": "module",
-  "main": "./lib/index.js",
-  "types": "./lib/types/host/index.d.ts",
   "files": [
     "lib",
     "docs",
@@ -17,10 +15,11 @@
   ],
   "exports": {
     ".": {
-      "types": "./lib/types/host/index.d.ts",
+      "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
     "./client": {
+      "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
     "./package.json": "./package.json"
@@ -246,5 +245,7 @@
     "vite": "^5.4.21",
     "ws": "^8.21.3"
   },
-  "packageManager": "pnpm@11.20.0"
+  "packageManager": "pnpm@11.20.0",
+  "main": "./lib/index.js",
+  "types": "./lib/types/index.d.ts"
 }

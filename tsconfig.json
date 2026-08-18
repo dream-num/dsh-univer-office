@@ -11,10 +11,7 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "verbatimModuleSyntax": true,
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
-    "outDir": "lib/types",
+    "rootDir": "src",
     "rootDir": "src",
     "skipLibCheck": true
   },
