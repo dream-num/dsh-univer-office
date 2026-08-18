@@ -15,11 +15,9 @@
   ],
   "exports": {
     ".": {
-      "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
     "./client": {
-      "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
     "./package.json": "./package.json"
@@ -246,6 +244,5 @@
     "ws": "^8.21.3"
   },
   "packageManager": "pnpm@11.20.0",
-  "main": "./lib/index.js",
-  "types": "./lib/types/index.d.ts"
+  "main": "./lib/index.js"
 }

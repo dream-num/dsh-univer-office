@@ -78,31 +78,7 @@ if (target === 'all' || target === 'lib') {
   const clientCode = client.outputFiles[0]?.text
   if (clientCode === undefined) throw new Error('client build produced no JavaScript')
   await writeFile('lib/client.js', `window.__ModuleLoader__.load({\n  id: "dsh-univer-office",\n  factory: (require) => {\n    var module = { exports: {} };\n    var exports = module.exports;\n${indent(clientCode, 4)}\n    return module.exports;\n  }\n});\n`)
-  // Minimal type entry, mirroring the dsh-base bundle pattern: a dsh plugin
-  // is a runtime bundle (loaded via cordis.patch.yml), not a library API, so
-  // the published types are a single index.d.ts declaring the apply surface.
-  await mkdir('lib/types', { recursive: true })
-  await writeFile('lib/types/index.d.ts', `/**
- * dsh-univer-office — DSH x Univer plugin bundle. The package's substance is
- * cordis.patch.yml (declared by dsh.bundle.patch); this module is loaded by
- * the DSH loader and carries no consumer-facing runtime API.
- */
-export declare const name: 'dsh-univer-office';
-export declare function apply(ctx: import('@deepseek-ai/cordis').Context, config?: Record<string, unknown>): void;
-`)
-  // Client half entry: one entry, one matching .d.ts (the client bundle exposes
-  // apply + inject for the DSH client loader).
-  await mkdir('lib/types/client', { recursive: true })
-  await writeFile('lib/types/client/index.d.ts', `/**
- * dsh-univer-office — browser client half. Loaded by the DSH client loader
- * through the \`./client\` export; injects the services it needs and registers
- * the preview-card UI.
- */
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime';
-export declare const inject: string[];
-export declare function apply(ctx: ClientContext): void;
-`)
-  console.log('built lib/types/index.d.ts + lib/types/client/index.d.ts')
+  console.log('built lib/index.js + lib/client.js')
 }
 
 if (target === 'all' || target === 'worker') {
