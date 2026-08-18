@@ -11,8 +11,6 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "verbatimModuleSyntax": true,
-    "rootDir": "src",
-    "rootDir": "src",
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],

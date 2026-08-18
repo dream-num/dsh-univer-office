@@ -3,6 +3,7 @@
   "version": "0.2.1",
   "description": "DSH × Univer integration with a bundled collaboration Gateway and Viewer: inline previews, live floating Worktree windows, and session-end review actions in DeepSeek Harness.",
   "type": "module",
+  "main": "./lib/index.js",
   "files": [
     "lib",
     "docs",
@@ -14,9 +15,6 @@
     "cordis.patch.yml"
   ],
   "exports": {
-    ".": {
-      "default": "./lib/index.js"
-    },
     "./client": {
       "default": "./lib/client.js"
     },
@@ -243,6 +241,5 @@
     "vite": "^5.4.21",
     "ws": "^8.21.3"
   },
-  "packageManager": "pnpm@11.20.0",
-  "main": "./lib/index.js"
+  "packageManager": "pnpm@11.20.0"
 }
