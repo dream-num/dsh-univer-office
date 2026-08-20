@@ -2435,91 +2435,91 @@ packages:
     resolution: {integrity: sha512-60YRaenCQcVjYEKOcG824+DRGGIQ3VKErcBoAEDJZz5bKIs2ZG+X/H9Nk+Q6EVkwJk5QNApxbrc5QtBSwtrXAg==}
 
   '@univer-cli/api-reference@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-qqN/JPhSiZ1x38WoJt88aJvmABSePJ+7mVe6gdU7yQ7piNwyYyQNracGu9nNEhpDkcpad1m21sBoEiR/Wozwvw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univer-cli/api-reference/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-qqN/JPhSiZ1x38WoJt88aJvmABSePJ+7mVe6gdU7yQ7piNwyYyQNracGu9nNEhpDkcpad1m21sBoEiR/Wozwvw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univer-cli%2Fapi-reference/1.0.0-insiders.20260819-8595af2/qqN_JPhSiZ1x38WoJt88aJvmABSePJ-7mVe6gdU7yQ7piNwyYyQNracGu9nNEhpDkcpad1m21sBoEiR_Wozwvw.tgz}
 
   '@univer-cli/content-execution@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-KtfKXE6lvZYMB2DwhBt4jBgf8Ju3/VrfQr1DkTZ9Xz657KEP5sMLZniNZv6Uund+9ZVKf7hK1OlXW9SPOMw4Ew==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univer-cli/content-execution/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-KtfKXE6lvZYMB2DwhBt4jBgf8Ju3/VrfQr1DkTZ9Xz657KEP5sMLZniNZv6Uund+9ZVKf7hK1OlXW9SPOMw4Ew==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univer-cli%2Fcontent-execution/1.0.0-insiders.20260819-8595af2/KtfKXE6lvZYMB2DwhBt4jBgf8Ju3_VrfQr1DkTZ9Xz657KEP5sMLZniNZv6Uund-9ZVKf7hK1OlXW9SPOMw4Ew.tgz}
 
   '@univer-cli/content-inspection@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-9V7WqzcGdvLvezq9l9QYkqvvjN80W2dJ+x9FX/99ICBw5HcF/YcDHuYCw0uUXMLsbn6+Hy8xeRicL+tROWymMw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univer-cli/content-inspection/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-9V7WqzcGdvLvezq9l9QYkqvvjN80W2dJ+x9FX/99ICBw5HcF/YcDHuYCw0uUXMLsbn6+Hy8xeRicL+tROWymMw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univer-cli%2Fcontent-inspection/1.0.0-insiders.20260819-8595af2/9V7WqzcGdvLvezq9l9QYkqvvjN80W2dJ-x9FX_99ICBw5HcF_YcDHuYCw0uUXMLsbn6-Hy8xeRicL-tROWymMw.tgz}
 
   '@univer-cli/headless-univer@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-dwIpDBH/tJtDrz4pjU5Tr/Z/qm7fY30f/ECwkLaGGPHmRB7khuLXIvPF+7JuhXmEVxmQV21ps9D9ovu0eglGMQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univer-cli/headless-univer/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-dwIpDBH/tJtDrz4pjU5Tr/Z/qm7fY30f/ECwkLaGGPHmRB7khuLXIvPF+7JuhXmEVxmQV21ps9D9ovu0eglGMQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univer-cli%2Fheadless-univer/1.0.0-insiders.20260819-8595af2/dwIpDBH_tJtDrz4pjU5Tr_Z_qm7fY30f_ECwkLaGGPHmRB7khuLXIvPF-7JuhXmEVxmQV21ps9D9ovu0eglGMQ.tgz}
 
   '@univer-cli/svg-facade@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-bD3HWbOIFjhenOaNPRBfJmZf6j06jsjaBvySJU19IlbjqB+uwHtvexvirOQJd0ghBMB8JLC3yrapAYZubyFcqA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univer-cli/svg-facade/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-bD3HWbOIFjhenOaNPRBfJmZf6j06jsjaBvySJU19IlbjqB+uwHtvexvirOQJd0ghBMB8JLC3yrapAYZubyFcqA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univer-cli%2Fsvg-facade/1.0.0-insiders.20260819-8595af2/bD3HWbOIFjhenOaNPRBfJmZf6j06jsjaBvySJU19IlbjqB-uwHtvexvirOQJd0ghBMB8JLC3yrapAYZubyFcqA.tgz}
 
   '@univer-cli/unit-layout-lint@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-DLNMrvQ+D288YR+DCYJldRR7vWzB0rJI22tftoG8MSSicBEbpN0g2KGfJfXfVSOuDu9u52/RCoS0oo60xE+LhQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univer-cli/unit-layout-lint/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-DLNMrvQ+D288YR+DCYJldRR7vWzB0rJI22tftoG8MSSicBEbpN0g2KGfJfXfVSOuDu9u52/RCoS0oo60xE+LhQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univer-cli%2Funit-layout-lint/1.0.0-insiders.20260819-8595af2/DLNMrvQ-D288YR-DCYJldRR7vWzB0rJI22tftoG8MSSicBEbpN0g2KGfJfXfVSOuDu9u52_RCoS0oo60xE-LhQ.tgz}
 
   '@univer-cli/univer-collaboration-runtime@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-syrAysfQV90HjSITg3dEy1/T6wpDT+WrKuZfzDz1+i1LtNeLaCP2EQl7wWPja4XsKfAR83xkzRSQmScYgjHg/w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univer-cli/univer-collaboration-runtime/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-syrAysfQV90HjSITg3dEy1/T6wpDT+WrKuZfzDz1+i1LtNeLaCP2EQl7wWPja4XsKfAR83xkzRSQmScYgjHg/w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univer-cli%2Funiver-collaboration-runtime/1.0.0-insiders.20260819-8595af2/syrAysfQV90HjSITg3dEy1_T6wpDT-WrKuZfzDz1-i1LtNeLaCP2EQl7wWPja4XsKfAR83xkzRSQmScYgjHg_w.tgz}
 
   '@univer-cli/univer-render-page@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-0XUGCdcq3umy71eoKqSGj1ozM+5nLNnFniaMum36gIbsT0Me4UJfkeYtc4ktgsbQLyTZMTeeAyYVSO1Fau61gQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univer-cli/univer-render-page/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-0XUGCdcq3umy71eoKqSGj1ozM+5nLNnFniaMum36gIbsT0Me4UJfkeYtc4ktgsbQLyTZMTeeAyYVSO1Fau61gQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univer-cli%2Funiver-render-page/1.0.0-insiders.20260819-8595af2/0XUGCdcq3umy71eoKqSGj1ozM-5nLNnFniaMum36gIbsT0Me4UJfkeYtc4ktgsbQLyTZMTeeAyYVSO1Fau61gQ.tgz}
     peerDependencies:
       '@univer-cli/univer-render-runtime': 1.0.0-insiders.20260819-8595af2
 
   '@univer-cli/univer-render-runtime@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-kfK9rUA01vKBU/QKnVff8v/amP1Bzk8UXIAM74wXe9/spZUKskVp3sW5IE3ISkRxwzkUlFXJuH4nOo36h3B8zA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univer-cli/univer-render-runtime/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-kfK9rUA01vKBU/QKnVff8v/amP1Bzk8UXIAM74wXe9/spZUKskVp3sW5IE3ISkRxwzkUlFXJuH4nOo36h3B8zA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univer-cli%2Funiver-render-runtime/1.0.0-insiders.20260819-8595af2/kfK9rUA01vKBU_QKnVff8v_amP1Bzk8UXIAM74wXe9_spZUKskVp3sW5IE3ISkRxwzkUlFXJuH4nOo36h3B8zA.tgz}
 
   '@univerjs-pro/bases-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-pG6ubjkydF9NxwT/IJPn7Z26yEdT9SehrmQx2jT4eWshvoX7T/KJArQIt+Pv1vv5L7+rD+fz8mjOUCHGSa5d3w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/bases-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-pG6ubjkydF9NxwT/IJPn7Z26yEdT9SehrmQx2jT4eWshvoX7T/KJArQIt+Pv1vv5L7+rD+fz8mjOUCHGSa5d3w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fbases-ui/1.0.0-insiders.20260819-8595af2/pG6ubjkydF9NxwT_IJPn7Z26yEdT9SehrmQx2jT4eWshvoX7T_KJArQIt-Pv1vv5L7-rD-fz8mjOUCHGSa5d3w.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       react-dom: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/bases@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-S3dqOMjDeW0wRPQfrbG70I3yoOelq5gJTs3V1MQrOsUV1sCWRRq6CJHxWI+FdeMnPdVpGKOdlu+gbSs5M100YQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/bases/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-S3dqOMjDeW0wRPQfrbG70I3yoOelq5gJTs3V1MQrOsUV1sCWRRq6CJHxWI+FdeMnPdVpGKOdlu+gbSs5M100YQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fbases/1.0.0-insiders.20260819-8595af2/S3dqOMjDeW0wRPQfrbG70I3yoOelq5gJTs3V1MQrOsUV1sCWRRq6CJHxWI-FdeMnPdVpGKOdlu-gbSs5M100YQ.tgz}
 
   '@univerjs-pro/boards-chart-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-pAF47x43AYlOpUZql687ABQ2W33zDS84mG1MDLaRrqugF7TWgExiN2V2Gca4x2QvjGgdO0lrZjC5dquKoZ5RLQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/boards-chart-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-pAF47x43AYlOpUZql687ABQ2W33zDS84mG1MDLaRrqugF7TWgExiN2V2Gca4x2QvjGgdO0lrZjC5dquKoZ5RLQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fboards-chart-ui/1.0.0-insiders.20260819-8595af2/pAF47x43AYlOpUZql687ABQ2W33zDS84mG1MDLaRrqugF7TWgExiN2V2Gca4x2QvjGgdO0lrZjC5dquKoZ5RLQ.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/boards-chart@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-sZi7sJb6E96Mv2sFcgeJn895CVUBasme5W/ZQQ7SzqkfUpvfn5oYXpZqvEdYVH+kTDJQeEiHDLD20sP7bSsAmA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/boards-chart/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-sZi7sJb6E96Mv2sFcgeJn895CVUBasme5W/ZQQ7SzqkfUpvfn5oYXpZqvEdYVH+kTDJQeEiHDLD20sP7bSsAmA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fboards-chart/1.0.0-insiders.20260819-8595af2/sZi7sJb6E96Mv2sFcgeJn895CVUBasme5W_ZQQ7SzqkfUpvfn5oYXpZqvEdYVH-kTDJQeEiHDLD20sP7bSsAmA.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/boards-mind-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-mzEKU+buESpcxY+YBwCgFlysvYTl6Os4E92bH9sdmsTlAWNskcitiuqY4ok0igADx03ECgA9g+Tr2zTz2Jj64w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/boards-mind-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-mzEKU+buESpcxY+YBwCgFlysvYTl6Os4E92bH9sdmsTlAWNskcitiuqY4ok0igADx03ECgA9g+Tr2zTz2Jj64w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fboards-mind-ui/1.0.0-insiders.20260819-8595af2/mzEKU-buESpcxY-YBwCgFlysvYTl6Os4E92bH9sdmsTlAWNskcitiuqY4ok0igADx03ECgA9g-Tr2zTz2Jj64w.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/boards-mind@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-F97zG1Aa43i6ZXkU0xC8Fhw0OGFiXEghgYG2br4kEUCiHL0X+Rb9NwRaUFSnCT20v7wKkmJxYTub7Xo0EmPpbQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/boards-mind/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-F97zG1Aa43i6ZXkU0xC8Fhw0OGFiXEghgYG2br4kEUCiHL0X+Rb9NwRaUFSnCT20v7wKkmJxYTub7Xo0EmPpbQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fboards-mind/1.0.0-insiders.20260819-8595af2/F97zG1Aa43i6ZXkU0xC8Fhw0OGFiXEghgYG2br4kEUCiHL0X-Rb9NwRaUFSnCT20v7wKkmJxYTub7Xo0EmPpbQ.tgz}
 
   '@univerjs-pro/boards-print@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-IPM3NsigV8zh0s2O3UyuvZi1ibAWQWhptNHH+1wbZVnEFLvcyggs1bvvV5hvJv017hDM4vMJpCtCec/WlpraTg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/boards-print/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-IPM3NsigV8zh0s2O3UyuvZi1ibAWQWhptNHH+1wbZVnEFLvcyggs1bvvV5hvJv017hDM4vMJpCtCec/WlpraTg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fboards-print/1.0.0-insiders.20260819-8595af2/IPM3NsigV8zh0s2O3UyuvZi1ibAWQWhptNHH-1wbZVnEFLvcyggs1bvvV5hvJv017hDM4vMJpCtCec_WlpraTg.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/boards-table-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-RRzkS1FQCQRF1L3D1W64bvKDtNVHbR9xkaqOEIfdlcOOBOXZT03DflFrCNVK/GMHfDb9uBiwj7osKGukhYajJA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/boards-table-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-RRzkS1FQCQRF1L3D1W64bvKDtNVHbR9xkaqOEIfdlcOOBOXZT03DflFrCNVK/GMHfDb9uBiwj7osKGukhYajJA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fboards-table-ui/1.0.0-insiders.20260819-8595af2/RRzkS1FQCQRF1L3D1W64bvKDtNVHbR9xkaqOEIfdlcOOBOXZT03DflFrCNVK_GMHfDb9uBiwj7osKGukhYajJA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
 
   '@univerjs-pro/boards-table@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-RjfXhSWg9IxfE2/13wwWzaW7oE7/QBiusgrOzhcfTQR2NPlUAqL/V+tt3OFCaj+6IrribWqE40Qp7qHOqBhbwg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/boards-table/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-RjfXhSWg9IxfE2/13wwWzaW7oE7/QBiusgrOzhcfTQR2NPlUAqL/V+tt3OFCaj+6IrribWqE40Qp7qHOqBhbwg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fboards-table/1.0.0-insiders.20260819-8595af2/RjfXhSWg9IxfE2_13wwWzaW7oE7_QBiusgrOzhcfTQR2NPlUAqL_V-tt3OFCaj-6IrribWqE40Qp7qHOqBhbwg.tgz}
 
   '@univerjs-pro/boards-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-/RH5cuBxmKIQ2H3662THuwlSLs/IfvfrFR5aDcwv+ZfflxVGlnjYqARd0DfJOUbHmYWEaw1sEzimjmxyh5z76Q==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/boards-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-/RH5cuBxmKIQ2H3662THuwlSLs/IfvfrFR5aDcwv+ZfflxVGlnjYqARd0DfJOUbHmYWEaw1sEzimjmxyh5z76Q==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fboards-ui/1.0.0-insiders.20260819-8595af2/_RH5cuBxmKIQ2H3662THuwlSLs_IfvfrFR5aDcwv-ZfflxVGlnjYqARd0DfJOUbHmYWEaw1sEzimjmxyh5z76Q.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/boards@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-11On1V4i0iMW6uGY9D+esluXDnYIDv9rtphodC8GbMKQcer1/vwq8ohNnx/0W6Sr5Z+1ofw5VY4Vv3e5ByCrlg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/boards/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-11On1V4i0iMW6uGY9D+esluXDnYIDv9rtphodC8GbMKQcer1/vwq8ohNnx/0W6Sr5Z+1ofw5VY4Vv3e5ByCrlg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fboards/1.0.0-insiders.20260819-8595af2/11On1V4i0iMW6uGY9D-esluXDnYIDv9rtphodC8GbMKQcer1_vwq8ohNnx_0W6Sr5Z-1ofw5VY4Vv3e5ByCrlg.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/chart-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-UezoBsjrdDGrEqx670fCrVsAqJkdt7DN9tiFDc9D5Ztm1Uk6mXka0p7aQ/7lN+kb00cNnrAi10tIWmT8zvcecQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/chart-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-UezoBsjrdDGrEqx670fCrVsAqJkdt7DN9tiFDc9D5Ztm1Uk6mXka0p7aQ/7lN+kb00cNnrAi10tIWmT8zvcecQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fchart-ui/1.0.0-insiders.20260819-8595af2/UezoBsjrdDGrEqx670fCrVsAqJkdt7DN9tiFDc9D5Ztm1Uk6mXka0p7aQ_7lN-kb00cNnrAi10tIWmT8zvcecQ.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
@@ -2528,150 +2528,150 @@ packages:
     resolution: {integrity: sha512-LWgwulcNkL4lnaosAyPwTssgtih52FCgGfMt7k6QRWz1scRakjNp++3souMaIxbzxXjIPXSJmwwXiNCsWnBMCA==, tarball: https://registry.npmjs.org/@univerjs-pro/cli-assets/-/cli-assets-0.1.0.tgz}
 
   '@univerjs-pro/collaboration-client-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-jvHIj0lY0zK6Avh3kElWpkcmPH1c7oMLQtXARhKpT/iYLJoecSxgzS0VMUX//c8dAZVdKCB52/udaqI0tihhMA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/collaboration-client-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-jvHIj0lY0zK6Avh3kElWpkcmPH1c7oMLQtXARhKpT/iYLJoecSxgzS0VMUX//c8dAZVdKCB52/udaqI0tihhMA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fcollaboration-client-ui/1.0.0-insiders.20260819-8595af2/jvHIj0lY0zK6Avh3kElWpkcmPH1c7oMLQtXARhKpT_iYLJoecSxgzS0VMUX__c8dAZVdKCB52_udaqI0tihhMA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/collaboration-client@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-CZAibToBiXIAyY7Xa6r7znaClxTrRylGRfqpWPhWJdwd+BMKM8KwBUuWhHAKvg04UKjJwP39RbH1Ny+uZfnmfQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/collaboration-client/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-CZAibToBiXIAyY7Xa6r7znaClxTrRylGRfqpWPhWJdwd+BMKM8KwBUuWhHAKvg04UKjJwP39RbH1Ny+uZfnmfQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fcollaboration-client/1.0.0-insiders.20260819-8595af2/CZAibToBiXIAyY7Xa6r7znaClxTrRylGRfqpWPhWJdwd-BMKM8KwBUuWhHAKvg04UKjJwP39RbH1Ny-uZfnmfQ.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/collaboration-embed@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-GMoIapIfRTuhxxCxAYHQj8oHLeCtPowZhvVxzKt3iJIED8b2VQxOuCLKJGs2B22GT6+uttKZRbcgkdYS+Ns5CQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/collaboration-embed/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-GMoIapIfRTuhxxCxAYHQj8oHLeCtPowZhvVxzKt3iJIED8b2VQxOuCLKJGs2B22GT6+uttKZRbcgkdYS+Ns5CQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fcollaboration-embed/1.0.0-insiders.20260819-8595af2/GMoIapIfRTuhxxCxAYHQj8oHLeCtPowZhvVxzKt3iJIED8b2VQxOuCLKJGs2B22GT6-uttKZRbcgkdYS-Ns5CQ.tgz}
 
   '@univerjs-pro/collaboration-endpoint@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-2uJS2XIAzBY+vK1azwO30t69DdVCYm4s2JU2rAQKm/eh1hzTVPZKXPCJgFutneYwYjmeQeazLQW3iM9pmEoJ1g==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/collaboration-endpoint/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-2uJS2XIAzBY+vK1azwO30t69DdVCYm4s2JU2rAQKm/eh1hzTVPZKXPCJgFutneYwYjmeQeazLQW3iM9pmEoJ1g==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fcollaboration-endpoint/1.0.0-insiders.20260819-8595af2/2uJS2XIAzBY-vK1azwO30t69DdVCYm4s2JU2rAQKm_eh1hzTVPZKXPCJgFutneYwYjmeQeazLQW3iM9pmEoJ1g.tgz}
 
   '@univerjs-pro/collaboration-service@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-D2OpvqF3imu8Ybmq79heh31yDE7shCaU30nMcTUdYnbM+xcGSpbSqSBKrfJ1WOBdt6WzphxBYVco5i3b4c9/ZA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/collaboration-service/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-D2OpvqF3imu8Ybmq79heh31yDE7shCaU30nMcTUdYnbM+xcGSpbSqSBKrfJ1WOBdt6WzphxBYVco5i3b4c9/ZA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fcollaboration-service/1.0.0-insiders.20260819-8595af2/D2OpvqF3imu8Ybmq79heh31yDE7shCaU30nMcTUdYnbM-xcGSpbSqSBKrfJ1WOBdt6WzphxBYVco5i3b4c9_ZA.tgz}
 
   '@univerjs-pro/collaboration-transport-node@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-2Hzs/yCpoTDXqZsphwzUBO+0O5C/ZBSyGlmInUdkDyA1eLS8iBnFK6cmT677C6vNHigDUHKyJvnEofJO0BM8Xg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/collaboration-transport-node/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-2Hzs/yCpoTDXqZsphwzUBO+0O5C/ZBSyGlmInUdkDyA1eLS8iBnFK6cmT677C6vNHigDUHKyJvnEofJO0BM8Xg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fcollaboration-transport-node/1.0.0-insiders.20260819-8595af2/2Hzs_yCpoTDXqZsphwzUBO-0O5C_ZBSyGlmInUdkDyA1eLS8iBnFK6cmT677C6vNHigDUHKyJvnEofJO0BM8Xg.tgz}
 
   '@univerjs-pro/collaboration-worktree-endpoint@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-jZnxy5A53M+LBBi5tUCL1AMFD7Gm29OpG8JbDQXoryEmZViow6DZddlg1EtlaoHMRrBT0QrwS1JLWJvlpiUseA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/collaboration-worktree-endpoint/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-jZnxy5A53M+LBBi5tUCL1AMFD7Gm29OpG8JbDQXoryEmZViow6DZddlg1EtlaoHMRrBT0QrwS1JLWJvlpiUseA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fcollaboration-worktree-endpoint/1.0.0-insiders.20260819-8595af2/jZnxy5A53M-LBBi5tUCL1AMFD7Gm29OpG8JbDQXoryEmZViow6DZddlg1EtlaoHMRrBT0QrwS1JLWJvlpiUseA.tgz}
 
   '@univerjs-pro/collaboration-worktree-service@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-oPjJLXyEhgsifjnfMcdmyMktA0X+ZOwfS5aNhFbEAl0ZDi+INPW7jzur8yMQuhK5uFBpXc2jkrl8dQ5x9a5ZYA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/collaboration-worktree-service/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-oPjJLXyEhgsifjnfMcdmyMktA0X+ZOwfS5aNhFbEAl0ZDi+INPW7jzur8yMQuhK5uFBpXc2jkrl8dQ5x9a5ZYA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fcollaboration-worktree-service/1.0.0-insiders.20260819-8595af2/oPjJLXyEhgsifjnfMcdmyMktA0X-ZOwfS5aNhFbEAl0ZDi-INPW7jzur8yMQuhK5uFBpXc2jkrl8dQ5x9a5ZYA.tgz}
 
   '@univerjs-pro/collaboration@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-OjCHI3lVjpETRt0boYsPiUBoosJLzslgVNNFKvdX1hCzlV5G2MAfMb1l2FQrgWFWjzhz2nipllqozxex21KfGA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/collaboration/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-OjCHI3lVjpETRt0boYsPiUBoosJLzslgVNNFKvdX1hCzlV5G2MAfMb1l2FQrgWFWjzhz2nipllqozxex21KfGA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fcollaboration/1.0.0-insiders.20260819-8595af2/OjCHI3lVjpETRt0boYsPiUBoosJLzslgVNNFKvdX1hCzlV5G2MAfMb1l2FQrgWFWjzhz2nipllqozxex21KfGA.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-callout-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-TlHsiG53enlBLekFyqLAFrKq9td22o/lCjfXYjK2uIuvp5kbGQRYf/oDhRcZ6WIk23BomSpB+KYg/kizD9yEsA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-callout-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-TlHsiG53enlBLekFyqLAFrKq9td22o/lCjfXYjK2uIuvp5kbGQRYf/oDhRcZ6WIk23BomSpB+KYg/kizD9yEsA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-callout-ui/1.0.0-insiders.20260819-8595af2/TlHsiG53enlBLekFyqLAFrKq9td22o_lCjfXYjK2uIuvp5kbGQRYf_oDhRcZ6WIk23BomSpB-KYg_kizD9yEsA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-callout@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-lUU+rdUg/AI6hcknDSf5+zn+dxMbpEgCbLwdWOtvpIyBVY3QAHlCG0toKd1ccOyirf6BB1Wc5fYICG5e+ztH6A==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-callout/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-lUU+rdUg/AI6hcknDSf5+zn+dxMbpEgCbLwdWOtvpIyBVY3QAHlCG0toKd1ccOyirf6BB1Wc5fYICG5e+ztH6A==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-callout/1.0.0-insiders.20260819-8595af2/lUU-rdUg_AI6hcknDSf5-zn-dxMbpEgCbLwdWOtvpIyBVY3QAHlCG0toKd1ccOyirf6BB1Wc5fYICG5e-ztH6A.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-chart-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-Oz0rcJnH/5ttq3Pfifw1ceVnS83WmnoVsZthpbPjtHToiVzbAZFGNLBRqVZfc7fJ7WKH4nMzaq30psiHd8Vi2g==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-chart-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-Oz0rcJnH/5ttq3Pfifw1ceVnS83WmnoVsZthpbPjtHToiVzbAZFGNLBRqVZfc7fJ7WKH4nMzaq30psiHd8Vi2g==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-chart-ui/1.0.0-insiders.20260819-8595af2/Oz0rcJnH_5ttq3Pfifw1ceVnS83WmnoVsZthpbPjtHToiVzbAZFGNLBRqVZfc7fJ7WKH4nMzaq30psiHd8Vi2g.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-chart@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-dyIanLyxDY2iNwhPTsSR4dSZ7PLhxZNWZkg27o7gEu4Rv8BAm8YhH/jEzRLGmGgRSGXVGT+vmnlMAEmixjFPbQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-chart/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-dyIanLyxDY2iNwhPTsSR4dSZ7PLhxZNWZkg27o7gEu4Rv8BAm8YhH/jEzRLGmGgRSGXVGT+vmnlMAEmixjFPbQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-chart/1.0.0-insiders.20260819-8595af2/dyIanLyxDY2iNwhPTsSR4dSZ7PLhxZNWZkg27o7gEu4Rv8BAm8YhH_jEzRLGmGgRSGXVGT-vmnlMAEmixjFPbQ.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-code-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-guxTu5myatrYwjh/roact72TXY7JI0mUvgV33cYTFK8pSQ5plslgfDtpFQLNKxug5uUnCNM6FY/6FkSNmusufw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-code-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-guxTu5myatrYwjh/roact72TXY7JI0mUvgV33cYTFK8pSQ5plslgfDtpFQLNKxug5uUnCNM6FY/6FkSNmusufw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-code-ui/1.0.0-insiders.20260819-8595af2/guxTu5myatrYwjh_roact72TXY7JI0mUvgV33cYTFK8pSQ5plslgfDtpFQLNKxug5uUnCNM6FY_6FkSNmusufw.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-code@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-FazQFaGGfBrniwwuMJhN1i5ovzlaLhxJ6WKa2zXXcmE58KAHUZ9lb5qSoisAE9lKUZAh/s8h7MrDrn6BbvZqvg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-code/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-FazQFaGGfBrniwwuMJhN1i5ovzlaLhxJ6WKa2zXXcmE58KAHUZ9lb5qSoisAE9lKUZAh/s8h7MrDrn6BbvZqvg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-code/1.0.0-insiders.20260819-8595af2/FazQFaGGfBrniwwuMJhN1i5ovzlaLhxJ6WKa2zXXcmE58KAHUZ9lb5qSoisAE9lKUZAh_s8h7MrDrn6BbvZqvg.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-column-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-kzULzVL33nQ9Nf63G0QgK5BrB5FQH7SocH/egBSwO//pn6oSihMRvyKfiqZFVydrl/TfXT7KBMabHy49QXGAxw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-column-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-kzULzVL33nQ9Nf63G0QgK5BrB5FQH7SocH/egBSwO//pn6oSihMRvyKfiqZFVydrl/TfXT7KBMabHy49QXGAxw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-column-ui/1.0.0-insiders.20260819-8595af2/kzULzVL33nQ9Nf63G0QgK5BrB5FQH7SocH_egBSwO__pn6oSihMRvyKfiqZFVydrl_TfXT7KBMabHy49QXGAxw.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-column@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-4we6bY6EbPd74LUezrKqMulecvNivXdZfcPay4YJVv/40qs3aPVV/1UUl6O6leaarBlh+LokezuGmRbeL8TO2A==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-column/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-4we6bY6EbPd74LUezrKqMulecvNivXdZfcPay4YJVv/40qs3aPVV/1UUl6O6leaarBlh+LokezuGmRbeL8TO2A==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-column/1.0.0-insiders.20260819-8595af2/4we6bY6EbPd74LUezrKqMulecvNivXdZfcPay4YJVv_40qs3aPVV_1UUl6O6leaarBlh-LokezuGmRbeL8TO2A.tgz}
 
   '@univerjs-pro/docs-latex-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-xpXXc9BKfSZf+cZTChUAq+NJ9jChRSLAwzP4zFIbyd+HpzTFLuHEdQTVaaDpsHO8+wsFYPnISyKL6u79rTR2dw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-latex-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-xpXXc9BKfSZf+cZTChUAq+NJ9jChRSLAwzP4zFIbyd+HpzTFLuHEdQTVaaDpsHO8+wsFYPnISyKL6u79rTR2dw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-latex-ui/1.0.0-insiders.20260819-8595af2/xpXXc9BKfSZf-cZTChUAq-NJ9jChRSLAwzP4zFIbyd-HpzTFLuHEdQTVaaDpsHO8-wsFYPnISyKL6u79rTR2dw.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-latex@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-6M5r55qMzw1/YDtzDzguwGzh1Y2RpQXJOCiz5/V9vZhNDyA+/7v94Ef5Tfh4Qz9/1L2a2rNdrzXf5quEZTXMig==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-latex/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-6M5r55qMzw1/YDtzDzguwGzh1Y2RpQXJOCiz5/V9vZhNDyA+/7v94Ef5Tfh4Qz9/1L2a2rNdrzXf5quEZTXMig==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-latex/1.0.0-insiders.20260819-8595af2/6M5r55qMzw1_YDtzDzguwGzh1Y2RpQXJOCiz5_V9vZhNDyA-_7v94Ef5Tfh4Qz9_1L2a2rNdrzXf5quEZTXMig.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-list-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-ZAkMq9J9YJqYCJpgeWLTzHg40mdpEVM4k9ZjLybA5YKw9C6JLmk6EHu+UUCJxm952cYvVNpJEl3hGyV30/2V3A==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-list-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-ZAkMq9J9YJqYCJpgeWLTzHg40mdpEVM4k9ZjLybA5YKw9C6JLmk6EHu+UUCJxm952cYvVNpJEl3hGyV30/2V3A==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-list-ui/1.0.0-insiders.20260819-8595af2/ZAkMq9J9YJqYCJpgeWLTzHg40mdpEVM4k9ZjLybA5YKw9C6JLmk6EHu-UUCJxm952cYvVNpJEl3hGyV30_2V3A.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-list@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-N8irfrCE/3LpZK3binkAtWbxI1cWCqNuDFNxV5OkxDWlbCuR7B2y2UN4eLIvo9/g86W5Z59YW3PptgiDamHKfw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-list/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-N8irfrCE/3LpZK3binkAtWbxI1cWCqNuDFNxV5OkxDWlbCuR7B2y2UN4eLIvo9/g86W5Z59YW3PptgiDamHKfw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-list/1.0.0-insiders.20260819-8595af2/N8irfrCE_3LpZK3binkAtWbxI1cWCqNuDFNxV5OkxDWlbCuR7B2y2UN4eLIvo9_g86W5Z59YW3PptgiDamHKfw.tgz}
 
   '@univerjs-pro/docs-quote-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-wq63JpUJRbJkgxE2Do8mJPZ3IhcJ36UaKgI7uhS51y2qwyURBIKDCEzWaOCMfdp8WAu24XC9nl0i+IWPaOgcSA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-quote-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-wq63JpUJRbJkgxE2Do8mJPZ3IhcJ36UaKgI7uhS51y2qwyURBIKDCEzWaOCMfdp8WAu24XC9nl0i+IWPaOgcSA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-quote-ui/1.0.0-insiders.20260819-8595af2/wq63JpUJRbJkgxE2Do8mJPZ3IhcJ36UaKgI7uhS51y2qwyURBIKDCEzWaOCMfdp8WAu24XC9nl0i-IWPaOgcSA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-quote@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-oLmnKTzE0jJEFQ+snabo742e4EGu7ZL/EdaxYaIIKIfOkiVJI0xs5mIVlZGxb89R/KRSNDJ/jJcLxqRe0dN0Ug==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-quote/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-oLmnKTzE0jJEFQ+snabo742e4EGu7ZL/EdaxYaIIKIfOkiVJI0xs5mIVlZGxb89R/KRSNDJ/jJcLxqRe0dN0Ug==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-quote/1.0.0-insiders.20260819-8595af2/oLmnKTzE0jJEFQ-snabo742e4EGu7ZL_EdaxYaIIKIfOkiVJI0xs5mIVlZGxb89R_KRSNDJ_jJcLxqRe0dN0Ug.tgz}
 
   '@univerjs-pro/docs-shape-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-HNechzivM1eMVx/fhmh6hJyzVZMyhIWMhbJ2mEHRRDKVnnRS3tvIrMWcUfXcxkVuRQz7iq3rLIdpxh/ETXHAUA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-shape-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-HNechzivM1eMVx/fhmh6hJyzVZMyhIWMhbJ2mEHRRDKVnnRS3tvIrMWcUfXcxkVuRQz7iq3rLIdpxh/ETXHAUA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-shape-ui/1.0.0-insiders.20260819-8595af2/HNechzivM1eMVx_fhmh6hJyzVZMyhIWMhbJ2mEHRRDKVnnRS3tvIrMWcUfXcxkVuRQz7iq3rLIdpxh_ETXHAUA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-shape@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-nrgfP+b2jvTldn/sUGHtNBClOTaX8l+eDgMwi4FBaCZWKFs6ZnJVEHRcM6yRkCkOT9uwUhUmkO9sMtEfRMKadg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-shape/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-nrgfP+b2jvTldn/sUGHtNBClOTaX8l+eDgMwi4FBaCZWKFs6ZnJVEHRcM6yRkCkOT9uwUhUmkO9sMtEfRMKadg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-shape/1.0.0-insiders.20260819-8595af2/nrgfP-b2jvTldn_sUGHtNBClOTaX8l-eDgMwi4FBaCZWKFs6ZnJVEHRcM6yRkCkOT9uwUhUmkO9sMtEfRMKadg.tgz}
 
   '@univerjs-pro/docs-table-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-FOqbcRiWjMSmTDKM1f0INtMrfIpMwq45W8F5UJUsRCNaK9PEYv1zGCu34efgtoX2iwsmYqeiBGbmysLZN4qjEA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-table-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-FOqbcRiWjMSmTDKM1f0INtMrfIpMwq45W8F5UJUsRCNaK9PEYv1zGCu34efgtoX2iwsmYqeiBGbmysLZN4qjEA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-table-ui/1.0.0-insiders.20260819-8595af2/FOqbcRiWjMSmTDKM1f0INtMrfIpMwq45W8F5UJUsRCNaK9PEYv1zGCu34efgtoX2iwsmYqeiBGbmysLZN4qjEA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-table@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-+YAOOd0NV+g1WQ0+LTEQ1p1DOpFr7TgAEWTLWlnCthK4tFl0j5KBNa1O+dLWf17fHkLtZtLWOpNxMMxzk55DmQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/docs-table/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-+YAOOd0NV+g1WQ0+LTEQ1p1DOpFr7TgAEWTLWlnCthK4tFl0j5KBNa1O+dLWf17fHkLtZtLWOpNxMMxzk55DmQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fdocs-table/1.0.0-insiders.20260819-8595af2/-YAOOd0NV-g1WQ0-LTEQ1p1DOpFr7TgAEWTLWlnCthK4tFl0j5KBNa1O-dLWf17fHkLtZtLWOpNxMMxzk55DmQ.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/embed-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-w+faRhpcqc2PaEkYEKGjNOjO+RBsck6yOeV2rj3QaAzJrK+r5V3/m6RKYLugtye8wRNSL1EsV5MiplyGuRSPRw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/embed-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-w+faRhpcqc2PaEkYEKGjNOjO+RBsck6yOeV2rj3QaAzJrK+r5V3/m6RKYLugtye8wRNSL1EsV5MiplyGuRSPRw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fembed-ui/1.0.0-insiders.20260819-8595af2/w-faRhpcqc2PaEkYEKGjNOjO-RBsck6yOeV2rj3QaAzJrK-r5V3_m6RKYLugtye8wRNSL1EsV5MiplyGuRSPRw.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       react-dom: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/embed-unit-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-GCUcXZVtmyS0qBZpf5xQGo8M2n0zsUG0VhG72rM/stCZ+o+RL5Lsq+4VaJ3CLU55/bgLrOL4s/YDdJDHLcit4g==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/embed-unit-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-GCUcXZVtmyS0qBZpf5xQGo8M2n0zsUG0VhG72rM/stCZ+o+RL5Lsq+4VaJ3CLU55/bgLrOL4s/YDdJDHLcit4g==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fembed-unit-ui/1.0.0-insiders.20260819-8595af2/GCUcXZVtmyS0qBZpf5xQGo8M2n0zsUG0VhG72rM_stCZ-o-RL5Lsq-4VaJ3CLU55_bgLrOL4s_YDdJDHLcit4g.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/embed@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-6hIblvLy4VYDzbuJ1wGeMwh81GSvIs6/mA+rUs3CCRXDHS6sHYEdVUw8XNlbc/n6tdPJ/sUpYc+XVBs/olcoIQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/embed/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-6hIblvLy4VYDzbuJ1wGeMwh81GSvIs6/mA+rUs3CCRXDHS6sHYEdVUw8XNlbc/n6tdPJ/sUpYc+XVBs/olcoIQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fembed/1.0.0-insiders.20260819-8595af2/6hIblvLy4VYDzbuJ1wGeMwh81GSvIs6_mA-rUs3CCRXDHS6sHYEdVUw8XNlbc_n6tdPJ_sUpYc-XVBs_olcoIQ.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/engine-chart@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-Wo0c6QqwfA9HDnlXkl6dxmKCy4Q050NTAxJXBp2efc/s6YEMDNjYP+IA1Zn6hNGBY45am27xEKCUdpnYT7Nlxg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/engine-chart/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-Wo0c6QqwfA9HDnlXkl6dxmKCy4Q050NTAxJXBp2efc/s6YEMDNjYP+IA1Zn6hNGBY45am27xEKCUdpnYT7Nlxg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fengine-chart/1.0.0-insiders.20260819-8595af2/Wo0c6QqwfA9HDnlXkl6dxmKCy4Q050NTAxJXBp2efc_s6YEMDNjYP-IA1Zn6hNGBY45am27xEKCUdpnYT7Nlxg.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
@@ -2701,259 +2701,259 @@ packages:
     resolution: {integrity: sha512-R4kbmQTThpejph0FUM8zCXJ9tHh1beZhxNSDK+OsBZeLKsQqKAAEaBbCM5iCktKWK2T7fwKYDKlvMiMjzRQ2Rw==, tarball: https://registry.npmjs.org/@univerjs-pro/engine-formula-rust-binding/-/engine-formula-rust-binding-1.0.0-insiders.20260811-001a0e5.tgz}
 
   '@univerjs-pro/engine-formula-rust@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-Q+dAYzRXtJ3DcvgypNqbRudrc6oD4zGF6jKLo1GucC4THyWk243jRuAFVEBhvRZO1aNXDntdWbM70zambOJn5w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/engine-formula-rust/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-Q+dAYzRXtJ3DcvgypNqbRudrc6oD4zGF6jKLo1GucC4THyWk243jRuAFVEBhvRZO1aNXDntdWbM70zambOJn5w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fengine-formula-rust/1.0.0-insiders.20260819-8595af2/Q-dAYzRXtJ3DcvgypNqbRudrc6oD4zGF6jKLo1GucC4THyWk243jRuAFVEBhvRZO1aNXDntdWbM70zambOJn5w.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/engine-formula@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-R7kNFaioyLtiwiLxTVEeB05aU821hji0UNub0TLXA9A7403LPmqZXhkGC3q2VhYygDESUjowtkYJoYBgL6Jczw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/engine-formula/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-R7kNFaioyLtiwiLxTVEeB05aU821hji0UNub0TLXA9A7403LPmqZXhkGC3q2VhYygDESUjowtkYJoYBgL6Jczw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fengine-formula/1.0.0-insiders.20260819-8595af2/R7kNFaioyLtiwiLxTVEeB05aU821hji0UNub0TLXA9A7403LPmqZXhkGC3q2VhYygDESUjowtkYJoYBgL6Jczw.tgz}
 
   '@univerjs-pro/engine-pivot@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-ET9EOUMLnbDv50mwuVEr56vLD0b4z7f3qyYgoeBJ8jRsEwHPotNLE4CuU/Qh0l575nXLqRe8OSzm4EVANeWwaQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/engine-pivot/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-ET9EOUMLnbDv50mwuVEr56vLD0b4z7f3qyYgoeBJ8jRsEwHPotNLE4CuU/Qh0l575nXLqRe8OSzm4EVANeWwaQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fengine-pivot/1.0.0-insiders.20260819-8595af2/ET9EOUMLnbDv50mwuVEr56vLD0b4z7f3qyYgoeBJ8jRsEwHPotNLE4CuU_Qh0l575nXLqRe8OSzm4EVANeWwaQ.tgz}
 
   '@univerjs-pro/engine-shape@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-7FTJ13RX2o4YpqvtDe1Xt7vN865XFjslxH79zXiMvRs1VQ16WUbJe+JeB8bJdNHJiQXgiDG1jrW7yjgdRf6gwQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/engine-shape/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-7FTJ13RX2o4YpqvtDe1Xt7vN865XFjslxH79zXiMvRs1VQ16WUbJe+JeB8bJdNHJiQXgiDG1jrW7yjgdRf6gwQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fengine-shape/1.0.0-insiders.20260819-8595af2/7FTJ13RX2o4YpqvtDe1Xt7vN865XFjslxH79zXiMvRs1VQ16WUbJe-JeB8bJdNHJiQXgiDG1jrW7yjgdRf6gwQ.tgz}
 
   '@univerjs-pro/exchange-client@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-/azJfWWM9orhI57GI5Xe+D5Y0ZeOPexrlhiuvf+zgRu57JL6n+C7JFmYl+aNTSnuxzadqbXG+pXw9c8dOx32DA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/exchange-client/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-/azJfWWM9orhI57GI5Xe+D5Y0ZeOPexrlhiuvf+zgRu57JL6n+C7JFmYl+aNTSnuxzadqbXG+pXw9c8dOx32DA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fexchange-client/1.0.0-insiders.20260819-8595af2/_azJfWWM9orhI57GI5Xe-D5Y0ZeOPexrlhiuvf-zgRu57JL6n-C7JFmYl-aNTSnuxzadqbXG-pXw9c8dOx32DA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/exchange-node-binding-darwin-arm64@0.1.0':
-    resolution: {integrity: sha512-QoNg/6PyhpwRmOdzmkZpb5EoM1Z/zNOCT3yyFzDyyKLObjD/Q1fvWRnicuhlB7Bi9HK4rKRAKWq3hn7DRY/LGg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/exchange-node-binding-darwin-arm64/versions/0.1.0/package.tgz}
+    resolution: {integrity: sha512-QoNg/6PyhpwRmOdzmkZpb5EoM1Z/zNOCT3yyFzDyyKLObjD/Q1fvWRnicuhlB7Bi9HK4rKRAKWq3hn7DRY/LGg==, tarball: https://registry.npmjs.org/@univerjs-pro/exchange-node-binding-darwin-arm64/-/exchange-node-binding-darwin-arm64-0.1.0.tgz}
     cpu: [arm64]
     os: [darwin]
 
   '@univerjs-pro/exchange-node-binding-linux-arm64-gnu@0.1.0':
-    resolution: {integrity: sha512-qcFw4sCb02pyPdvQfM4JTG7/EPHgnerKcu+VWO/O7pxXW8lIoFKC897Bwx6+xYThrjAtLl9ycyEWZaVCKQL4lA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/exchange-node-binding-linux-arm64-gnu/versions/0.1.0/package.tgz}
+    resolution: {integrity: sha512-qcFw4sCb02pyPdvQfM4JTG7/EPHgnerKcu+VWO/O7pxXW8lIoFKC897Bwx6+xYThrjAtLl9ycyEWZaVCKQL4lA==, tarball: https://registry.npmjs.org/@univerjs-pro/exchange-node-binding-linux-arm64-gnu/-/exchange-node-binding-linux-arm64-gnu-0.1.0.tgz}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
   '@univerjs-pro/exchange-node-binding-linux-x64-gnu@0.1.0':
-    resolution: {integrity: sha512-qGDzRn67tqINU/zZ8luvDq2G1O2gYECZOzN42LtPotCDkFLEcYMweExe+vV4QaJ9tx8tBMQt/fnGTpfH/kzEgw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/exchange-node-binding-linux-x64-gnu/versions/0.1.0/package.tgz}
+    resolution: {integrity: sha512-qGDzRn67tqINU/zZ8luvDq2G1O2gYECZOzN42LtPotCDkFLEcYMweExe+vV4QaJ9tx8tBMQt/fnGTpfH/kzEgw==, tarball: https://registry.npmjs.org/@univerjs-pro/exchange-node-binding-linux-x64-gnu/-/exchange-node-binding-linux-x64-gnu-0.1.0.tgz}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
   '@univerjs-pro/exchange-node-binding-win32-x64-msvc@0.1.0':
-    resolution: {integrity: sha512-eO79lZCXEtnFbArmXFKIMxUoKfiDtAhfClG+uZVmvqcg+blj7BD/Rn/WSmyB4CYciXdRcR4QAX0Si0DaMrxfgA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/exchange-node-binding-win32-x64-msvc/versions/0.1.0/package.tgz}
+    resolution: {integrity: sha512-eO79lZCXEtnFbArmXFKIMxUoKfiDtAhfClG+uZVmvqcg+blj7BD/Rn/WSmyB4CYciXdRcR4QAX0Si0DaMrxfgA==, tarball: https://registry.npmjs.org/@univerjs-pro/exchange-node-binding-win32-x64-msvc/-/exchange-node-binding-win32-x64-msvc-0.1.0.tgz}
     cpu: [x64]
     os: [win32]
 
   '@univerjs-pro/exchange-node-binding@0.1.0':
-    resolution: {integrity: sha512-opsPVyI2WFafWzvFSdRvy2Fz5leMS6edwqc4o8GYqzIRSu36DkpWaydvFRGcXLN+CxhB6EkpHDQaFIRextey8w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/exchange-node-binding/versions/0.1.0/package.tgz}
+    resolution: {integrity: sha512-opsPVyI2WFafWzvFSdRvy2Fz5leMS6edwqc4o8GYqzIRSu36DkpWaydvFRGcXLN+CxhB6EkpHDQaFIRextey8w==, tarball: https://registry.npmjs.org/@univerjs-pro/exchange-node-binding/-/exchange-node-binding-0.1.0.tgz}
 
   '@univerjs-pro/exchange-node@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-tADRVxotmJXq1ed6/GjHn5xy+QTQIucs61Y3/ZUzRcih8eLHnuN8AXQEaQFsYgV1VTS++hSmHguXh74Mk7gC+Q==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/exchange-node/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-tADRVxotmJXq1ed6/GjHn5xy+QTQIucs61Y3/ZUzRcih8eLHnuN8AXQEaQFsYgV1VTS++hSmHguXh74Mk7gC+Q==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fexchange-node/1.0.0-insiders.20260819-8595af2/tADRVxotmJXq1ed6_GjHn5xy-QTQIucs61Y3_ZUzRcih8eLHnuN8AXQEaQFsYgV1VTS--hSmHguXh74Mk7gC-Q.tgz}
 
   '@univerjs-pro/ink-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-fHDOhDLEzbzHtEywS7X5A760WWlZIQJNILfOD0VJyotc4r1EBcWMYNTepWVN/4wHYFWlpoNUMHmSfWtVzD7maQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/ink-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-fHDOhDLEzbzHtEywS7X5A760WWlZIQJNILfOD0VJyotc4r1EBcWMYNTepWVN/4wHYFWlpoNUMHmSfWtVzD7maQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fink-ui/1.0.0-insiders.20260819-8595af2/fHDOhDLEzbzHtEywS7X5A760WWlZIQJNILfOD0VJyotc4r1EBcWMYNTepWVN_4wHYFWlpoNUMHmSfWtVzD7maQ.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/ink@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-3rXqPL5SASz+3fVIHIjr+0z2ji+pVJeoN4R5U4YbKmRbfVfnbwf1TldLOGdhIF8yCTEv7MInEhRXnBrnPIwkdw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/ink/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-3rXqPL5SASz+3fVIHIjr+0z2ji+pVJeoN4R5U4YbKmRbfVfnbwf1TldLOGdhIF8yCTEv7MInEhRXnBrnPIwkdw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fink/1.0.0-insiders.20260819-8595af2/3rXqPL5SASz-3fVIHIjr-0z2ji-pVJeoN4R5U4YbKmRbfVfnbwf1TldLOGdhIF8yCTEv7MInEhRXnBrnPIwkdw.tgz}
 
   '@univerjs-pro/license@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-oEqqZUZ4AQImCwwmnZsyDkHwOKDw84KwIhug6FnWnpBssZCNHPD88atoQvw9FfucQYOepZPCze+om2OUCg/tiw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/license/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-oEqqZUZ4AQImCwwmnZsyDkHwOKDw84KwIhug6FnWnpBssZCNHPD88atoQvw9FfucQYOepZPCze+om2OUCg/tiw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Flicense/1.0.0-insiders.20260819-8595af2/oEqqZUZ4AQImCwwmnZsyDkHwOKDw84KwIhug6FnWnpBssZCNHPD88atoQvw9FfucQYOepZPCze-om2OUCg_tiw.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/pdfs@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-gN/reSSmS5CiqgPjZfuL4fX6heONZTZ3G0LJvSLofkM1CFxTf6BRzTi+4Tl6Xh4aAN4vyA/8zJotXhKJ51bu3A==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/pdfs/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-gN/reSSmS5CiqgPjZfuL4fX6heONZTZ3G0LJvSLofkM1CFxTf6BRzTi+4Tl6Xh4aAN4vyA/8zJotXhKJ51bu3A==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fpdfs/1.0.0-insiders.20260819-8595af2/gN_reSSmS5CiqgPjZfuL4fX6heONZTZ3G0LJvSLofkM1CFxTf6BRzTi-4Tl6Xh4aAN4vyA_8zJotXhKJ51bu3A.tgz}
 
   '@univerjs-pro/print@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-/Ln22LYr2alRLUyMpNWNc0uPqJTTuNGAiDgKy6eaZk70hugx7vaPGwKD0CQ56sY0w/64PQQA2kBXugv5cRRrEA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/print/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-/Ln22LYr2alRLUyMpNWNc0uPqJTTuNGAiDgKy6eaZk70hugx7vaPGwKD0CQ56sY0w/64PQQA2kBXugv5cRRrEA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fprint/1.0.0-insiders.20260819-8595af2/_Ln22LYr2alRLUyMpNWNc0uPqJTTuNGAiDgKy6eaZk70hugx7vaPGwKD0CQ56sY0w_64PQQA2kBXugv5cRRrEA.tgz}
 
   '@univerjs-pro/range-preprocess@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-NvJzp8Wbnq7rACnr0UXRGYwcNXvZuatvLpVNpXoj8vXR9xE2sWTU3seCG2E7MQNFUHDmVFYhg0tNpoLboSm6oQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/range-preprocess/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-NvJzp8Wbnq7rACnr0UXRGYwcNXvZuatvLpVNpXoj8vXR9xE2sWTU3seCG2E7MQNFUHDmVFYhg0tNpoLboSm6oQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Frange-preprocess/1.0.0-insiders.20260819-8595af2/NvJzp8Wbnq7rACnr0UXRGYwcNXvZuatvLpVNpXoj8vXR9xE2sWTU3seCG2E7MQNFUHDmVFYhg0tNpoLboSm6oQ.tgz}
 
   '@univerjs-pro/shape-editor-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-qiwCMCdbMJKi5uddAF3A5iIyfsIEce28L+4Ys2poU6BXZ6n+iHEmendFoFS89Oxo6jCkiTfgkmhkuAhWzkoi8w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/shape-editor-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-qiwCMCdbMJKi5uddAF3A5iIyfsIEce28L+4Ys2poU6BXZ6n+iHEmendFoFS89Oxo6jCkiTfgkmhkuAhWzkoi8w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fshape-editor-ui/1.0.0-insiders.20260819-8595af2/qiwCMCdbMJKi5uddAF3A5iIyfsIEce28L-4Ys2poU6BXZ6n-iHEmendFoFS89Oxo6jCkiTfgkmhkuAhWzkoi8w.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/shape-editor@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-xKBqsQlazMYyn5kU56s3p9DK42q7TmRzETenZyst58Hb5D+ERGbJ3SMXjmq+IGssGxwIEy+ecoX9OyFG23RqFw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/shape-editor/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-xKBqsQlazMYyn5kU56s3p9DK42q7TmRzETenZyst58Hb5D+ERGbJ3SMXjmq+IGssGxwIEy+ecoX9OyFG23RqFw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fshape-editor/1.0.0-insiders.20260819-8595af2/xKBqsQlazMYyn5kU56s3p9DK42q7TmRzETenZyst58Hb5D-ERGbJ3SMXjmq-IGssGxwIEy-ecoX9OyFG23RqFw.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-chart-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-u9FLnFXRxbUft0RCvB399c+AC5gSoZh7+E/EqqETOF1sFvIjd6Wz1ptWENpJpp4EUBDKTVIs0YdBtDjN66z9iQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-chart-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-u9FLnFXRxbUft0RCvB399c+AC5gSoZh7+E/EqqETOF1sFvIjd6Wz1ptWENpJpp4EUBDKTVIs0YdBtDjN66z9iQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-chart-ui/1.0.0-insiders.20260819-8595af2/u9FLnFXRxbUft0RCvB399c-AC5gSoZh7-E_EqqETOF1sFvIjd6Wz1ptWENpJpp4EUBDKTVIs0YdBtDjN66z9iQ.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-chart@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-xbUi4XneZaV/Xw2ZPRCfSQeMzkxCzlzqXo+xcI5tjV55G4r8i72NF2T8GNJ1+DlGQLeUmiJ0TajKaF1SkVKG5Q==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-chart/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-xbUi4XneZaV/Xw2ZPRCfSQeMzkxCzlzqXo+xcI5tjV55G4r8i72NF2T8GNJ1+DlGQLeUmiJ0TajKaF1SkVKG5Q==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-chart/1.0.0-insiders.20260819-8595af2/xbUi4XneZaV_Xw2ZPRCfSQeMzkxCzlzqXo-xcI5tjV55G4r8i72NF2T8GNJ1-DlGQLeUmiJ0TajKaF1SkVKG5Q.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-outline-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-M3Nza8Tl6pASc+1hlscGuEo90twHKHfhpX9gWkp4ReA1hbjteeQL+xC8G8Fa4XkpzeaPaC5CZPwcfYSu9lnvEQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-outline-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-M3Nza8Tl6pASc+1hlscGuEo90twHKHfhpX9gWkp4ReA1hbjteeQL+xC8G8Fa4XkpzeaPaC5CZPwcfYSu9lnvEQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-outline-ui/1.0.0-insiders.20260819-8595af2/M3Nza8Tl6pASc-1hlscGuEo90twHKHfhpX9gWkp4ReA1hbjteeQL-xC8G8Fa4XkpzeaPaC5CZPwcfYSu9lnvEQ.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-outline@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-bkxN3yVhe68x+oheYdv22pNemyHb6hdQRU7IE+LrH4byGiWy32+tBrGi2oQDFOZgLI7lY7XLUZfIpgCjbyJTyQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-outline/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-bkxN3yVhe68x+oheYdv22pNemyHb6hdQRU7IE+LrH4byGiWy32+tBrGi2oQDFOZgLI7lY7XLUZfIpgCjbyJTyQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-outline/1.0.0-insiders.20260819-8595af2/bkxN3yVhe68x-oheYdv22pNemyHb6hdQRU7IE-LrH4byGiWy32-tBrGi2oQDFOZgLI7lY7XLUZfIpgCjbyJTyQ.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-pivot-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-37b+FjfjNkzAp7f9Yu8B/fpoDi7lDnxjfHhPGsHKknCyoEBytNE6qX2jdYn7VyLp8rW2LYU66u9NF+wt+Td7yg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-pivot-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-37b+FjfjNkzAp7f9Yu8B/fpoDi7lDnxjfHhPGsHKknCyoEBytNE6qX2jdYn7VyLp8rW2LYU66u9NF+wt+Td7yg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-pivot-ui/1.0.0-insiders.20260819-8595af2/37b-FjfjNkzAp7f9Yu8B_fpoDi7lDnxjfHhPGsHKknCyoEBytNE6qX2jdYn7VyLp8rW2LYU66u9NF-wt-Td7yg.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-pivot@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-WnPtS0gr3JzZH1mgD8jNPg5xNLHCoouRw7txhmlsy3aFc0CR0E1Xcs1qz9B8Ch3jFu95Ow1XARJNumeldOM5+w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-pivot/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-WnPtS0gr3JzZH1mgD8jNPg5xNLHCoouRw7txhmlsy3aFc0CR0E1Xcs1qz9B8Ch3jFu95Ow1XARJNumeldOM5+w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-pivot/1.0.0-insiders.20260819-8595af2/WnPtS0gr3JzZH1mgD8jNPg5xNLHCoouRw7txhmlsy3aFc0CR0E1Xcs1qz9B8Ch3jFu95Ow1XARJNumeldOM5-w.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-print@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-mCSAFtaLpQNQnpkmoIfvMWio4X0SRmF3ouCrFGUZyG4wEPay5GQS4QNx6FAfBXhYJNZ+p9a0e9ubj/MfIgoihg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-print/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-mCSAFtaLpQNQnpkmoIfvMWio4X0SRmF3ouCrFGUZyG4wEPay5GQS4QNx6FAfBXhYJNZ+p9a0e9ubj/MfIgoihg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-print/1.0.0-insiders.20260819-8595af2/mCSAFtaLpQNQnpkmoIfvMWio4X0SRmF3ouCrFGUZyG4wEPay5GQS4QNx6FAfBXhYJNZ-p9a0e9ubj_MfIgoihg.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-shape-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-IxsgOF1x73CrT6LtS3Sv7YegoXsOC+nEQz1pDssWEvafyMQ7JUKzxDksvg3aYQmi9uvKnhHv0WI32WlOln8bzQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-shape-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-IxsgOF1x73CrT6LtS3Sv7YegoXsOC+nEQz1pDssWEvafyMQ7JUKzxDksvg3aYQmi9uvKnhHv0WI32WlOln8bzQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-shape-ui/1.0.0-insiders.20260819-8595af2/IxsgOF1x73CrT6LtS3Sv7YegoXsOC-nEQz1pDssWEvafyMQ7JUKzxDksvg3aYQmi9uvKnhHv0WI32WlOln8bzQ.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-shape@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-iVLTgcLijTGFVGyiux8tfW2cKGouHBvqWaMxP5hxwkqrAzU/057p7wObfpvuwlpwj4PibXLR9Q0v1NMVMoEIfg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-shape/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-iVLTgcLijTGFVGyiux8tfW2cKGouHBvqWaMxP5hxwkqrAzU/057p7wObfpvuwlpwj4PibXLR9Q0v1NMVMoEIfg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-shape/1.0.0-insiders.20260819-8595af2/iVLTgcLijTGFVGyiux8tfW2cKGouHBvqWaMxP5hxwkqrAzU_057p7wObfpvuwlpwj4PibXLR9Q0v1NMVMoEIfg.tgz}
 
   '@univerjs-pro/sheets-sparkline-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-MTlB631PQr9dOVM3oZIGFb35zG3+q48kKZH//zsK/JJKtpS7S35Fjpr+0y+sX2PopuKbo0Mgt/Xh9G+P0isccA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-sparkline-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-MTlB631PQr9dOVM3oZIGFb35zG3+q48kKZH//zsK/JJKtpS7S35Fjpr+0y+sX2PopuKbo0Mgt/Xh9G+P0isccA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-sparkline-ui/1.0.0-insiders.20260819-8595af2/MTlB631PQr9dOVM3oZIGFb35zG3-q48kKZH__zsK_JJKtpS7S35Fjpr-0y-sX2PopuKbo0Mgt_Xh9G-P0isccA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/sheets-sparkline@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-UaME2j2rnW/J9FEtouL6Alk2PAXx69BqOnxQmLRfXhOae/5RMETeAlZQ5NSn/RZAAuo16zKWuxdAoAAyzWYY5A==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/sheets-sparkline/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-UaME2j2rnW/J9FEtouL6Alk2PAXx69BqOnxQmLRfXhOae/5RMETeAlZQ5NSn/RZAAuo16zKWuxdAoAAyzWYY5A==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fsheets-sparkline/1.0.0-insiders.20260819-8595af2/UaME2j2rnW_J9FEtouL6Alk2PAXx69BqOnxQmLRfXhOae_5RMETeAlZQ5NSn_RZAAuo16zKWuxdAoAAyzWYY5A.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/slides-chart-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-Q31y5fnmaimRwh3doWqqhA5omP/vkkC4WhXl7K5G5LWYzoBLh5rinkDVeI9XpqSRmKx0cv7Abhc4OdaZBu3zYA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/slides-chart-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-Q31y5fnmaimRwh3doWqqhA5omP/vkkC4WhXl7K5G5LWYzoBLh5rinkDVeI9XpqSRmKx0cv7Abhc4OdaZBu3zYA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fslides-chart-ui/1.0.0-insiders.20260819-8595af2/Q31y5fnmaimRwh3doWqqhA5omP_vkkC4WhXl7K5G5LWYzoBLh5rinkDVeI9XpqSRmKx0cv7Abhc4OdaZBu3zYA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/slides-chart@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-JKhE+QGs0tu1pUfE4b/oo1y4dzHWSUHMoH5T8Vgw594jsk6om/Au3/vuSEzxLLfMuwq1Gu/nygHpaaSjQ7FHJw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/slides-chart/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-JKhE+QGs0tu1pUfE4b/oo1y4dzHWSUHMoH5T8Vgw594jsk6om/Au3/vuSEzxLLfMuwq1Gu/nygHpaaSjQ7FHJw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fslides-chart/1.0.0-insiders.20260819-8595af2/JKhE-QGs0tu1pUfE4b_oo1y4dzHWSUHMoH5T8Vgw594jsk6om_Au3_vuSEzxLLfMuwq1Gu_nygHpaaSjQ7FHJw.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/slides-print@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-R4IeICXcYDSGGsS6JD9001tD19XcSyyE6F9cTg8VeSOmnBQ43h6PK2N8wyc1hUeAkTgvVu/ckvWQB43wQsgcZQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/slides-print/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-R4IeICXcYDSGGsS6JD9001tD19XcSyyE6F9cTg8VeSOmnBQ43h6PK2N8wyc1hUeAkTgvVu/ckvWQB43wQsgcZQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fslides-print/1.0.0-insiders.20260819-8595af2/R4IeICXcYDSGGsS6JD9001tD19XcSyyE6F9cTg8VeSOmnBQ43h6PK2N8wyc1hUeAkTgvVu_ckvWQB43wQsgcZQ.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/slides-table-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-NdEk+fv01Rbf9wYdJDkxOfzKRUyHoddNVUt3DLvtgNkvZ1KuptDA9Bre5NjzWk+NQFxR+nUrOcQu0LUVC52xng==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/slides-table-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-NdEk+fv01Rbf9wYdJDkxOfzKRUyHoddNVUt3DLvtgNkvZ1KuptDA9Bre5NjzWk+NQFxR+nUrOcQu0LUVC52xng==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fslides-table-ui/1.0.0-insiders.20260819-8595af2/NdEk-fv01Rbf9wYdJDkxOfzKRUyHoddNVUt3DLvtgNkvZ1KuptDA9Bre5NjzWk-NQFxR-nUrOcQu0LUVC52xng.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
 
   '@univerjs-pro/slides-table@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-Hy1OFPQ47iX85puVzDkWmzegjSxGsIDusWDZ4/de69HSbK0otrW0RQjj4QYZzMTIX2Va6HwoBW/5QXGqmH2QAQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/slides-table/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-Hy1OFPQ47iX85puVzDkWmzegjSxGsIDusWDZ4/de69HSbK0otrW0RQjj4QYZzMTIX2Va6HwoBW/5QXGqmH2QAQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fslides-table/1.0.0-insiders.20260819-8595af2/Hy1OFPQ47iX85puVzDkWmzegjSxGsIDusWDZ4_de69HSbK0otrW0RQjj4QYZzMTIX2Va6HwoBW_5QXGqmH2QAQ.tgz}
 
   '@univerjs-pro/slides-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-6LqxXwOo4qBJQAja+pBOXUEPv5pQpnRrda2JFb9u/SNdUlOhwzBculooFbdMJK5OdLs1UNiSGU5U2uPkxNEN1w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/slides-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-6LqxXwOo4qBJQAja+pBOXUEPv5pQpnRrda2JFb9u/SNdUlOhwzBculooFbdMJK5OdLs1UNiSGU5U2uPkxNEN1w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fslides-ui/1.0.0-insiders.20260819-8595af2/6LqxXwOo4qBJQAja-pBOXUEPv5pQpnRrda2JFb9u_SNdUlOhwzBculooFbdMJK5OdLs1UNiSGU5U2uPkxNEN1w.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/slides@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-k1y5eBSS47/X4ZG7x16Sv6HuNjwz3UF+GeuB/LWXMZjZLW1/CwlYN/wLcW/5XSHF59C2sVvdwa/FyAj2BYBbhQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/slides/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-k1y5eBSS47/X4ZG7x16Sv6HuNjwz3UF+GeuB/LWXMZjZLW1/CwlYN/wLcW/5XSHF59C2sVvdwa/FyAj2BYBbhQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fslides/1.0.0-insiders.20260819-8595af2/k1y5eBSS47_X4ZG7x16Sv6HuNjwz3UF-GeuB_LWXMZjZLW1_CwlYN_wLcW_5XSHF59C2sVvdwa_FyAj2BYBbhQ.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/thread-comment-resource@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-yO115DBquvSZMHNXx2R5DN4RM7e0P4A5vV91K7iq82bQoq8vsxehQk3VS9GW9Kl/Y5z2elYqnzONOHwGtFRrag==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs-pro/thread-comment-resource/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-yO115DBquvSZMHNXx2R5DN4RM7e0P4A5vV91K7iq82bQoq8vsxehQk3VS9GW9Kl/Y5z2elYqnzONOHwGtFRrag==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs-pro%2Fthread-comment-resource/1.0.0-insiders.20260819-8595af2/yO115DBquvSZMHNXx2R5DN4RM7e0P4A5vV91K7iq82bQoq8vsxehQk3VS9GW9Kl_Y5z2elYqnzONOHwGtFRrag.tgz}
 
   '@univerjs/core@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-27wtPWqEYywMS3EE991rmfOhoMZ5ooN52qb4tYaEafc3t+j6WJ3kH3l7CtHfr/zAJ+HSAluDOS4mmBigsRRGUw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/core/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-27wtPWqEYywMS3EE991rmfOhoMZ5ooN52qb4tYaEafc3t+j6WJ3kH3l7CtHfr/zAJ+HSAluDOS4mmBigsRRGUw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fcore/1.0.0-insiders.20260819-8595af2/27wtPWqEYywMS3EE991rmfOhoMZ5ooN52qb4tYaEafc3t-j6WJ3kH3l7CtHfr_zAJ-HSAluDOS4mmBigsRRGUw.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/data-validation@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-It7Aqx3g4L3RBqTtTwyzfpj7fO6QdMRQdzLoW+r8an0QAxXCdq3yhM5oq6pu4FPwjwXkR1uoLdFXghO6+LuWjg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/data-validation/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-It7Aqx3g4L3RBqTtTwyzfpj7fO6QdMRQdzLoW+r8an0QAxXCdq3yhM5oq6pu4FPwjwXkR1uoLdFXghO6+LuWjg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdata-validation/1.0.0-insiders.20260819-8595af2/It7Aqx3g4L3RBqTtTwyzfpj7fO6QdMRQdzLoW-r8an0QAxXCdq3yhM5oq6pu4FPwjwXkR1uoLdFXghO6-LuWjg.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/design@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-ha9sArNxd12xU+p7OLJxN/CwjAiZAeOYcyqwm4lSnOFFKs8dohUn5TFjZuTCS2Dr7vhJf1wqj1NRV/0ukkNmug==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/design/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-ha9sArNxd12xU+p7OLJxN/CwjAiZAeOYcyqwm4lSnOFFKs8dohUn5TFjZuTCS2Dr7vhJf1wqj1NRV/0ukkNmug==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdesign/1.0.0-insiders.20260819-8595af2/ha9sArNxd12xU-p7OLJxN_CwjAiZAeOYcyqwm4lSnOFFKs8dohUn5TFjZuTCS2Dr7vhJf1wqj1NRV_0ukkNmug.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       react-dom: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
 
   '@univerjs/docs-drawing-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-XT8ANR0a8wM2HE45H3R/HHiOMoXdgbwyme0yAKSAHJ5LqJ8pkwowXboPe7vDTEpZcOq7x9oaTXJzw8Ue2G3cjg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/docs-drawing-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-XT8ANR0a8wM2HE45H3R/HHiOMoXdgbwyme0yAKSAHJ5LqJ8pkwowXboPe7vDTEpZcOq7x9oaTXJzw8Ue2G3cjg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdocs-drawing-ui/1.0.0-insiders.20260819-8595af2/XT8ANR0a8wM2HE45H3R_HHiOMoXdgbwyme0yAKSAHJ5LqJ8pkwowXboPe7vDTEpZcOq7x9oaTXJzw8Ue2G3cjg.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/docs-drawing@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-tKyt1GUggPxiog04sbO7x0hTBr27B6hGST58woyHOAA/Vo7I5ip/MBSP2xPjrim8ETdJBlcAvF+BF4F5fWXDTw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/docs-drawing/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-tKyt1GUggPxiog04sbO7x0hTBr27B6hGST58woyHOAA/Vo7I5ip/MBSP2xPjrim8ETdJBlcAvF+BF4F5fWXDTw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdocs-drawing/1.0.0-insiders.20260819-8595af2/tKyt1GUggPxiog04sbO7x0hTBr27B6hGST58woyHOAA_Vo7I5ip_MBSP2xPjrim8ETdJBlcAvF-BF4F5fWXDTw.tgz}
 
   '@univerjs/docs-hyper-link-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-6j5o4d5DCewGUmqVKqbvyRFMmbXoLmEwISjIy/EbyWnz8XUyf8zxoBR44UL2zrXK0q26LDJoKTz8bCBxhxC7hQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/docs-hyper-link-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-6j5o4d5DCewGUmqVKqbvyRFMmbXoLmEwISjIy/EbyWnz8XUyf8zxoBR44UL2zrXK0q26LDJoKTz8bCBxhxC7hQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdocs-hyper-link-ui/1.0.0-insiders.20260819-8595af2/6j5o4d5DCewGUmqVKqbvyRFMmbXoLmEwISjIy_EbyWnz8XUyf8zxoBR44UL2zrXK0q26LDJoKTz8bCBxhxC7hQ.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/docs-hyper-link@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-q5C1Bz3dJnlPQHHKDmMKdlht1k0TwFARgtqXLI5kuzIlcTqUvsiU4YctLwWSPJN34L2LwRPZiI7H+E8Lm7NBuA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/docs-hyper-link/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-q5C1Bz3dJnlPQHHKDmMKdlht1k0TwFARgtqXLI5kuzIlcTqUvsiU4YctLwWSPJN34L2LwRPZiI7H+E8Lm7NBuA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdocs-hyper-link/1.0.0-insiders.20260819-8595af2/q5C1Bz3dJnlPQHHKDmMKdlht1k0TwFARgtqXLI5kuzIlcTqUvsiU4YctLwWSPJN34L2LwRPZiI7H-E8Lm7NBuA.tgz}
 
   '@univerjs/docs-thread-comment-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-rElTXI1VTvn2gYP2GxprqV1a/5fTcurzKe77GCimSz58F0aQL9lv5ZFnweJjl1ucCdn5l/sc2RYzgDhNcxvOLw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/docs-thread-comment-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-rElTXI1VTvn2gYP2GxprqV1a/5fTcurzKe77GCimSz58F0aQL9lv5ZFnweJjl1ucCdn5l/sc2RYzgDhNcxvOLw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdocs-thread-comment-ui/1.0.0-insiders.20260819-8595af2/rElTXI1VTvn2gYP2GxprqV1a_5fTcurzKe77GCimSz58F0aQL9lv5ZFnweJjl1ucCdn5l_sc2RYzgDhNcxvOLw.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/docs-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-NTfTEGReNRc3mKlBC0fAYJHFRIbdFDORcERC/0zxffK6Aw4zDqXdkxDEzOBFTtuSiI+hEZI5QVZCBHszR3XYoA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/docs-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-NTfTEGReNRc3mKlBC0fAYJHFRIbdFDORcERC/0zxffK6Aw4zDqXdkxDEzOBFTtuSiI+hEZI5QVZCBHszR3XYoA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdocs-ui/1.0.0-insiders.20260819-8595af2/NTfTEGReNRc3mKlBC0fAYJHFRIbdFDORcERC_0zxffK6Aw4zDqXdkxDEzOBFTtuSiI-hEZI5QVZCBHszR3XYoA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/docs@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-SpjIJR9CCLR7N0ZVI8wTNcBFuqIwz6xyexHc2ZFnvKsf1U61LQ0IAILgezzyheC3xh1YzqorGGWlLVsI9IJ4Fw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/docs/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-SpjIJR9CCLR7N0ZVI8wTNcBFuqIwz6xyexHc2ZFnvKsf1U61LQ0IAILgezzyheC3xh1YzqorGGWlLVsI9IJ4Fw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdocs/1.0.0-insiders.20260819-8595af2/SpjIJR9CCLR7N0ZVI8wTNcBFuqIwz6xyexHc2ZFnvKsf1U61LQ0IAILgezzyheC3xh1YzqorGGWlLVsI9IJ4Fw.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/drawing-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-RbbIwCqQE3YpyU77q4ym5gdUiP5JCUcve2+OU+G4aHC2Aemqv8c9z8FpoqNM2wVEOEY2g01olrUDyvcdFi4LMg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/drawing-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-RbbIwCqQE3YpyU77q4ym5gdUiP5JCUcve2+OU+G4aHC2Aemqv8c9z8FpoqNM2wVEOEY2g01olrUDyvcdFi4LMg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdrawing-ui/1.0.0-insiders.20260819-8595af2/RbbIwCqQE3YpyU77q4ym5gdUiP5JCUcve2-OU-G4aHC2Aemqv8c9z8FpoqNM2wVEOEY2g01olrUDyvcdFi4LMg.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/drawing@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-qbrVbV3NnvM9Z2N6lBFVFIhSNgSjJ2L6cXZtxGdwAZKTVv0iBsGOY2PSJnC6378OGoLUi8zduo8ccHTdxUMr1w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/drawing/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-qbrVbV3NnvM9Z2N6lBFVFIhSNgSjJ2L6cXZtxGdwAZKTVv0iBsGOY2PSJnC6378OGoLUi8zduo8ccHTdxUMr1w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fdrawing/1.0.0-insiders.20260819-8595af2/qbrVbV3NnvM9Z2N6lBFVFIhSNgSjJ2L6cXZtxGdwAZKTVv0iBsGOY2PSJnC6378OGoLUi8zduo8ccHTdxUMr1w.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/engine-formula@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-RFOjLJ398HgRhM/MRGexK0nBMsv5y3i5t9mDzeXaepcYouYVggxUzkyGEntChkiZLoxdHHOfnqMeti3C5ZYEDg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/engine-formula/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-RFOjLJ398HgRhM/MRGexK0nBMsv5y3i5t9mDzeXaepcYouYVggxUzkyGEntChkiZLoxdHHOfnqMeti3C5ZYEDg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fengine-formula/1.0.0-insiders.20260819-8595af2/RFOjLJ398HgRhM_MRGexK0nBMsv5y3i5t9mDzeXaepcYouYVggxUzkyGEntChkiZLoxdHHOfnqMeti3C5ZYEDg.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/engine-render@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-Q23BfsHYjcbLq+BZoCHO7bz7OJN0SEUK32AgXNAfvID4uLST5Wz3aoW3fjy8vnDqgVmwUmtQXu9suBqciHXG9w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/engine-render/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-Q23BfsHYjcbLq+BZoCHO7bz7OJN0SEUK32AgXNAfvID4uLST5Wz3aoW3fjy8vnDqgVmwUmtQXu9suBqciHXG9w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fengine-render/1.0.0-insiders.20260819-8595af2/Q23BfsHYjcbLq-BZoCHO7bz7OJN0SEUK32AgXNAfvID4uLST5Wz3aoW3fjy8vnDqgVmwUmtQXu9suBqciHXG9w.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/find-replace@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-OqxrpLOUXFU+hN8cuGi1bqsfdfEDb9wxOIi2vHwJRoK6bssWqWiXXjV/00GBAaJgvJBZweFTVVV05YX3XfoZUA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/find-replace/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-OqxrpLOUXFU+hN8cuGi1bqsfdfEDb9wxOIi2vHwJRoK6bssWqWiXXjV/00GBAaJgvJBZweFTVVV05YX3XfoZUA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Ffind-replace/1.0.0-insiders.20260819-8595af2/OqxrpLOUXFU-hN8cuGi1bqsfdfEDb9wxOIi2vHwJRoK6bssWqWiXXjV_00GBAaJgvJBZweFTVVV05YX3XfoZUA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
@@ -2971,176 +2971,176 @@ packages:
       react-dom: '*'
 
   '@univerjs/network@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-o1Ou9XWpFbIhn5j37eLDo9FFoXr7yrZ/rkMF0YfZfPVtwSRzvSH8fuU12/x2EKHGiK4kfwaBg+8mrC+k9dUlaw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/network/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-o1Ou9XWpFbIhn5j37eLDo9FFoXr7yrZ/rkMF0YfZfPVtwSRzvSH8fuU12/x2EKHGiK4kfwaBg+8mrC+k9dUlaw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fnetwork/1.0.0-insiders.20260819-8595af2/o1Ou9XWpFbIhn5j37eLDo9FFoXr7yrZ_rkMF0YfZfPVtwSRzvSH8fuU12_x2EKHGiK4kfwaBg-8mrC-k9dUlaw.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/protocol@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-PWR9K8qHA02Ww9hJz8DLNyDthIuWkqEmF0iktcsL+x16U+SPyePFnr57mOrVZwXALrIqAKPGwuE85wDnjbERBQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/protocol/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-PWR9K8qHA02Ww9hJz8DLNyDthIuWkqEmF0iktcsL+x16U+SPyePFnr57mOrVZwXALrIqAKPGwuE85wDnjbERBQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fprotocol/1.0.0-insiders.20260819-8595af2/PWR9K8qHA02Ww9hJz8DLNyDthIuWkqEmF0iktcsL-x16U-SPyePFnr57mOrVZwXALrIqAKPGwuE85wDnjbERBQ.tgz}
 
   '@univerjs/rpc@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-efCtAw7oNTkdDXqkILSsc/70RXpuH/xGP7Fx98j2umYyMoDqKVNmZfIV8JvSK6XL39DnftCG2KaoUpsEE8JzNQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/rpc/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-efCtAw7oNTkdDXqkILSsc/70RXpuH/xGP7Fx98j2umYyMoDqKVNmZfIV8JvSK6XL39DnftCG2KaoUpsEE8JzNQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Frpc/1.0.0-insiders.20260819-8595af2/efCtAw7oNTkdDXqkILSsc_70RXpuH_xGP7Fx98j2umYyMoDqKVNmZfIV8JvSK6XL39DnftCG2KaoUpsEE8JzNQ.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-conditional-formatting-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-C/X/sWeiFIOUbQAV4zn1zE+wYpidK9uQ+WSXJIUhjU8xsDbc8UNzZUREIl7yXKaPlIWkbjq9AacdTnWgNqMS7w==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-conditional-formatting-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-C/X/sWeiFIOUbQAV4zn1zE+wYpidK9uQ+WSXJIUhjU8xsDbc8UNzZUREIl7yXKaPlIWkbjq9AacdTnWgNqMS7w==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-conditional-formatting-ui/1.0.0-insiders.20260819-8595af2/C_X_sWeiFIOUbQAV4zn1zE-wYpidK9uQ-WSXJIUhjU8xsDbc8UNzZUREIl7yXKaPlIWkbjq9AacdTnWgNqMS7w.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-conditional-formatting@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-yyB5ZMmQRhEr3RR6kapC6EkD/3rLO8XheXYL8PzUAAIFp6qJgvXaxTEnmvhBhyId0oerNkGiyx8Rz7A0c+PsNQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-conditional-formatting/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-yyB5ZMmQRhEr3RR6kapC6EkD/3rLO8XheXYL8PzUAAIFp6qJgvXaxTEnmvhBhyId0oerNkGiyx8Rz7A0c+PsNQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-conditional-formatting/1.0.0-insiders.20260819-8595af2/yyB5ZMmQRhEr3RR6kapC6EkD_3rLO8XheXYL8PzUAAIFp6qJgvXaxTEnmvhBhyId0oerNkGiyx8Rz7A0c-PsNQ.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-crosshair-highlight@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-FnTfwSku0i9lFWHN6y+aCI0V2J+9uXk+NWjLRI78cXmI1hulRykHSk9Fm2rUOX9kQBnbQ8ibY3TQfyqbSvmcJg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-crosshair-highlight/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-FnTfwSku0i9lFWHN6y+aCI0V2J+9uXk+NWjLRI78cXmI1hulRykHSk9Fm2rUOX9kQBnbQ8ibY3TQfyqbSvmcJg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-crosshair-highlight/1.0.0-insiders.20260819-8595af2/FnTfwSku0i9lFWHN6y-aCI0V2J-9uXk-NWjLRI78cXmI1hulRykHSk9Fm2rUOX9kQBnbQ8ibY3TQfyqbSvmcJg.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-data-validation-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-3FnsJLDPqXFsHbqfy/+nU8MSpajutY2swcJpRn9ON7x1Nhg7zEZxETQ8mUEvNbFErUwgxe5ZDMU5h0WocZ2e+A==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-data-validation-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-3FnsJLDPqXFsHbqfy/+nU8MSpajutY2swcJpRn9ON7x1Nhg7zEZxETQ8mUEvNbFErUwgxe5ZDMU5h0WocZ2e+A==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-data-validation-ui/1.0.0-insiders.20260819-8595af2/3FnsJLDPqXFsHbqfy_-nU8MSpajutY2swcJpRn9ON7x1Nhg7zEZxETQ8mUEvNbFErUwgxe5ZDMU5h0WocZ2e-A.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-data-validation@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-nC5dFUlqlEGqBwiH7fYwGlpG/w/OxE4b9bZLiPvI95kI1oeFdaVpNDC9JqIDl920hB5d8VWlzumtLRWSOQxYJA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-data-validation/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-nC5dFUlqlEGqBwiH7fYwGlpG/w/OxE4b9bZLiPvI95kI1oeFdaVpNDC9JqIDl920hB5d8VWlzumtLRWSOQxYJA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-data-validation/1.0.0-insiders.20260819-8595af2/nC5dFUlqlEGqBwiH7fYwGlpG_w_OxE4b9bZLiPvI95kI1oeFdaVpNDC9JqIDl920hB5d8VWlzumtLRWSOQxYJA.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-drawing-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-PUH6/rUTxxMPapIevT8IxDJK5zY0CBw0ZHXvntyCzNHW9HLpeZFDGhXbD6VTgqWpFoCYolnrpaeZzekqXmpH7A==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-drawing-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-PUH6/rUTxxMPapIevT8IxDJK5zY0CBw0ZHXvntyCzNHW9HLpeZFDGhXbD6VTgqWpFoCYolnrpaeZzekqXmpH7A==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-drawing-ui/1.0.0-insiders.20260819-8595af2/PUH6_rUTxxMPapIevT8IxDJK5zY0CBw0ZHXvntyCzNHW9HLpeZFDGhXbD6VTgqWpFoCYolnrpaeZzekqXmpH7A.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-drawing@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-QE+RaD4iMyV8/9RwdEJgItM+x3WTIrIE3DHWOMW9q58hX32SauExYKJhnYz0RQvLoIbKH2nLOLhf86gYYoeNCw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-drawing/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-QE+RaD4iMyV8/9RwdEJgItM+x3WTIrIE3DHWOMW9q58hX32SauExYKJhnYz0RQvLoIbKH2nLOLhf86gYYoeNCw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-drawing/1.0.0-insiders.20260819-8595af2/QE-RaD4iMyV8_9RwdEJgItM-x3WTIrIE3DHWOMW9q58hX32SauExYKJhnYz0RQvLoIbKH2nLOLhf86gYYoeNCw.tgz}
 
   '@univerjs/sheets-filter-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-+O5S2brCCVeS1XHGCMu9YQqxGNOmcwHexzCMOL/fZpZ/cQoU+Q8X/Ts6hFY9+fRrzYMW29bkHw2AY/xRmk+8/A==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-filter-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-+O5S2brCCVeS1XHGCMu9YQqxGNOmcwHexzCMOL/fZpZ/cQoU+Q8X/Ts6hFY9+fRrzYMW29bkHw2AY/xRmk+8/A==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-filter-ui/1.0.0-insiders.20260819-8595af2/-O5S2brCCVeS1XHGCMu9YQqxGNOmcwHexzCMOL_fZpZ_cQoU-Q8X_Ts6hFY9-fRrzYMW29bkHw2AY_xRmk-8_A.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-filter@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-t7DTiLEREhOKUjiuWap0raoR726mfHe17iJM7VynTAGzKuhXOl0z6oEB2wjvvL57bZT1fZKjvd7ig80tHXpOmA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-filter/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-t7DTiLEREhOKUjiuWap0raoR726mfHe17iJM7VynTAGzKuhXOl0z6oEB2wjvvL57bZT1fZKjvd7ig80tHXpOmA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-filter/1.0.0-insiders.20260819-8595af2/t7DTiLEREhOKUjiuWap0raoR726mfHe17iJM7VynTAGzKuhXOl0z6oEB2wjvvL57bZT1fZKjvd7ig80tHXpOmA.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-find-replace@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-q9PgdvjBilrFcM0sUiZLnhue4X3X8h4Kq2jyckWbz18wIS8OVR2JWLL7f2eSOcwZ3j4JFnIUgVUXpNQuhoIttg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-find-replace/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-q9PgdvjBilrFcM0sUiZLnhue4X3X8h4Kq2jyckWbz18wIS8OVR2JWLL7f2eSOcwZ3j4JFnIUgVUXpNQuhoIttg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-find-replace/1.0.0-insiders.20260819-8595af2/q9PgdvjBilrFcM0sUiZLnhue4X3X8h4Kq2jyckWbz18wIS8OVR2JWLL7f2eSOcwZ3j4JFnIUgVUXpNQuhoIttg.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-formula-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-eXJygf7Vbp+/f8si72rwYZoNFJ5o8QOcqSfJ1fkweyff1x1W1EwsfChhI2R9DzXfeq5ja3DU3xZdNpARKnjMfw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-formula-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-eXJygf7Vbp+/f8si72rwYZoNFJ5o8QOcqSfJ1fkweyff1x1W1EwsfChhI2R9DzXfeq5ja3DU3xZdNpARKnjMfw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-formula-ui/1.0.0-insiders.20260819-8595af2/eXJygf7Vbp-_f8si72rwYZoNFJ5o8QOcqSfJ1fkweyff1x1W1EwsfChhI2R9DzXfeq5ja3DU3xZdNpARKnjMfw.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-formula@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-eE8d49I0/5Ez842VdWBzSPLwJbJ+Z+IWovI72FZmzSPrlg/vpbrh65NKloZBadOyrM9sfgHp7ddvR0bV+bNOXA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-formula/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-eE8d49I0/5Ez842VdWBzSPLwJbJ+Z+IWovI72FZmzSPrlg/vpbrh65NKloZBadOyrM9sfgHp7ddvR0bV+bNOXA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-formula/1.0.0-insiders.20260819-8595af2/eE8d49I0_5Ez842VdWBzSPLwJbJ-Z-IWovI72FZmzSPrlg_vpbrh65NKloZBadOyrM9sfgHp7ddvR0bV-bNOXA.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-hyper-link-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-8Ib15JZSHHlHq21PoAfxp6kipV44iurFkZSIHt+1v2JT0R7oBkoC7hjsAV8AcO+ZCIBU+BQvE4j/HsZf9i/hZw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-hyper-link-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-8Ib15JZSHHlHq21PoAfxp6kipV44iurFkZSIHt+1v2JT0R7oBkoC7hjsAV8AcO+ZCIBU+BQvE4j/HsZf9i/hZw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-hyper-link-ui/1.0.0-insiders.20260819-8595af2/8Ib15JZSHHlHq21PoAfxp6kipV44iurFkZSIHt-1v2JT0R7oBkoC7hjsAV8AcO-ZCIBU-BQvE4j_HsZf9i_hZw.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-hyper-link@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-LUNdQ9N+IzY8Aj3VwcMPnwuv2j0IhHCmG2PLKeyMLFp0W/uhNjmHa21YsbZ/VTWC0WrK5CrBFW6e+A7EpY5pFg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-hyper-link/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-LUNdQ9N+IzY8Aj3VwcMPnwuv2j0IhHCmG2PLKeyMLFp0W/uhNjmHa21YsbZ/VTWC0WrK5CrBFW6e+A7EpY5pFg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-hyper-link/1.0.0-insiders.20260819-8595af2/LUNdQ9N-IzY8Aj3VwcMPnwuv2j0IhHCmG2PLKeyMLFp0W_uhNjmHa21YsbZ_VTWC0WrK5CrBFW6e-A7EpY5pFg.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-note-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-uTqkdtkDVIDC5GEsjfCwli75aHSuIK4A5qZatmg3Z7t9SlfLOTCd+8zLUkFOctYoo7cRVUsRpk+7Kn+Gfr4mQA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-note-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-uTqkdtkDVIDC5GEsjfCwli75aHSuIK4A5qZatmg3Z7t9SlfLOTCd+8zLUkFOctYoo7cRVUsRpk+7Kn+Gfr4mQA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-note-ui/1.0.0-insiders.20260819-8595af2/uTqkdtkDVIDC5GEsjfCwli75aHSuIK4A5qZatmg3Z7t9SlfLOTCd-8zLUkFOctYoo7cRVUsRpk-7Kn-Gfr4mQA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-note@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-UC31IWvvKXrxPQCphDLJBGJn9i8NtxJLECni6dYcKVMoU3l/PunXq6BFWE4v7J88Te8SI5BzziNW57HJsFsgdw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-note/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-UC31IWvvKXrxPQCphDLJBGJn9i8NtxJLECni6dYcKVMoU3l/PunXq6BFWE4v7J88Te8SI5BzziNW57HJsFsgdw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-note/1.0.0-insiders.20260819-8595af2/UC31IWvvKXrxPQCphDLJBGJn9i8NtxJLECni6dYcKVMoU3l_PunXq6BFWE4v7J88Te8SI5BzziNW57HJsFsgdw.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-numfmt-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-5I5Ahz4hiEOq8NOuRHmEfDAIrb1N9Qn7ZxUxkScDzAeR1gXQKCCZQWIvwwM4wbnJJDGvvtkDUVlRr58UJCkcqA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-numfmt-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-5I5Ahz4hiEOq8NOuRHmEfDAIrb1N9Qn7ZxUxkScDzAeR1gXQKCCZQWIvwwM4wbnJJDGvvtkDUVlRr58UJCkcqA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-numfmt-ui/1.0.0-insiders.20260819-8595af2/5I5Ahz4hiEOq8NOuRHmEfDAIrb1N9Qn7ZxUxkScDzAeR1gXQKCCZQWIvwwM4wbnJJDGvvtkDUVlRr58UJCkcqA.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-numfmt@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-328tYFvSPugi0nGbs85NgVPzjESBu6jm4h20jaid4UvKMS52oau1wnzStEvyJkshyKFkY0W50Yq5Ng8n+l2AYw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-numfmt/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-328tYFvSPugi0nGbs85NgVPzjESBu6jm4h20jaid4UvKMS52oau1wnzStEvyJkshyKFkY0W50Yq5Ng8n+l2AYw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-numfmt/1.0.0-insiders.20260819-8595af2/328tYFvSPugi0nGbs85NgVPzjESBu6jm4h20jaid4UvKMS52oau1wnzStEvyJkshyKFkY0W50Yq5Ng8n-l2AYw.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-sort-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-RRBH8Ee+pPbV9x/pUv0WemEoaiawUBSis6KJoKMETHkCzxZswi7ECTaSf5s2LBE2RFYdery0kPIEf64TfAIt8Q==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-sort-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-RRBH8Ee+pPbV9x/pUv0WemEoaiawUBSis6KJoKMETHkCzxZswi7ECTaSf5s2LBE2RFYdery0kPIEf64TfAIt8Q==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-sort-ui/1.0.0-insiders.20260819-8595af2/RRBH8Ee-pPbV9x_pUv0WemEoaiawUBSis6KJoKMETHkCzxZswi7ECTaSf5s2LBE2RFYdery0kPIEf64TfAIt8Q.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-sort@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-laYZ+iv2bxfbA26oJBsld90wjjIKa05uiFFlu1JXkgg0p/fcawhmWTBk9IOWNVxrBOdhud3t4HL9m6E+r1gOtA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-sort/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-laYZ+iv2bxfbA26oJBsld90wjjIKa05uiFFlu1JXkgg0p/fcawhmWTBk9IOWNVxrBOdhud3t4HL9m6E+r1gOtA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-sort/1.0.0-insiders.20260819-8595af2/laYZ-iv2bxfbA26oJBsld90wjjIKa05uiFFlu1JXkgg0p_fcawhmWTBk9IOWNVxrBOdhud3t4HL9m6E-r1gOtA.tgz}
 
   '@univerjs/sheets-table-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-8N9Q1uvLCHZR41hhl0hf6aVgIOvij6gDO7AvIsuB+GGAiJlmVZLYCez3DUv8Rj0zMuXdlJhZbECzAiZ/EtaloQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-table-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-8N9Q1uvLCHZR41hhl0hf6aVgIOvij6gDO7AvIsuB+GGAiJlmVZLYCez3DUv8Rj0zMuXdlJhZbECzAiZ/EtaloQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-table-ui/1.0.0-insiders.20260819-8595af2/8N9Q1uvLCHZR41hhl0hf6aVgIOvij6gDO7AvIsuB-GGAiJlmVZLYCez3DUv8Rj0zMuXdlJhZbECzAiZ_EtaloQ.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-table@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-okwAonHtjN6KbUTc7S0oNlod2B9JBNVfhNcRI0GmJL9q36NjLPLwacsN1d86O7ammf3VI97Mcu22SGY38vNlDg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-table/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-okwAonHtjN6KbUTc7S0oNlod2B9JBNVfhNcRI0GmJL9q36NjLPLwacsN1d86O7ammf3VI97Mcu22SGY38vNlDg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-table/1.0.0-insiders.20260819-8595af2/okwAonHtjN6KbUTc7S0oNlod2B9JBNVfhNcRI0GmJL9q36NjLPLwacsN1d86O7ammf3VI97Mcu22SGY38vNlDg.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-thread-comment-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-1pp26PPH6+zCtrLr8Vomd9y6raypER9NZWupsF5BTiijrHod2bO+4KUAcsdtXfpwnnAIFQmnACglSRvDJw8mOw==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-thread-comment-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-1pp26PPH6+zCtrLr8Vomd9y6raypER9NZWupsF5BTiijrHod2bO+4KUAcsdtXfpwnnAIFQmnACglSRvDJw8mOw==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-thread-comment-ui/1.0.0-insiders.20260819-8595af2/1pp26PPH6-zCtrLr8Vomd9y6raypER9NZWupsF5BTiijrHod2bO-4KUAcsdtXfpwnnAIFQmnACglSRvDJw8mOw.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-thread-comment@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-85fFJmhOgh46F437ImfdYpMV1L3DCkAh72V3SasVwmGN+huddvQ+P0pHrO7gb598S3UCGtDnJpxZJmybDOCGCQ==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-thread-comment/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-85fFJmhOgh46F437ImfdYpMV1L3DCkAh72V3SasVwmGN+huddvQ+P0pHrO7gb598S3UCGtDnJpxZJmybDOCGCQ==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-thread-comment/1.0.0-insiders.20260819-8595af2/85fFJmhOgh46F437ImfdYpMV1L3DCkAh72V3SasVwmGN-huddvQ-P0pHrO7gb598S3UCGtDnJpxZJmybDOCGCQ.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-vr79dOMd5fVL77kSTE9otMLLrAy5o0R2LDSABb6L9WgvKqPxEaNuvB7PsIRAWdTpAlGkZjNc0/8qYMXv+yxwjg==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-vr79dOMd5fVL77kSTE9otMLLrAy5o0R2LDSABb6L9WgvKqPxEaNuvB7PsIRAWdTpAlGkZjNc0/8qYMXv+yxwjg==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets-ui/1.0.0-insiders.20260819-8595af2/vr79dOMd5fVL77kSTE9otMLLrAy5o0R2LDSABb6L9WgvKqPxEaNuvB7PsIRAWdTpAlGkZjNc0_8qYMXv-yxwjg.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/sheets@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-RgAWfXz2u+klXn21d/Eg9F3di41rFcH18SiTs9dv5JJjK8zILW4nN6HSk+jICy1wH70y5d1cDnp0vqNwWj5lag==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/sheets/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-RgAWfXz2u+klXn21d/Eg9F3di41rFcH18SiTs9dv5JJjK8zILW4nN6HSk+jICy1wH70y5d1cDnp0vqNwWj5lag==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fsheets/1.0.0-insiders.20260819-8595af2/RgAWfXz2u-klXn21d_Eg9F3di41rFcH18SiTs9dv5JJjK8zILW4nN6HSk-jICy1wH70y5d1cDnp0vqNwWj5lag.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/telemetry@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-ewMvuFeE+pPbJpFUewVIGmygMBEtfNQCKwL62KAXe+kwC8B4pnIihRlZY8LCK1S/UVRQUICbugGnNEGXJEd8sA==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/telemetry/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-ewMvuFeE+pPbJpFUewVIGmygMBEtfNQCKwL62KAXe+kwC8B4pnIihRlZY8LCK1S/UVRQUICbugGnNEGXJEd8sA==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Ftelemetry/1.0.0-insiders.20260819-8595af2/ewMvuFeE-pPbJpFUewVIGmygMBEtfNQCKwL62KAXe-kwC8B4pnIihRlZY8LCK1S_UVRQUICbugGnNEGXJEd8sA.tgz}
 
   '@univerjs/themes@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-TYEdAUgniChLFKFPwpnGxhi097KQHjd+/lq8xaxmds715MlbSfYe+3JuCgYy88R5cqLn2pZ8Q/vhfdFit1M+9A==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/themes/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-TYEdAUgniChLFKFPwpnGxhi097KQHjd+/lq8xaxmds715MlbSfYe+3JuCgYy88R5cqLn2pZ8Q/vhfdFit1M+9A==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fthemes/1.0.0-insiders.20260819-8595af2/TYEdAUgniChLFKFPwpnGxhi097KQHjd-_lq8xaxmds715MlbSfYe-3JuCgYy88R5cqLn2pZ8Q_vhfdFit1M-9A.tgz}
 
   '@univerjs/thread-comment-ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-RiO+lxhdNODJm6B0294xUtfLrY4OpTGHw4ZuE9RSa074GQX3SXyztKJqie3V1lEOVbivaMcKEHNfpOggRX8h5Q==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/thread-comment-ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-RiO+lxhdNODJm6B0294xUtfLrY4OpTGHw4ZuE9RSa074GQX3SXyztKJqie3V1lEOVbivaMcKEHNfpOggRX8h5Q==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fthread-comment-ui/1.0.0-insiders.20260819-8595af2/RiO-lxhdNODJm6B0294xUtfLrY4OpTGHw4ZuE9RSa074GQX3SXyztKJqie3V1lEOVbivaMcKEHNfpOggRX8h5Q.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs/thread-comment@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-2nOXXybrhoY9ljCMka/sUs/qByN2+LQyodHb6x+08hQuAMJXKV8WuAIGFD5jjgAuYs7a/XthLw9HsXgaY4931g==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/thread-comment/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-2nOXXybrhoY9ljCMka/sUs/qByN2+LQyodHb6x+08hQuAMJXKV8WuAIGFD5jjgAuYs7a/XthLw9HsXgaY4931g==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fthread-comment/1.0.0-insiders.20260819-8595af2/2nOXXybrhoY9ljCMka_sUs_qByN2-LQyodHb6x-08hQuAMJXKV8WuAIGFD5jjgAuYs7a_XthLw9HsXgaY4931g.tgz}
     peerDependencies:
       rxjs: '>=7.0.0'
 
   '@univerjs/ui@1.0.0-insiders.20260819-8595af2':
-    resolution: {integrity: sha512-yHgSqkqJ8XPIKiNeYv9RcU/Ji69MksBJyMSuiaGtQ7m+O3yrq08JIgc6LlVxKNjqXYTeCWCZjF/G0eT2NH3lig==, tarball: https://insider-npm.oss-cn-shenzhen.aliyuncs.com/insider-npm-registry/v1/packages/@univerjs/ui/versions/1.0.0-insiders.20260819-8595af2/package.tgz}
+    resolution: {integrity: sha512-yHgSqkqJ8XPIKiNeYv9RcU/Ji69MksBJyMSuiaGtQ7m+O3yrq08JIgc6LlVxKNjqXYTeCWCZjF/G0eT2NH3lig==, tarball: https://insider-npm-registry.univer.work/-/insider/v1/tarballs/%40univerjs%2Fui/1.0.0-insiders.20260819-8595af2/yHgSqkqJ8XPIKiNeYv9RcU_Ji69MksBJyMSuiaGtQ7m-O3yrq08JIgc6LlVxKNjqXYTeCWCZjF_G0eT2NH3lig.tgz}
     peerDependencies:
       react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       react-dom: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc

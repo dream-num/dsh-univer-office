@@ -136,3 +136,8 @@ minimumReleaseAgeExclude:
   - '@univerjs/thread-comment-ui@1.0.0-insiders.20260819-8595af2'
   - '@univerjs/thread-comment@1.0.0-insiders.20260819-8595af2'
   - '@univerjs/ui@1.0.0-insiders.20260819-8595af2'
+  - '@univerjs-pro/exchange-node-binding-darwin-arm64@0.1.0'
+  - '@univerjs-pro/exchange-node-binding-linux-arm64-gnu@0.1.0'
+  - '@univerjs-pro/exchange-node-binding-linux-x64-gnu@0.1.0'
+  - '@univerjs-pro/exchange-node-binding-win32-x64-msvc@0.1.0'
+  - '@univerjs-pro/exchange-node-binding@0.1.0'
