@@ -19,7 +19,13 @@ export const EN_US_MESSAGES = {
     loadFailed: (error: string): string => `Failed to load: ${error}`,
     previewComputeFailed: "Failed to compute the merge preview",
     previewUnitUnrenderable: "This file cannot be rendered in the merge preview",
-    previewLoadFailed: (error: string): string => `Failed to load the preview: ${error}`
+    previewLoadFailed: (error: string): string => `Failed to load the preview: ${error}`,
+    worktreeReadOnly:
+      "This is a read-only AI modification. Ask the AI assistant to continue editing if changes are needed.",
+    mergePreviewReadOnly:
+      "This is a read-only merge preview and cannot be edited directly. Ask the AI assistant to continue editing, or make manual changes after merging.",
+    currentVersionReadOnly:
+      'The current version is temporarily read-only. Choose "Edit anyway" above to make changes.'
   },
   toast: {
     worktreeGone: "That modification no longer exists; switched back to the current version",
@@ -75,6 +81,7 @@ export const EN_US_MESSAGES = {
     divergedShowingOriginal: "The latest version has changed · viewing the original edits",
     segPreview: "Merge preview",
     segOriginal: "Original edits",
+    readOnlyPreview: "Read-only preview",
     viewOnly: "View only",
     editable: "Editable",
     editingPending: (n: number): string => `Editing · ${n} unmerged`,

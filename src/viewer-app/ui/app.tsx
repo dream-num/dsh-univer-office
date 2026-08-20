@@ -33,6 +33,7 @@ import {
   t,
   type Lang,
 } from "../i18n";
+import type { Messages } from "../i18n/locales/en-US";
 import { persistSidebarCollapsed, resolveSidebarCollapsed } from "../sidebar-preference";
 import { AppView } from "./app-view";
 import { el } from "./dom";
@@ -105,8 +106,8 @@ class ViewerController {
     return loadViewerLocale(locale);
   }
 
-  public async setLocale(locale: LocaleType): Promise<void> {
-    await this.handle?.setLocale(locale);
+  public async setLocale(locale: LocaleType, messages: Messages = t()): Promise<void> {
+    await this.handle?.setLocale(locale, this.readOnlyCopy(this.last, messages));
   }
 
   /** The React content pane hands its host element to the viewer once mounted. */
@@ -220,6 +221,7 @@ class ViewerController {
           changesets: job.data.changesets,
           locale: this.getLocale(),
           darkMode: this.getDarkMode(),
+          readOnlyCopy: this.readOnlyCopy(job),
         });
       } else {
         handle = await createViewer({
@@ -236,6 +238,7 @@ class ViewerController {
           editable: job.view.kind === "trunk" && job.editable,
           locale: this.getLocale(),
           darkMode: this.getDarkMode(),
+          readOnlyCopy: this.readOnlyCopy(job),
         });
       }
       if (generation !== this.generation) {
@@ -246,7 +249,7 @@ class ViewerController {
       this.handle = handle;
       // Preferences may have changed while this async viewer was being created.
       handle.setDarkMode(this.getDarkMode());
-      await handle.setLocale(this.getLocale());
+      await handle.setLocale(this.getLocale(), this.readOnlyCopy(job));
     } catch (error) {
       if (generation === this.generation) {
         host.append(
@@ -261,6 +264,16 @@ class ViewerController {
         this.setBusy(false);
       }
     }
+  }
+
+  private readOnlyCopy(job: ViewerJob | undefined, messages: Messages = t()) {
+    const message =
+      job?.mode === "preview"
+        ? messages.viewer.mergePreviewReadOnly
+        : job?.view.kind === "worktree"
+          ? messages.viewer.worktreeReadOnly
+          : messages.viewer.currentVersionReadOnly;
+    return { title: messages.topbar.readOnlyPreview, message };
   }
 
   private teardown(): void {
@@ -1083,7 +1096,7 @@ export class App {
       if (generation !== this.languageGeneration) {
         return;
       }
-      await this.viewer.setLocale(locale);
+      await this.viewer.setLocale(locale, messages);
       if (generation !== this.languageGeneration) {
         return;
       }

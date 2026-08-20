@@ -75,7 +75,10 @@ export function messagesFromVocabulary(v: MessageVocabulary): Messages {
       loadFailed: (error) => failure(v.load, error),
       previewComputeFailed: `${v.preview} ${v.failed}`,
       previewUnitUnrenderable: `${v.preview}: ${v.cannot}`,
-      previewLoadFailed: (error) => failure(v.preview, error)
+      previewLoadFailed: (error) => failure(v.preview, error),
+      worktreeReadOnly: `${v.viewOnly} · ${v.aiAssistant} ${v.modification}. ${v.editing}: ${v.cannot}.`,
+      mergePreviewReadOnly: `${v.viewOnly} · ${v.preview}. ${v.editing}: ${v.cannot}.`,
+      currentVersionReadOnly: `${v.currentVersion} · ${v.viewOnly}. ${v.continue} ${v.editing}.`
     },
     toast: {
       worktreeGone: `${v.modification}: ${v.no} · ${v.currentVersion}`,
@@ -123,6 +126,7 @@ export function messagesFromVocabulary(v: MessageVocabulary): Messages {
       divergedShowingOriginal: `${v.latestChanged} · ${v.modification}`,
       segPreview: v.preview,
       segOriginal: v.modification,
+      readOnlyPreview: `${v.viewOnly} · ${v.preview}`,
       viewOnly: v.viewOnly,
       editable: v.editable,
       editingPending: (n) => `${v.editing} · ${n} ${v.awaiting}`,

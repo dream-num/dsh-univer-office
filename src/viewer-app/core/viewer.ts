@@ -56,6 +56,7 @@ import {
 import { blockLocalEditingCommands, resolveViewerReadOnlyEnforcement } from "./viewer-readonly";
 import { createCollaborationSheetResourceRefDataProvider } from "./collaboration-sheet-resource-ref-data-provider";
 import { loadViewerLocale } from "./locales/generated/load";
+import { withReadOnlyPermissionLocale, type ReadOnlyLocaleCopy } from "./locales/read-only";
 
 export interface ViewerOptions {
   /** DOM id of the (already-empty) element UniverUIPlugin mounts into. */
@@ -73,11 +74,13 @@ export interface ViewerOptions {
   locale: LocaleType;
   /** Initial Univer appearance. Later changes use ViewerHandle.setDarkMode without rebuilding. */
   darkMode: boolean;
+  /** Viewer-owned wording for native permission feedback when this instance is read-only. */
+  readOnlyCopy: ReadOnlyLocaleCopy;
 }
 
 export interface ViewerHandle {
   setDarkMode(isDarkMode: boolean): void;
-  setLocale(locale: LocaleType): Promise<void>;
+  setLocale(locale: LocaleType, readOnlyCopy: ReadOnlyLocaleCopy): Promise<void>;
   dispose(): void;
 }
 
@@ -97,7 +100,11 @@ declare global {
  * (trunk<->worktree) or handling a `reset` is done by the caller disposing this and creating a fresh one.
  */
 export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
-  const localePack = await loadViewerLocale(opts.locale);
+  const editable = opts.editable === true;
+  const baseLocalePack = await loadViewerLocale(opts.locale);
+  const localePack = editable
+    ? baseLocalePack
+    : withReadOnlyPermissionLocale(baseLocalePack, opts.readOnlyCopy);
   const urls = buildRuntimeConfig(
     opts.gatewayFileKey === undefined
       ? {
@@ -204,7 +211,7 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
 
   const readOnlyEnforcement = resolveViewerReadOnlyEnforcement(
     opts.unitType,
-    opts.editable === true
+    editable
   );
   if (readOnlyEnforcement === "sheet-permission") {
     makeReadonly(univer, opts.unitId);
@@ -214,8 +221,11 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
 
   return {
     setDarkMode: (isDarkMode) => api.toggleDarkMode(isDarkMode),
-    setLocale: async (locale) => {
-      const pack = await loadViewerLocale(locale);
+    setLocale: async (locale, readOnlyCopy) => {
+      const basePack = await loadViewerLocale(locale);
+      const pack = editable
+        ? basePack
+        : withReadOnlyPermissionLocale(basePack, readOnlyCopy);
       api.loadLocales(locale, pack);
       api.setLocale(locale);
     },
@@ -262,6 +272,8 @@ export interface PreviewViewerOptions {
   locale: LocaleType;
   /** Initial Univer appearance. Later changes use ViewerHandle.setDarkMode without rebuilding. */
   darkMode: boolean;
+  /** Viewer-owned wording for native permission feedback in this read-only preview. */
+  readOnlyCopy: ReadOnlyLocaleCopy;
 }
 
 /**
@@ -273,7 +285,10 @@ export interface PreviewViewerOptions {
  * opens comb and never writes back. Switching unit/worktree is done by disposing and recreating.
  */
 export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<ViewerHandle> {
-  const localePack = await loadViewerLocale(opts.locale);
+  const localePack = withReadOnlyPermissionLocale(
+    await loadViewerLocale(opts.locale),
+    opts.readOnlyCopy
+  );
   const univer = new Univer({
     locale: opts.locale,
     locales: { [opts.locale]: localePack },
@@ -343,8 +358,11 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
 
   return {
     setDarkMode: (isDarkMode) => api.toggleDarkMode(isDarkMode),
-    setLocale: async (locale) => {
-      const pack = await loadViewerLocale(locale);
+    setLocale: async (locale, readOnlyCopy) => {
+      const pack = withReadOnlyPermissionLocale(
+        await loadViewerLocale(locale),
+        readOnlyCopy
+      );
       api.loadLocales(locale, pack);
       api.setLocale(locale);
     },

@@ -769,6 +769,10 @@ function WorktreeTitle({
             <span className="shrink-0 truncate text-xs text-muted-foreground">· {unit.name}</span>
           )}
         </div>
+        <Badge variant="outline">
+          <Lock />
+          {t().topbar.readOnlyPreview}
+        </Badge>
         {previewError !== undefined ? (
           <Badge variant="warn" title={previewError}>
             <TriangleAlert />

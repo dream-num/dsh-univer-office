@@ -22,7 +22,11 @@ export const ZH_CN_MESSAGES: Messages = {
     loadFailed: (error: string): string => `加载失败:${error}`,
     previewComputeFailed: "预览计算失败",
     previewUnitUnrenderable: "此文件在合并预览中不可渲染",
-    previewLoadFailed: (error: string): string => `预览加载失败:${error}`
+    previewLoadFailed: (error: string): string => `预览加载失败:${error}`,
+    worktreeReadOnly: "这是 AI 修改的只读预览。如需调整，请让 AI 助手继续修改。",
+    mergePreviewReadOnly:
+      "这是只读的合并预览，无法直接编辑。如需调整，可让 AI 继续修改；也可以先合并，再自行编辑。",
+    currentVersionReadOnly: "当前版本暂时只读。点击上方「仍要编辑」后可以继续修改。"
   },
   toast: {
     worktreeGone: "该修改已不存在,已切回当前版本",
@@ -76,6 +80,7 @@ export const ZH_CN_MESSAGES: Messages = {
     divergedShowingOriginal: "最新版本有改动 · 正在看原始修改",
     segPreview: "合并预览",
     segOriginal: "原始修改",
+    readOnlyPreview: "只读预览",
     viewOnly: "仅查看",
     editable: "可编辑",
     editingPending: (n: number): string => `编辑中 · ${n} 处未合入`,

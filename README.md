@@ -173,6 +173,7 @@ The plugin also ships eight version-matched, lazily loaded skills: core orchestr
 
 - **Live Univer window** — file creation plus worktree creation, reopening, writing, and submission open it automatically. Drag, resize, fold, or maximize it; non-terminal windows left open carry into the next Turn.
 - **Unified Turn cards** — every touched `.univer` file that still exists has its own full Univer card, later reads do not erase a lifecycle result already produced in that Turn, and deleted temporary files do not leave loading cards behind.
+- **Explicit read-only review** — agent modifications and merge previews are labeled “Read-only preview” in the top bar. Editing a Sheet explains that the content is under review instead of incorrectly reporting a protected range or telling you to contact its creator.
 - **Historical review** — draft, ready, merged, and discarded results all remain in the same card layout at their original Turn, with historical cards collapsed by default.
 - **Session isolation** — each DSH session shows only its own windows, cards, and review state.
 - **English and Chinese UI** — the plugin shell and every open Viewer follow the DSH locale.
