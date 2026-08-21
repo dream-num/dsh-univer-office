@@ -15,6 +15,10 @@ import { CollabGatewayAssetScopeNotFoundError } from "../assets/errors.js";
 import { GatewaySemanticError } from "../errors.js";
 import { optimizeUniverfilePath } from "../optimization/univerfile-optimizer.js";
 import { MAX_UNIVERFILE_ASSET_BYTES } from "../univerfile-sqlite";
+import {
+  ExchangeHttpError,
+  MAX_EXCHANGE_FILE_BYTES,
+} from "../exchange/gateway-exchange-service.js";
 import type { Univerfile, UniverfileManager } from "../univerfile-manager.js";
 import {
   UniverfileError,
@@ -94,7 +98,7 @@ function applyCors(req: IncomingMessage, res: ServerResponse): void {
     "access-control-allow-headers",
     req.headers["access-control-request-headers"] ?? "content-type, x-user-id, authorization",
   );
-  res.setHeader("access-control-expose-headers", "content-type");
+  res.setHeader("access-control-expose-headers", "content-type, content-disposition");
   res.setHeader("access-control-max-age", "86400");
 }
 
@@ -183,6 +187,8 @@ async function dispatch(
     }
 
     if (rest[0] === "universer-api") {
+      const exchanged = await handleExchangeApi(univerfile, rest, method, url, req, res);
+      if (exchanged) return;
       const handled = await handleAssetApi(univerfile, undefined, rest, method, url, req, res);
       if (handled) return;
     }
@@ -219,6 +225,119 @@ async function dispatch(
     sendJson(res, 404, { error: { code: 0, message: `no route for ${method} ${url.pathname}` } });
   } catch (error) {
     sendJson(res, 500, { error: toErrorDetail(error) });
+  }
+}
+
+async function handleExchangeApi(
+  univerfile: Univerfile,
+  path: readonly string[],
+  method: string,
+  url: URL,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<boolean> {
+  const upload =
+    method === "POST" &&
+    path.length === 4 &&
+    path[1] === "stream" &&
+    path[2] === "file" &&
+    path[3] === "upload" &&
+    Number(url.searchParams.get("source")) === 1;
+  const autoImport =
+    method === "POST" && path.length === 3 && path[1] === "exchange" && path[2] === "import";
+  const typedImport =
+    method === "POST" &&
+    path.length === 4 &&
+    path[1] === "exchange" &&
+    path[2] !== undefined &&
+    path[3] === "import";
+  const typedExport =
+    method === "POST" &&
+    path.length === 4 &&
+    path[1] === "exchange" &&
+    path[2] !== undefined &&
+    path[3] === "export";
+  const task =
+    method === "GET" &&
+    path.length === 4 &&
+    path[1] === "exchange" &&
+    path[2] === "task" &&
+    path[3] !== undefined;
+  const file =
+    method === "GET" &&
+    path.length === 4 &&
+    path[1] === "file" &&
+    path[2] !== undefined &&
+    (path[3] === "sign-url" || path[3] === "content");
+  if (!upload && !autoImport && !typedImport && !typedExport && !task && !file) return false;
+
+  try {
+    if (upload) {
+      const uploaded = await receiveSingleMultipartFile(req, MAX_EXCHANGE_FILE_BYTES, "Exchange");
+      const result = univerfile.collab.exchange.upload({
+        size: url.searchParams.get("size"),
+        flate: url.searchParams.get("flate"),
+        filename: uploaded.filename,
+        mediaType: uploaded.mediaType,
+        bytes: uploaded.bytes,
+      });
+      sendJson(res, 201, result);
+      return true;
+    }
+    if (autoImport || typedImport) {
+      const result = univerfile.collab.exchange.importFile(
+        autoImport ? "auto" : path[2],
+        await readJsonBody(req),
+        (created) => {
+          univerfile.events.emit("", {
+            type: "unit_added",
+            unitId: created.unitId,
+            unitType: created.type as UnitType,
+            name: created.name,
+          });
+        },
+      );
+      sendJson(res, 200, result);
+      return true;
+    }
+    if (typedExport) {
+      sendJson(res, 200, univerfile.collab.exchange.exportFile(path[2], await readJsonBody(req)));
+      return true;
+    }
+    if (task) {
+      res.setHeader("cache-control", "private, no-store");
+      sendJson(res, 200, univerfile.collab.exchange.getTask(decodeURIComponent(path[3] ?? "")));
+      return true;
+    }
+
+    const fileId = decodeURIComponent(path[2] ?? "");
+    if (path[3] === "sign-url") {
+      const result = univerfile.collab.exchange.signUrl(
+        fileId,
+        url.pathname.replace(/\/sign-url$/u, "/content"),
+      );
+      if (result === null) return false;
+      res.setHeader("cache-control", "private, no-store");
+      sendJson(res, 200, result);
+      return true;
+    }
+    const opened = univerfile.collab.exchange.openFile(fileId);
+    if (opened === null) return false;
+    res.writeHead(200, {
+      "content-type": opened.mediaType,
+      "content-length": String(opened.bytes.byteLength),
+      "content-disposition": contentDisposition(opened.filename, "attachment"),
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "sandbox; default-src 'none'",
+      "cross-origin-resource-policy": "same-origin",
+    });
+    res.end(opened.bytes);
+    return true;
+  } catch (error) {
+    const status = error instanceof ExchangeHttpError ? error.status : 500;
+    sendJson(res, status, { error: toErrorDetail(error) });
+    return true;
   }
 }
 
@@ -321,7 +440,9 @@ async function handleWorktrees(
         undefined,
         body.snapshot,
       );
-      const unit = collab.worktreeUnits(worktreeId).find((entry) => entry.unitId === created.unitId);
+      const unit = collab
+        .worktreeUnits(worktreeId)
+        .find((entry) => entry.unitId === created.unitId);
       univerfile.events.emit(worktreeId, {
         type: "unit_added",
         unitId: created.unitId,
@@ -512,7 +633,7 @@ async function handleAssetApi(
   try {
     if (isUpload) {
       const intent = validateAssetUploadIntent(url.searchParams);
-      const file = await receiveSingleAssetFile(req);
+      const file = await receiveSingleMultipartFile(req, MAX_UNIVERFILE_ASSET_BYTES, "Asset");
       if (file.bytes.byteLength !== intent.size) {
         throw new AssetHttpError(400, "Uploaded file size does not match size query parameter");
       }
@@ -546,7 +667,7 @@ async function handleAssetApi(
       "content-type": opened.record.mediaType,
       "content-length": String(opened.record.byteSize),
       etag: `"${opened.record.digest}"`,
-      "content-disposition": contentDisposition(opened.record.originalFilename),
+      "content-disposition": contentDisposition(opened.record.originalFilename, "inline"),
       "cache-control": "private, no-store",
       "x-content-type-options": "nosniff",
       "content-security-policy": "sandbox; default-src 'none'",
@@ -679,7 +800,11 @@ function readRequestBody(req: IncomingMessage): Promise<Buffer> {
   });
 }
 
-function receiveSingleAssetFile(req: IncomingMessage): Promise<{
+function receiveSingleMultipartFile(
+  req: IncomingMessage,
+  maxBytes: number,
+  label: string,
+): Promise<{
   readonly filename: string;
   readonly mediaType: string;
   readonly bytes: Uint8Array;
@@ -689,7 +814,8 @@ function receiveSingleAssetFile(req: IncomingMessage): Promise<{
     try {
       parser = Busboy({
         headers: req.headers,
-        limits: { files: 1, fields: 0, parts: 1, fileSize: MAX_UNIVERFILE_ASSET_BYTES },
+        defParamCharset: "utf8",
+        limits: { files: 1, fields: 0, parts: 1, fileSize: maxBytes },
       });
     } catch {
       reject(new AssetHttpError(400, "A multipart file field named 'file' is required"));
@@ -717,10 +843,7 @@ function receiveSingleAssetFile(req: IncomingMessage): Promise<{
       };
       stream.on("data", (chunk: Buffer) => file?.chunks.push(Buffer.from(chunk)));
       stream.once("limit", () => {
-        parseError ??= new AssetHttpError(
-          413,
-          `Asset exceeds the ${MAX_UNIVERFILE_ASSET_BYTES} byte limit`,
-        );
+        parseError ??= new AssetHttpError(413, `${label} exceeds the ${maxBytes} byte limit`);
       });
       stream.once("error", (error) => {
         parseError ??= error;
@@ -745,7 +868,7 @@ function receiveSingleAssetFile(req: IncomingMessage): Promise<{
       resolve({ filename: file.filename, mediaType: file.mediaType, bytes });
     });
     req.once("aborted", () => {
-      parseError ??= new AssetHttpError(400, "Asset upload was aborted");
+      parseError ??= new AssetHttpError(400, `${label} upload was aborted`);
     });
     req.pipe(parser);
   });
@@ -773,8 +896,8 @@ function validateAssetUploadIntent(query: URLSearchParams): {
   return { size, unitId };
 }
 
-function contentDisposition(filename: string): string {
-  return `inline; filename*=UTF-8''${encodeURIComponent(filename)}`;
+function contentDisposition(filename: string, disposition: "attachment" | "inline"): string {
+  return `${disposition}; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 
 class AssetHttpError extends Error {
@@ -857,7 +980,10 @@ function requireWorktreeUnitCreateBody(body: unknown): {
   if (typeof value.name !== "string" || value.name.length === 0) {
     throw new Error("name must be a non-empty string");
   }
-  if (value.snapshot !== undefined && (typeof value.snapshot !== "object" || value.snapshot === null || Array.isArray(value.snapshot))) {
+  if (
+    value.snapshot !== undefined &&
+    (typeof value.snapshot !== "object" || value.snapshot === null || Array.isArray(value.snapshot))
+  ) {
     throw new Error("snapshot must be an object");
   }
   return {

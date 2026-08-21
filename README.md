@@ -178,6 +178,7 @@ The plugin also ships eight version-matched, lazily loaded skills: core orchestr
 - **Historical review** — draft, ready, merged, and discarded results all remain in the same card layout at their original Turn, with historical cards collapsed by default.
 - **Session isolation** — each DSH session shows only its own windows, cards, and review state.
 - **English and Chinese UI** — the plugin shell and every open Viewer follow the DSH locale.
+- **Viewer import, export, and print** — a live trunk Viewer uses the Univer Ribbon to import Office files as new Units in the current `.univer`, export Sheet, Doc, Slide, or Base Units, and print supported Units. Worktree and merge-preview Views remain read-only for exchange but retain print; Board provides print only.
 
 ## Requirements and current limits
 

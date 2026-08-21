@@ -17,6 +17,9 @@ importers:
       '@univerjs-pro/engine-formula-rust-binding':
         specifier: 1.0.0-insiders.20260819-8209aa8
         version: 1.0.0-insiders.20260819-8209aa8
+      '@univerjs-pro/exchange-node':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/exchange-node-binding':
         specifier: 0.1.0
         version: 0.1.0
@@ -117,6 +120,9 @@ importers:
       '@univerjs-pro/bases':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/bases-exchange-client':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/bases-ui':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
@@ -133,6 +139,9 @@ importers:
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/boards-mind-ui':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/boards-print':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/boards-table':
@@ -198,6 +207,9 @@ importers:
       '@univerjs-pro/docs-column-ui':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/docs-exchange-client':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/docs-latex':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
@@ -208,6 +220,9 @@ importers:
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/docs-list-ui':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/docs-print':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/docs-quote':
@@ -246,9 +261,6 @@ importers:
       '@univerjs-pro/exchange-client':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
-      '@univerjs-pro/exchange-node':
-        specifier: 1.0.0-insiders.20260821-c2f0ba5
-        version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/ink':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
@@ -273,6 +285,9 @@ importers:
       '@univerjs-pro/sheets-chart-ui':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-exchange-client':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/sheets-outline':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
@@ -283,6 +298,9 @@ importers:
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/sheets-pivot-ui':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-print':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/sheets-shape':
@@ -304,6 +322,12 @@ importers:
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/slides-chart-ui':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/slides-exchange-client':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/slides-print':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/slides-table':
@@ -2546,6 +2570,11 @@ packages:
   '@univer-cli/univer-render-runtime@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-D0DvEoISN+5bR07KiUM36BCYArypqmSgs4Y1QmnBklXig956p25irh+5KgGHzpzvkcsAvi0bopY3lOj3hO4KkA==}
 
+  '@univerjs-pro/bases-exchange-client@1.0.0-insiders.20260821-c2f0ba5':
+    resolution: {integrity: sha512-I4B9CXY/TaaiH8+H2FBflg9U+HdKIN/7uGl8vugB2SD5DVxE7WLE4eTCnWp/hE8CCEuUBXQCnYRGxL9z3b2bpQ==}
+    peerDependencies:
+      react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+
   '@univerjs-pro/bases-ui@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-I6T03HkMGDWjpfgTynYcAeIt3dGXGMbfjI1Qxo/iHHqY/luo5Z0OgwxpI+fO+Mz0GZW8x+tWqqZM6FBSeW2xwQ==}
     peerDependencies:
@@ -2686,6 +2715,9 @@ packages:
   '@univerjs-pro/docs-column@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-ouNtm/wvqbKdDrs0lEUZvP5EnVLe7FsKKMrfClc83pVvS1h/vFs5QiAE6vcmCqUyu8ncYIT9V2FAfqwI7dH3Fg==}
 
+  '@univerjs-pro/docs-exchange-client@1.0.0-insiders.20260821-c2f0ba5':
+    resolution: {integrity: sha512-3/xjShFF1nqTiEvnDxHxHNkLpzLwbxR0aOMSEYMiCmh49gdOYtccltRo/D4PGXq94zMcXugobeMM9oK1baQ2uw==}
+
   '@univerjs-pro/docs-latex-ui@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-Pj1o2UzWYhr5rNPXYnOMZbcfpi59loF45SFwZaseqTl/i/gcFK/toV3MgqdLBwnfjX3NE6A/Fzpc8mh3/LlnlA==}
     peerDependencies:
@@ -2705,6 +2737,12 @@ packages:
 
   '@univerjs-pro/docs-list@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-ZqBMIE/4mAnoroZBv4Jy8cRzbXGgb9ae3YFw8DmElc5WeZ1N/z8WHyMqxBS5QOvQbxNnRvKjdwnutVIbubZ9fg==}
+
+  '@univerjs-pro/docs-print@1.0.0-insiders.20260821-c2f0ba5':
+    resolution: {integrity: sha512-ki/Ht6+IOW5qpvB4QRL8st4GrBGSAFKuGiwPTrYh7ML418ign49IwIlpHJRgiHSPH6Umg28Y0ZqKF9DEM1iSxA==}
+    peerDependencies:
+      react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+      rxjs: '>=7.0.0'
 
   '@univerjs-pro/docs-quote-ui@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-0Yamjnhvz3YLkzhtNVs6vltCOR2yr/CZYY9bVtxhKFhpC6jog5AGDHqllUqoBKcWWTJWhOhdFy7EcmbhURD+Tg==}
@@ -2876,6 +2914,9 @@ packages:
     peerDependencies:
       rxjs: '>=7.0.0'
 
+  '@univerjs-pro/sheets-exchange-client@1.0.0-insiders.20260821-c2f0ba5':
+    resolution: {integrity: sha512-Ud+LM9yAo39MZ9tI299SwHzYMCT0+Iand56s+X+1bBzA+BZJ7xGWKQ/icWFudSSr/mSfPjc/sCsZkDPoTx+/jg==}
+
   '@univerjs-pro/sheets-outline-ui@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-dp9+xgWy2UJUJSdQDGQNpg1OyOznLUTXk1AJM3wTvIdsHdrHEapDfRNFd5o5Xveuk0kdl5QHpPboYYUReNu94Q==}
     peerDependencies:
@@ -2934,6 +2975,9 @@ packages:
     resolution: {integrity: sha512-k8Iphz1cEK0UodLk9juBbtuyhm59nvk7dm2gO47IIMl17Wtyxbp/r0KY9AWxtAXxWoOZHobNNWqNCWm4TT6v+w==}
     peerDependencies:
       rxjs: '>=7.0.0'
+
+  '@univerjs-pro/slides-exchange-client@1.0.0-insiders.20260821-c2f0ba5':
+    resolution: {integrity: sha512-DILtBhpmzp7tLWFpBSNofU3yLKbd9O4la8qPtQ/n2BU95w6YFQ++t/DjWzWXupITaINf3OKmhBqSU60Yg1x+SA==}
 
   '@univerjs-pro/slides-print@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-qC4QpZUmS339gUoEu56Mt6fQukMoNkPVBh1lYK8kMbnxOMLAwfkTsk3xr+MO/zQ8lJ57o/dBPntpiJUiMrWN+w==}
@@ -5957,6 +6001,23 @@ snapshots:
       - utf-8-validate
       - yauzl
 
+  '@univerjs-pro/bases-exchange-client@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs-pro/bases-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/collaboration': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/exchange-client': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/license': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/core': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/design': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@univerjs/icons': 1.38.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@univerjs/ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      react: 18.3.1
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - react-dom
+      - rxjs
+
   '@univerjs-pro/bases-ui@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
       '@univerjs-pro/bases': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
@@ -6434,6 +6495,20 @@ snapshots:
       - react
       - rxjs
 
+  '@univerjs-pro/docs-exchange-client@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs-pro/collaboration': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/exchange-client': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/license': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/core': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - react
+      - react-dom
+      - rxjs
+
   '@univerjs-pro/docs-latex-ui@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
       '@univerjs-pro/boards-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
@@ -6488,6 +6563,23 @@ snapshots:
     transitivePeerDependencies:
       - react
       - rxjs
+
+  '@univerjs-pro/docs-print@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs-pro/license': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/print': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/core': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/docs': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/docs-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-render': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/icons': 1.38.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@univerjs/ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      react: 18.3.1
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - react-dom
 
   '@univerjs-pro/docs-quote-ui@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
@@ -6914,6 +7006,22 @@ snapshots:
     transitivePeerDependencies:
       - react
 
+  '@univerjs-pro/sheets-exchange-client@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs-pro/collaboration': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/exchange-client': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/license': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/core': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - react
+      - react-dom
+      - rxjs
+
   '@univerjs-pro/sheets-outline-ui@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
       '@univerjs-pro/license': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
@@ -7098,6 +7206,20 @@ snapshots:
       rxjs: 7.8.2
     transitivePeerDependencies:
       - react
+
+  '@univerjs-pro/slides-exchange-client@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs-pro/collaboration': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/exchange-client': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/license': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/core': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - react
+      - react-dom
+      - rxjs
 
   '@univerjs-pro/slides-print@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
     dependencies:

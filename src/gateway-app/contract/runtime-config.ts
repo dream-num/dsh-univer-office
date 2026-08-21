@@ -34,6 +34,9 @@ export interface RuntimeConfigUrls {
   downloadEndpointUrl: string;
   uploadFileServerUrl: string;
   signUrlServerUrl: string;
+  getTaskServerUrl: string;
+  importServerUrl: string;
+  exportServerUrl: string;
 }
 
 function toWsOrigin(origin: string): string {
@@ -62,5 +65,8 @@ export function buildRuntimeConfig(input: RuntimeConfigInput): RuntimeConfigUrls
     downloadEndpointUrl: `${base}/universer-api/`,
     uploadFileServerUrl: `${base}/universer-api/stream/file/upload`,
     signUrlServerUrl: `${base}/universer-api/file/{fileID}/sign-url`,
+    getTaskServerUrl: `${base}/universer-api/exchange/task/{taskID}`,
+    importServerUrl: `${base}/universer-api/exchange/{type}/import`,
+    exportServerUrl: `${base}/universer-api/exchange/{type}/export`,
   };
 }

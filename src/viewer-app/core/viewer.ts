@@ -10,36 +10,36 @@ import {
   IUndoRedoService,
   type LocaleType,
   Univer,
-  UniverInstanceType
+  UniverInstanceType,
 } from "@univerjs/core";
 import type { IBoardData } from "@univerjs-pro/boards";
 import type {
   IBaseSnapshot,
   ICellData,
   IObjectMatrixPrimitiveType,
-  ITableSnapshot
+  ITableSnapshot,
 } from "@univerjs/core";
 import type { IDeserializedSheetBlock, ISheetBlock, ISnapshot } from "@univerjs/protocol";
 import {
   transformSnapshotToDocumentData,
   transformSnapshotToSlideData,
   transformSnapshotToWorkbookData,
-  UniverCollaborationPlugin
+  UniverCollaborationPlugin,
 } from "@univerjs-pro/collaboration";
 import { UniverCollaborationClientPlugin } from "@univerjs-pro/collaboration-client";
 import { UniverCollaborationEmbedPlugin } from "@univerjs-pro/collaboration-embed";
 import {
   BrowserCollaborationSocketService,
-  UniverCollaborationClientUIPlugin
+  UniverCollaborationClientUIPlugin,
 } from "@univerjs-pro/collaboration-client-ui";
 import {
   EmbedModelService,
   EmbedReferencedUnitMaterializeService,
-  IReferencedUnitManagerService
+  IReferencedUnitManagerService,
 } from "@univerjs-pro/embed";
 import {
   FormulaCalculationSessionService,
-  SetTriggerFormulaCalculationStartMutation
+  SetTriggerFormulaCalculationStartMutation,
 } from "@univerjs/engine-formula";
 import { ISocketService, WebSocketService } from "@univerjs/network";
 import { WorkbookEditablePermission } from "@univerjs/sheets";
@@ -51,7 +51,7 @@ import {
   UNIT_TYPE_DOC,
   UNIT_TYPE_SHEET,
   UNIT_TYPE_SLIDE,
-  type UnitType
+  type UnitType,
 } from "@univer/collab-gateway-contract";
 import { blockLocalEditingCommands, resolveViewerReadOnlyEnforcement } from "./viewer-readonly";
 import { createCollaborationSheetResourceRefDataProvider } from "./collaboration-sheet-resource-ref-data-provider";
@@ -110,13 +110,13 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
       ? {
           origin: opts.origin,
           univerfile: opts.univerfile,
-          ...(opts.worktreeId === undefined ? {} : { worktreeId: opts.worktreeId })
+          ...(opts.worktreeId === undefined ? {} : { worktreeId: opts.worktreeId }),
         }
       : {
           origin: opts.origin,
           gatewayFileKey: opts.gatewayFileKey,
-          ...(opts.worktreeId === undefined ? {} : { worktreeId: opts.worktreeId })
-        }
+          ...(opts.worktreeId === undefined ? {} : { worktreeId: opts.worktreeId }),
+        },
   );
 
   const univer = new Univer({
@@ -127,9 +127,9 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     // null the core ones to avoid a redi "registered more than once" conflict.
     override: [
       [IAuthzIoService, null],
-      [IUndoRedoService, null]
+      [IUndoRedoService, null],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ] as any
+    ] as any,
   });
 
   const sheetResourceRefDataProvider = createCollaborationSheetResourceRefDataProvider(() => {
@@ -145,9 +145,9 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
           .executeCommand(
             SetTriggerFormulaCalculationStartMutation.id,
             { commands: [], forceCalculation: true },
-            { onlyLocal: true }
+            { onlyLocal: true },
           );
-      }
+      },
     };
   });
 
@@ -157,6 +157,19 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     license: TEST_LICENSE,
     workbenchChrome: opts.unitType === UNIT_TYPE_BOARD ? "hidden" : "visible",
     ribbonType: "grid",
+    unitType: toUniverInstanceType(opts.unitType),
+    ...(opts.worktreeId === undefined && opts.unitType !== UNIT_TYPE_BOARD
+      ? {
+          exchangeClientConfig: {
+            uploadFileServerUrl: urls.uploadFileServerUrl,
+            getTaskServerUrl: urls.getTaskServerUrl,
+            signUrlServerUrl: urls.signUrlServerUrl,
+            importServerUrl: urls.importServerUrl,
+            exportServerUrl: urls.exportServerUrl,
+            downloadEndpointUrl: urls.downloadEndpointUrl,
+          },
+        }
+      : {}),
     resourceRefDataProviderRegistrations: [sheetResourceRefDataProvider.registration],
     // Collaboration must start before Embed core, whose command service consumes collaborative
     // undo/redo. Collaboration Embed itself depends on Embed core and belongs before Embed UI.
@@ -172,15 +185,15 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
         enableSingleActiveInstanceLock: false,
         loginUrlKey: "/login",
         sendChangesetTimeout: 200,
-        ...urls
+        ...urls,
       });
-      if (opts.unitType === UNIT_TYPE_BOARD) {
-        univer.registerPlugin(UniverCollaborationClientUIPlugin);
-      }
+      univer.registerPlugin(UniverCollaborationClientUIPlugin, {
+        ...(opts.unitType === UNIT_TYPE_BASE ? { enableDocumentCollaborationUI: false } : {}),
+      });
     },
     registerAfterEmbedCore: () => {
       univer.registerPlugin(UniverCollaborationEmbedPlugin);
-    }
+    },
   });
 
   const api = FUniver.newAPI(univer);
@@ -209,10 +222,7 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
   await materializeHostEmbedChildren(univer, opts.unitId);
   const disposeDebugEndpoint = exposeDebugEndpoint(univer, api);
 
-  const readOnlyEnforcement = resolveViewerReadOnlyEnforcement(
-    opts.unitType,
-    editable
-  );
+  const readOnlyEnforcement = resolveViewerReadOnlyEnforcement(opts.unitType, editable);
   if (readOnlyEnforcement === "sheet-permission") {
     makeReadonly(univer, opts.unitId);
   } else if (readOnlyEnforcement === "mutation-gate") {
@@ -223,9 +233,7 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     setDarkMode: (isDarkMode) => api.toggleDarkMode(isDarkMode),
     setLocale: async (locale, readOnlyCopy) => {
       const basePack = await loadViewerLocale(locale);
-      const pack = editable
-        ? basePack
-        : withReadOnlyPermissionLocale(basePack, readOnlyCopy);
+      const pack = editable ? basePack : withReadOnlyPermissionLocale(basePack, readOnlyCopy);
       api.loadLocales(locale, pack);
       api.setLocale(locale);
     },
@@ -235,7 +243,7 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
       disposeDebugEndpoint();
       api.dispose();
       univer.dispose();
-    }
+    },
   };
 }
 
@@ -287,12 +295,12 @@ export interface PreviewViewerOptions {
 export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<ViewerHandle> {
   const localePack = withReadOnlyPermissionLocale(
     await loadViewerLocale(opts.locale),
-    opts.readOnlyCopy
+    opts.readOnlyCopy,
   );
   const univer = new Univer({
     locale: opts.locale,
     locales: { [opts.locale]: localePack },
-    darkMode: opts.darkMode
+    darkMode: opts.darkMode,
   });
 
   registerViewRendering(univer, {
@@ -300,7 +308,8 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
     assetIoOwner: ViewAssetIoOwner.Local,
     license: TEST_LICENSE,
     workbenchChrome: opts.unitType === UNIT_TYPE_BOARD ? "hidden" : "visible",
-    ribbonType: "grid"
+    ribbonType: "grid",
+    unitType: toUniverInstanceType(opts.unitType),
   });
 
   const snapshot = decodeSnapshotFromWire(opts.snapshot) as ISnapshot;
@@ -316,7 +325,7 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
   } else if (opts.unitType === UNIT_TYPE_BASE) {
     const data = decodeBaseSnapshotData(
       snapshot,
-      (opts.sheetBlocks ?? []) as Array<IDeserializedSheetBlock | ISheetBlock>
+      (opts.sheetBlocks ?? []) as Array<IDeserializedSheetBlock | ISheetBlock>,
     );
     unitId = data.id ?? "";
     univer.createUnit(UniverInstanceType.UNIVER_BASE, data);
@@ -327,7 +336,7 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
   } else if (opts.unitType === UNIT_TYPE_SHEET) {
     const data = await transformSnapshotToWorkbookData(
       snapshot,
-      (opts.sheetBlocks ?? []) as Parameters<typeof transformSnapshotToWorkbookData>[1]
+      (opts.sheetBlocks ?? []) as Parameters<typeof transformSnapshotToWorkbookData>[1],
     );
     unitId = data.id ?? "";
     univer.createUnit(UniverInstanceType.UNIVER_SHEET, data);
@@ -359,10 +368,7 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
   return {
     setDarkMode: (isDarkMode) => api.toggleDarkMode(isDarkMode),
     setLocale: async (locale, readOnlyCopy) => {
-      const pack = withReadOnlyPermissionLocale(
-        await loadViewerLocale(locale),
-        readOnlyCopy
-      );
+      const pack = withReadOnlyPermissionLocale(await loadViewerLocale(locale), readOnlyCopy);
       api.loadLocales(locale, pack);
       api.setLocale(locale);
     },
@@ -370,7 +376,7 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
       disposeDebugEndpoint();
       api.dispose();
       univer.dispose();
-    }
+    },
   };
 }
 
@@ -433,13 +439,13 @@ function decodeBoardSnapshotData(snapshot: ISnapshot): IBoardData {
     id: snapshot.unitID || meta.unitID,
     rev: snapshot.rev || meta.rev,
     name: meta.name,
-    resources: meta.resources
+    resources: meta.resources,
   } as unknown as IBoardData;
 }
 
 function decodeBaseSnapshotData(
   snapshot: ISnapshot,
-  blocks: readonly (IDeserializedSheetBlock | ISheetBlock)[]
+  blocks: readonly (IDeserializedSheetBlock | ISheetBlock)[],
 ): IBaseSnapshot {
   const meta = snapshot.workbook;
   if (meta === undefined) {
@@ -465,7 +471,7 @@ function decodeBaseSnapshotData(
       id: tableMeta.id,
       name: tableMeta.name,
       ...decodeJsonData(tableMeta.originalMeta),
-      cellData
+      cellData,
     } as unknown as ITableSnapshot;
   }
 
@@ -478,7 +484,7 @@ function decodeBaseSnapshotData(
     createdAt: 0,
     updatedAt: 0,
     ...decodeJsonData(meta.originalMeta),
-    rev: snapshot.rev || meta.rev
+    rev: snapshot.rev || meta.rev,
   } as unknown as IBaseSnapshot;
 }
 
@@ -502,4 +508,19 @@ function base64ToBytes(b64: string): Uint8Array {
     bytes[i] = bin.charCodeAt(i);
   }
   return bytes;
+}
+
+function toUniverInstanceType(unitType: UnitType): UniverInstanceType {
+  switch (unitType) {
+    case UNIT_TYPE_DOC:
+      return UniverInstanceType.UNIVER_DOC;
+    case UNIT_TYPE_SHEET:
+      return UniverInstanceType.UNIVER_SHEET;
+    case UNIT_TYPE_SLIDE:
+      return UniverInstanceType.UNIVER_SLIDE;
+    case UNIT_TYPE_BASE:
+      return UniverInstanceType.UNIVER_BASE;
+    case UNIT_TYPE_BOARD:
+      return UniverInstanceType.UNIVER_BOARD;
+  }
 }

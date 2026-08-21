@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { type UnitType } from './contract';
+import { type UnitType } from "./contract";
 import type {
   CollabMemberContext,
   CreateUnitFromDataInput,
   DatabaseContext,
 } from "@univerjs-pro/collaboration-service";
+import { UnitSnapshotMaterializer } from "@univerjs-pro/collaboration-service";
+import type { ISnapshotWithBlocks } from "@univerjs-pro/exchange-node";
 import type {
   IChangeset as IProtocolChangeset,
   IDeserializedSheetBlock,
@@ -28,19 +30,17 @@ import type {
 import { externalizeEmbeddedImages } from "./assets/externalize-embedded-images.js";
 import { CollabGatewayAssetScopeNotFoundError } from "./assets/errors.js";
 import { GatewayFileRuntime } from "./gateway-file-runtime.js";
-import type { UniverfileAssetRecord, UniverfileOpenedAsset } from './univerfile-sqlite';
-import {
-  UNIVERFILE_UNIT_METADATA_KEY,
-  type UniverfileUnitSummary,
-} from './univerfile-sqlite';
+import type { UniverfileAssetRecord, UniverfileOpenedAsset } from "./univerfile-sqlite";
+import { UNIVERFILE_UNIT_METADATA_KEY, type UniverfileUnitSummary } from "./univerfile-sqlite";
 import {
   UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY,
   UNIVERFILE_WORKTREE_METADATA_KEY,
   type UniverfileWorktreeSummary,
   type UniverfileWorktreeUnitSummary,
-} from './univerfile-sqlite';
+} from "./univerfile-sqlite";
 import { unitAdapter } from "./univer/unit-types.js";
 import { KeyedLock } from "./util/lock.js";
+import { GatewayExchangeService } from "./exchange/gateway-exchange-service.js";
 
 export interface CollabServiceOptions {
   /** `.univer` file path; ":memory:" (default) for an ephemeral store. */
@@ -61,6 +61,7 @@ export class CollabService {
   public readonly runtime: GatewayFileRuntime;
   public readonly storage: TrunkStorageCompatibility;
   public readonly worktrees: WorktreeCatalogCompatibility;
+  public readonly exchange: GatewayExchangeService;
 
   private readonly _lock = new KeyedLock();
 
@@ -68,6 +69,7 @@ export class CollabService {
     this.runtime = new GatewayFileRuntime(options);
     this.storage = new TrunkStorageCompatibility(this.runtime);
     this.worktrees = new WorktreeCatalogCompatibility(this.runtime);
+    this.exchange = new GatewayExchangeService(this);
   }
 
   public async createUnit(type: number, input: CreateUnitInput = {}): Promise<CreateUnitResult> {
@@ -97,6 +99,23 @@ export class CollabService {
 
   public listUnits(): readonly UniverfileUnitSummary[] {
     return this.runtime.trunkAdapter.listUnits();
+  }
+
+  public async materializeUnit(unitId: string, type: UniverType): Promise<ISnapshotWithBlocks> {
+    const unit = this.listUnits().find((candidate) => candidate.unitId === unitId);
+    if (unit === undefined || unit.type !== type) {
+      throw new Error(`Unit ${unitId} was not found with type ${String(type)}`);
+    }
+    const loadData = await this.runtime.trunkService.getUnitLoadDataWithBlocks(
+      { unitID: unitId, type, revision: 0 },
+      callOptions("local", { source: "gateway-exchange" }),
+    );
+    const materializer = new UnitSnapshotMaterializer();
+    try {
+      return await materializer.materializeSnapshot(loadData);
+    } finally {
+      await materializer.dispose();
+    }
   }
 
   public createWorktree(agentId = "", name = ""): WorktreeRecord {
@@ -539,8 +558,9 @@ export class CollabService {
     this.runtime.handleUpgrade(request, socket, head, sdkUrl);
   }
 
-  public dispose(): Promise<void> {
-    return this.runtime.dispose();
+  public async dispose(): Promise<void> {
+    await this.exchange.dispose();
+    await this.runtime.dispose();
   }
 
   public getCurrentRev(unitId: string): number | undefined {

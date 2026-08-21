@@ -1,11 +1,12 @@
 import { UniverSheetsImportRangeFormulaPlugin } from "@univer/importrange-formula";
-import { IImageIoService, IUniverInstanceService } from "@univerjs/core";
+import { IImageIoService, IUniverInstanceService, UniverInstanceType } from "@univerjs/core";
 import type { Univer } from "@univerjs/core";
 import { IAttachmentIoService } from "@univerjs-pro/collaboration-client";
 import { UniverProFormulaEnginePlugin } from "@univerjs-pro/engine-formula";
 import { UniverLicensePlugin } from "@univerjs-pro/license";
 import { UniverBasesPlugin } from "@univerjs-pro/bases";
 import { UniverBasesUIPlugin } from "@univerjs-pro/bases-ui";
+import { UniverBasesExchangeClientPlugin } from "@univerjs-pro/bases-exchange-client";
 import { BoardToolType, UniverBoardsPlugin } from "@univerjs-pro/boards";
 import { UniverBoardsChartPlugin } from "@univerjs-pro/boards-chart";
 import { UniverBoardsChartUIPlugin } from "@univerjs-pro/boards-chart-ui";
@@ -14,6 +15,7 @@ import { UniverBoardsMindUIPlugin } from "@univerjs-pro/boards-mind-ui";
 import { UniverBoardsTablePlugin } from "@univerjs-pro/boards-table";
 import { UniverBoardsTableUIPlugin } from "@univerjs-pro/boards-table-ui";
 import { UniverBoardsUIPlugin } from "@univerjs-pro/boards-ui";
+import { UniverBoardsPrintPlugin } from "@univerjs-pro/boards-print";
 import { UniverDocsCalloutPlugin } from "@univerjs-pro/docs-callout";
 import { UniverDocsCalloutUIPlugin } from "@univerjs-pro/docs-callout-ui";
 import { UniverDocsChartPlugin } from "@univerjs-pro/docs-chart";
@@ -22,10 +24,12 @@ import { UniverDocsCodePlugin } from "@univerjs-pro/docs-code";
 import { UniverDocsCodeUIPlugin } from "@univerjs-pro/docs-code-ui";
 import { UniverDocsColumnPlugin } from "@univerjs-pro/docs-column";
 import { UniverDocsColumnUIPlugin } from "@univerjs-pro/docs-column-ui";
+import { UniverDocsExchangeClientPlugin } from "@univerjs-pro/docs-exchange-client";
 import { UniverDocsListPlugin } from "@univerjs-pro/docs-list";
 import { UniverDocsListUIPlugin } from "@univerjs-pro/docs-list-ui";
 import { UniverDocsQuotePlugin } from "@univerjs-pro/docs-quote";
 import { UniverDocsQuoteUIPlugin } from "@univerjs-pro/docs-quote-ui";
+import { UniverDocsPrintPlugin } from "@univerjs-pro/docs-print";
 import { UniverDocsShapePlugin } from "@univerjs-pro/docs-shape";
 import { UniverDocsShapeUIPlugin } from "@univerjs-pro/docs-shape-ui";
 import { UniverDocsTablePlugin } from "@univerjs-pro/docs-table";
@@ -42,6 +46,8 @@ import { UniverSheetsOutlinePlugin } from "@univerjs-pro/sheets-outline";
 import { UniverSheetsOutlineUIPlugin } from "@univerjs-pro/sheets-outline-ui";
 import { UniverSheetsPivotTablePlugin } from "@univerjs-pro/sheets-pivot";
 import { UniverSheetsPivotTableUIPlugin } from "@univerjs-pro/sheets-pivot-ui";
+import { UniverSheetsExchangeClientPlugin } from "@univerjs-pro/sheets-exchange-client";
+import { UniverSheetsPrintPlugin } from "@univerjs-pro/sheets-print";
 import { UniverSheetsShapePlugin } from "@univerjs-pro/sheets-shape";
 import { UniverSheetsShapeUIPlugin } from "@univerjs-pro/sheets-shape-ui";
 import { UniverSheetSparklinePlugin } from "@univerjs-pro/sheets-sparkline";
@@ -49,6 +55,8 @@ import { UniverSheetSparklineUIPlugin } from "@univerjs-pro/sheets-sparkline-ui"
 import { UniverSlidesPlugin } from "@univerjs-pro/slides";
 import { UniverSlidesChartPlugin } from "@univerjs-pro/slides-chart";
 import { UniverSlidesChartUIPlugin } from "@univerjs-pro/slides-chart-ui";
+import { UniverSlidesExchangeClientPlugin } from "@univerjs-pro/slides-exchange-client";
+import { UniverSlidesPrintPlugin } from "@univerjs-pro/slides-print";
 import { UniverSlidesTablePlugin } from "@univerjs-pro/slides-table";
 import { UniverSlidesTableUIPlugin } from "@univerjs-pro/slides-table-ui";
 import { UniverSlidesUIPlugin } from "@univerjs-pro/slides-ui";
@@ -245,7 +253,6 @@ function registerBaseUnitPlugins(univer: Univer, collaborationOwnsAssetIo: boole
 
 /** Stable Board plugins in the version-matched univer-pro browser example order. */
 function registerBoardPlugins(univer: Univer): void {
-  univer.registerPlugin(UniverExchangeClientPlugin);
   univer.registerPlugin(UniverBoardsPlugin);
   univer.registerPlugin(UniverInkPlugin);
   univer.registerPlugin(UniverInkUIPlugin);
@@ -258,6 +265,63 @@ function registerBoardPlugins(univer: Univer): void {
   univer.registerPlugin(UniverBoardsMindUIPlugin);
   univer.registerPlugin(UniverBoardsTablePlugin);
   univer.registerPlugin(UniverBoardsTableUIPlugin);
+}
+
+export interface ViewExchangeClientConfig {
+  readonly uploadFileServerUrl: string;
+  readonly getTaskServerUrl: string;
+  readonly signUrlServerUrl: string;
+  readonly importServerUrl: string;
+  readonly exportServerUrl: string;
+  readonly downloadEndpointUrl: string;
+}
+
+function registerOutputPlugins(
+  univer: Univer,
+  unitType: UniverInstanceType,
+  exchangeClientConfig: ViewExchangeClientConfig | undefined
+): void {
+  const registerExchange = (): void => {
+    if (exchangeClientConfig !== undefined) {
+      univer.registerPlugin(UniverExchangeClientPlugin, exchangeClientConfig);
+    }
+  };
+
+  switch (unitType) {
+    case UniverInstanceType.UNIVER_SHEET:
+      // Workspace's Advanced Sheet preset owns print before the two exchange plugins.
+      univer.registerPlugin(UniverSheetsPrintPlugin);
+      registerExchange();
+      if (exchangeClientConfig !== undefined) {
+        univer.registerPlugin(UniverSheetsExchangeClientPlugin);
+      }
+      return;
+    case UniverInstanceType.UNIVER_DOC:
+      registerExchange();
+      if (exchangeClientConfig !== undefined) {
+        univer.registerPlugin(UniverDocsExchangeClientPlugin);
+      }
+      univer.registerPlugin(UniverDocsPrintPlugin);
+      return;
+    case UniverInstanceType.UNIVER_SLIDE:
+      registerExchange();
+      if (exchangeClientConfig !== undefined) {
+        univer.registerPlugin(UniverSlidesExchangeClientPlugin);
+      }
+      univer.registerPlugin(UniverSlidesPrintPlugin);
+      return;
+    case UniverInstanceType.UNIVER_BASE:
+      registerExchange();
+      if (exchangeClientConfig !== undefined) {
+        univer.registerPlugin(UniverBasesExchangeClientPlugin);
+      }
+      return;
+    case UniverInstanceType.UNIVER_BOARD:
+      univer.registerPlugin(UniverBoardsPrintPlugin);
+      return;
+    default:
+      throw new Error(`Unsupported Browser View Unit type: ${String(unitType)}`);
+  }
 }
 
 function registerEmbedCorePlugin(
@@ -291,6 +355,9 @@ export interface ViewRenderingOptions {
   license: string;
   workbenchChrome: "hidden" | "visible";
   ribbonType?: RibbonType;
+  /** Browser Viewer Unit type. Omit only for the headless multi-Unit render page. */
+  unitType?: UniverInstanceType;
+  exchangeClientConfig?: ViewExchangeClientConfig;
   resourceRefDataProviderRegistrations?: readonly IEmbedResourceRefDataProviderRegistration[];
   registerBeforeEmbedCore?: () => void;
   registerAfterEmbedCore?: () => void;
@@ -318,6 +385,9 @@ export function registerViewRendering(univer: Univer, options: ViewRenderingOpti
   registerBaseUnitPlugins(univer, collaborationOwnsAssetIo);
   registerBoardPlugins(univer);
   options.registerBeforeEmbedCore?.();
+  if (options.unitType !== undefined) {
+    registerOutputPlugins(univer, options.unitType, options.exchangeClientConfig);
+  }
   registerEmbedCorePlugin(univer, options.resourceRefDataProviderRegistrations ?? []);
   options.registerAfterEmbedCore?.();
   registerEmbedUIPlugin(univer);

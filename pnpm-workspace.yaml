@@ -139,3 +139,8 @@ minimumReleaseAgeExclude:
   - '@univerjs/thread-comment@1.0.0-insiders.20260821-c2f0ba5'
   - '@univerjs/ui@1.0.0-insiders.20260821-c2f0ba5'
   - '@univerjs/icons@1.38.0'
+  - '@univerjs-pro/bases-exchange-client@1.0.0-insiders.20260821-c2f0ba5'
+  - '@univerjs-pro/docs-exchange-client@1.0.0-insiders.20260821-c2f0ba5'
+  - '@univerjs-pro/docs-print@1.0.0-insiders.20260821-c2f0ba5'
+  - '@univerjs-pro/sheets-exchange-client@1.0.0-insiders.20260821-c2f0ba5'
+  - '@univerjs-pro/slides-exchange-client@1.0.0-insiders.20260821-c2f0ba5'

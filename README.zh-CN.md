@@ -178,6 +178,7 @@ Agent 会自动选择对应 Skills 和 `univer_*` 工具。通常会依次创建
 - **历史审阅**：`draft`、`ready`、合并和丢弃结果都使用同款卡片保留在原回合，历史卡片默认折叠。
 - **多会话隔离**：每个 DSH 会话只展示属于自己的窗口、卡片和审阅状态。
 - **中英文界面**：插件外壳和已打开的 Viewer 跟随 DSH 的界面语言。
+- **Viewer 导入、导出与打印**：实时 trunk Viewer 可通过 Univer Ribbon 把 Office 文件导入为当前 `.univer` 中的新 Unit，导出 Sheet、Doc、Slide 或多维表格，并打印受支持的 Unit。worktree 和 merge preview 不开放导入导出但保留打印；Board 仅提供打印。
 
 ## 要求与限制
 

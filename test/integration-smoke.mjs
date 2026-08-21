@@ -222,6 +222,43 @@ try {
 	const merged = await service.status(scoped);
 	if (merged.result?.trunk?.units?.length !== 3) throw new Error(`merge did not publish Units: ${JSON.stringify(merged)}`);
 
+	const gatewayKey = Buffer.from(file).toString("base64url");
+	const exchangeBase = `${origin}/uf/${gatewayKey}/universer-api`;
+	const exchangeCsv = Buffer.from("name,value\nserver,7\n", "utf8");
+	const exchangeForm = new FormData();
+	exchangeForm.append("file", new Blob([exchangeCsv], { type: "text/csv" }), "服务端.csv");
+	const uploadedExchange = await fetch(
+		`${exchangeBase}/stream/file/upload?size=${exchangeCsv.byteLength}&source=1&flate=false`,
+		{ method: "POST", body: exchangeForm },
+	);
+	if (uploadedExchange.status !== 201) throw new Error(`exchange upload failed: ${await uploadedExchange.text()}`);
+	const uploadedExchangeBody = await uploadedExchange.json();
+	const importTask = await postJson(`${exchangeBase}/exchange/2/import`, {
+		fileID: uploadedExchangeBody.FileId,
+		outputType: 1,
+		options: {},
+	});
+	const importedExchange = await waitForExchangeTask(exchangeBase, importTask.taskID);
+	const exchangedUnitId = importedExchange.import?.unitID;
+	if (typeof exchangedUnitId !== "string" || importedExchange.status !== "done") {
+		throw new Error(`server exchange import failed: ${JSON.stringify(importedExchange)}`);
+	}
+	const exportTask = await postJson(`${exchangeBase}/exchange/2/export`, {
+		unitID: exchangedUnitId,
+		format: "xlsx",
+		options: {},
+	});
+	const exportedExchange = await waitForExchangeTask(exchangeBase, exportTask.taskID);
+	const exchangedFileId = exportedExchange.export?.fileID;
+	if (typeof exchangedFileId !== "string") {
+		throw new Error(`server exchange export failed: ${JSON.stringify(exportedExchange)}`);
+	}
+	const signedExchange = await (await fetch(`${exchangeBase}/file/${exchangedFileId}/sign-url`)).json();
+	const exchangedDownload = await fetch(`${origin}${signedExchange.url}`);
+	if (!exchangedDownload.ok || (await exchangedDownload.arrayBuffer()).byteLength === 0) {
+		throw new Error("server exchange download failed");
+	}
+
 	const disposable = await service.worktree({ ...scoped, action: "create", name: "discard me" });
 	const disposableId = disposable.result?.worktreeId;
 	if (typeof disposableId !== "string") throw new Error(`disposable worktree failed: ${JSON.stringify(disposable)}`);
@@ -276,6 +313,27 @@ async function occupyPortWithFreeSuccessor() {
 async function closeServer(server) {
 	if (!server.listening) return;
 	await new Promise((resolve, reject) => server.close((error) => error === undefined ? resolve() : reject(error)));
+}
+
+async function postJson(url, body) {
+	const response = await fetch(url, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(body),
+	});
+	if (!response.ok) throw new Error(`POST ${url} failed: ${await response.text()}`);
+	return response.json();
+}
+
+async function waitForExchangeTask(exchangeBase, taskId) {
+	for (let attempt = 0; attempt < 100; attempt += 1) {
+		const response = await fetch(`${exchangeBase}/exchange/task/${encodeURIComponent(taskId)}`);
+		if (!response.ok) throw new Error(`exchange task polling failed: ${await response.text()}`);
+		const task = await response.json();
+		if (task.status !== "pending") return task;
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
+	throw new Error(`exchange task ${taskId} did not settle`);
 }
 
 async function expectTransition(worktreeId, action, expectedStatus) {

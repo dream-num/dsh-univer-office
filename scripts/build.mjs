@@ -118,6 +118,7 @@ if (target === 'all' || target === 'gateway') {
     ...builtinModules.map((id) => `node:${id}`),
     ...builtinModules,
     'libsql',
+    '@univerjs-pro/exchange-node',
     '@univerjs-pro/exchange-node-binding',
     '@univerjs-pro/engine-formula-rust-binding',
     '@univerjs-pro/cli-assets',

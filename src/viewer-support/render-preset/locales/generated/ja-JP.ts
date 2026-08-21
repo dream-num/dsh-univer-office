@@ -13,51 +13,59 @@ import locale11 from "@univerjs/drawing-ui/locale/ja-JP";
 import locale12 from "@univerjs-pro/embed-ui/locale/ja-JP";
 import locale13 from "@univerjs-pro/bases/locale/ja-JP";
 import locale14 from "@univerjs-pro/bases-ui/locale/ja-JP";
-import locale15 from "@univerjs-pro/shape-editor-ui/locale/ja-JP";
-import locale16 from "@univerjs-pro/ink-ui/locale/ja-JP";
-import locale17 from "@univerjs-pro/boards-ui/locale/ja-JP";
-import locale18 from "@univerjs-pro/boards-chart-ui/locale/ja-JP";
-import locale19 from "@univerjs-pro/boards-mind-ui/locale/ja-JP";
-import locale20 from "@univerjs-pro/boards-table-ui/locale/ja-JP";
-import locale21 from "@univerjs-pro/docs-callout-ui/locale/ja-JP";
-import locale22 from "@univerjs-pro/docs-chart-ui/locale/ja-JP";
-import locale23 from "@univerjs-pro/docs-column-ui/locale/ja-JP";
-import locale24 from "@univerjs-pro/docs-code-ui/locale/ja-JP";
-import locale25 from "@univerjs-pro/docs-list-ui/locale/ja-JP";
-import locale26 from "@univerjs-pro/docs-quote-ui/locale/ja-JP";
-import locale27 from "@univerjs-pro/docs-shape-ui/locale/ja-JP";
-import locale28 from "@univerjs-pro/docs-table-ui/locale/ja-JP";
-import locale29 from "@univerjs-pro/docs-latex-ui/locale/ja-JP";
-import locale30 from "@univerjs-pro/sheets-chart/locale/ja-JP";
-import locale31 from "@univerjs-pro/sheets-chart-ui/locale/ja-JP";
-import locale32 from "@univerjs/sheets-conditional-formatting/locale/ja-JP";
-import locale33 from "@univerjs/sheets-conditional-formatting-ui/locale/ja-JP";
-import locale34 from "@univerjs/sheets-crosshair-highlight/locale/ja-JP";
-import locale35 from "@univerjs/sheets-data-validation/locale/ja-JP";
-import locale36 from "@univerjs/sheets-data-validation-ui/locale/ja-JP";
-import locale37 from "@univerjs/sheets-drawing-ui/locale/ja-JP";
-import locale38 from "@univerjs/sheets-filter/locale/ja-JP";
-import locale39 from "@univerjs/sheets-filter-ui/locale/ja-JP";
-import locale40 from "@univerjs/sheets-hyper-link/locale/ja-JP";
-import locale41 from "@univerjs/sheets-hyper-link-ui/locale/ja-JP";
-import locale42 from "@univerjs/sheets-note-ui/locale/ja-JP";
-import locale43 from "@univerjs/sheets-numfmt-ui/locale/ja-JP";
-import locale44 from "@univerjs-pro/sheets-outline-ui/locale/ja-JP";
-import locale45 from "@univerjs-pro/sheets-pivot/locale/ja-JP";
-import locale46 from "@univerjs-pro/sheets-pivot-ui/locale/ja-JP";
-import locale47 from "@univerjs-pro/sheets-shape-ui/locale/ja-JP";
-import locale48 from "@univerjs/sheets-sort-ui/locale/ja-JP";
-import locale49 from "@univerjs-pro/sheets-sparkline-ui/locale/ja-JP";
-import locale50 from "@univerjs/sheets-table/locale/ja-JP";
-import locale51 from "@univerjs/sheets-table-ui/locale/ja-JP";
-import locale52 from "@univerjs/sheets-thread-comment-ui/locale/ja-JP";
-import locale53 from "@univerjs/thread-comment-ui/locale/ja-JP";
-import locale54 from "@univerjs-pro/slides/locale/ja-JP";
-import locale55 from "@univerjs-pro/slides-ui/locale/ja-JP";
-import locale56 from "@univerjs-pro/slides-chart-ui/locale/ja-JP";
-import locale57 from "@univerjs-pro/slides-table-ui/locale/ja-JP";
-import locale58 from "@univerjs-pro/chart-ui/locale/ja-JP";
-import locale59 from "@univerjs-pro/engine-chart/locale/ja-JP";
+import locale15 from "@univerjs-pro/bases-exchange-client/locale/ja-JP";
+import locale16 from "@univerjs-pro/shape-editor-ui/locale/ja-JP";
+import locale17 from "@univerjs-pro/ink-ui/locale/ja-JP";
+import locale18 from "@univerjs-pro/boards-ui/locale/ja-JP";
+import locale19 from "@univerjs-pro/boards-chart-ui/locale/ja-JP";
+import locale20 from "@univerjs-pro/boards-mind-ui/locale/ja-JP";
+import locale21 from "@univerjs-pro/boards-table-ui/locale/ja-JP";
+import locale22 from "@univerjs-pro/boards-print/locale/ja-JP";
+import locale23 from "@univerjs-pro/docs-callout-ui/locale/ja-JP";
+import locale24 from "@univerjs-pro/docs-chart-ui/locale/ja-JP";
+import locale25 from "@univerjs-pro/docs-column-ui/locale/ja-JP";
+import locale26 from "@univerjs-pro/docs-exchange-client/locale/ja-JP";
+import locale27 from "@univerjs-pro/docs-code-ui/locale/ja-JP";
+import locale28 from "@univerjs-pro/docs-list-ui/locale/ja-JP";
+import locale29 from "@univerjs-pro/docs-quote-ui/locale/ja-JP";
+import locale30 from "@univerjs-pro/docs-shape-ui/locale/ja-JP";
+import locale31 from "@univerjs-pro/docs-table-ui/locale/ja-JP";
+import locale32 from "@univerjs-pro/docs-latex-ui/locale/ja-JP";
+import locale33 from "@univerjs-pro/docs-print/locale/ja-JP";
+import locale34 from "@univerjs-pro/sheets-chart/locale/ja-JP";
+import locale35 from "@univerjs-pro/sheets-chart-ui/locale/ja-JP";
+import locale36 from "@univerjs/sheets-conditional-formatting/locale/ja-JP";
+import locale37 from "@univerjs/sheets-conditional-formatting-ui/locale/ja-JP";
+import locale38 from "@univerjs/sheets-crosshair-highlight/locale/ja-JP";
+import locale39 from "@univerjs/sheets-data-validation/locale/ja-JP";
+import locale40 from "@univerjs/sheets-data-validation-ui/locale/ja-JP";
+import locale41 from "@univerjs/sheets-drawing-ui/locale/ja-JP";
+import locale42 from "@univerjs/sheets-filter/locale/ja-JP";
+import locale43 from "@univerjs/sheets-filter-ui/locale/ja-JP";
+import locale44 from "@univerjs/sheets-hyper-link/locale/ja-JP";
+import locale45 from "@univerjs/sheets-hyper-link-ui/locale/ja-JP";
+import locale46 from "@univerjs/sheets-note-ui/locale/ja-JP";
+import locale47 from "@univerjs/sheets-numfmt-ui/locale/ja-JP";
+import locale48 from "@univerjs-pro/sheets-outline-ui/locale/ja-JP";
+import locale49 from "@univerjs-pro/sheets-pivot/locale/ja-JP";
+import locale50 from "@univerjs-pro/sheets-pivot-ui/locale/ja-JP";
+import locale51 from "@univerjs-pro/sheets-exchange-client/locale/ja-JP";
+import locale52 from "@univerjs-pro/sheets-print/locale/ja-JP";
+import locale53 from "@univerjs-pro/sheets-shape-ui/locale/ja-JP";
+import locale54 from "@univerjs/sheets-sort-ui/locale/ja-JP";
+import locale55 from "@univerjs-pro/sheets-sparkline-ui/locale/ja-JP";
+import locale56 from "@univerjs/sheets-table/locale/ja-JP";
+import locale57 from "@univerjs/sheets-table-ui/locale/ja-JP";
+import locale58 from "@univerjs/sheets-thread-comment-ui/locale/ja-JP";
+import locale59 from "@univerjs/thread-comment-ui/locale/ja-JP";
+import locale60 from "@univerjs-pro/slides/locale/ja-JP";
+import locale61 from "@univerjs-pro/slides-ui/locale/ja-JP";
+import locale62 from "@univerjs-pro/slides-chart-ui/locale/ja-JP";
+import locale63 from "@univerjs-pro/slides-table-ui/locale/ja-JP";
+import locale64 from "@univerjs-pro/slides-exchange-client/locale/ja-JP";
+import locale65 from "@univerjs-pro/slides-print/locale/ja-JP";
+import locale66 from "@univerjs-pro/chart-ui/locale/ja-JP";
+import locale67 from "@univerjs-pro/engine-chart/locale/ja-JP";
 import { mergeLocalePacks } from "../merge.js";
 
 const locale = mergeLocalePacks([
@@ -120,7 +128,15 @@ const locale = mergeLocalePacks([
   locale56,
   locale57,
   locale58,
-  locale59
+  locale59,
+  locale60,
+  locale61,
+  locale62,
+  locale63,
+  locale64,
+  locale65,
+  locale66,
+  locale67
 ]);
 
 export default locale;
