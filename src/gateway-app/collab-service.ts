@@ -150,7 +150,7 @@ export class CollabService {
   }> {
     const unit = this._requireWorktreeUnit(worktreeId, unitId);
     try {
-      const result = await this.runtime.worktreeService.getUnit(
+      const result = await this.runtime.worktreeService.getUnitLoadData(
         {
           worktreeID: worktreeId,
           unitID: unitId,
@@ -468,7 +468,7 @@ export class CollabService {
       }
       throw new Error(`Unit ${unitId} is not part of Worktree ${worktreeId}`);
     }
-    const result = await this.runtime.worktreeService.getUnit(
+    const result = await this.runtime.worktreeService.getUnitLoadData(
       {
         worktreeID: worktreeId,
         unitID: unitId,
@@ -682,7 +682,7 @@ class TrunkStorageCompatibility {
     changesets: readonly IProtocolChangeset[];
   }> {
     try {
-      const result = await this._runtime.trunkService.getUnit(
+      const result = await this._runtime.trunkService.getUnitLoadData(
         {
           unitID: request.unitID,
           type: request.type as UniverType,
