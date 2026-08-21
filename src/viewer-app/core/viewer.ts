@@ -41,7 +41,6 @@ import {
   FormulaCalculationSessionService,
   SetTriggerFormulaCalculationStartMutation,
 } from "@univerjs/engine-formula";
-import { ISocketService, WebSocketService } from "@univerjs/network";
 import { WorkbookEditablePermission } from "@univerjs/sheets";
 import { TEST_LICENSE, ViewAssetIoOwner, registerViewRendering } from "@univer/render-preset";
 import {
@@ -174,9 +173,6 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     // Collaboration must start before Embed core, whose command service consumes collaborative
     // undo/redo. Collaboration Embed itself depends on Embed core and belongs before Embed UI.
     registerBeforeEmbedCore: () => {
-      if (opts.unitType !== UNIT_TYPE_BOARD) {
-        univer.__getInjector().add([ISocketService, { useClass: WebSocketService }]);
-      }
       univer.registerPlugin(UniverCollaborationPlugin);
       univer.registerPlugin(UniverCollaborationClientPlugin, {
         socketService: BrowserCollaborationSocketService,
