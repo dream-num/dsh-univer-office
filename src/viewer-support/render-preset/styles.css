@@ -5,20 +5,7 @@
 @import "@univerjs/docs-hyper-link-ui/lib/index.css";
 @import "@univerjs/docs-thread-comment-ui/lib/index.css";
 @import "@univerjs/drawing-ui/lib/index.css";
-@import "@univerjs-pro/chart-ui/lib/index.css";
-@import "@univerjs-pro/shape-editor-ui/lib/index.css";
-@import "@univerjs-pro/ink-ui/lib/index.css";
-@import "@univerjs-pro/docs-callout-ui/lib/index.css";
-@import "@univerjs-pro/docs-chart-ui/lib/index.css";
-@import "@univerjs-pro/docs-code-ui/lib/index.css";
-@import "@univerjs-pro/docs-latex-ui/lib/index.css";
-@import "@univerjs-pro/docs-print/lib/index.css";
-@import "@univerjs-pro/docs-shape-ui/lib/index.css";
-@import "@univerjs-pro/docs-table-ui/lib/index.css";
-@import "@univerjs-pro/docs-list-ui/lib/index.css";
-@import "@univerjs-pro/docs-quote-ui/lib/index.css";
 @import "@univerjs-pro/embed-ui/lib/index.css";
-@import "@univerjs-pro/exchange-client/lib/index.css";
 @import "@univerjs/thread-comment-ui/lib/index.css";
 @import "@univerjs/sheets-ui/lib/index.css";
 @import "@univerjs/sheets-formula-ui/lib/index.css";
@@ -33,6 +20,16 @@
 @import "@univerjs/sheets-crosshair-highlight/lib/index.css";
 @import "@univerjs/sheets-sort-ui/lib/index.css";
 @import "@univerjs/sheets-thread-comment-ui/lib/index.css";
+@import "@univerjs-pro/chart-ui/lib/index.css";
+@import "@univerjs-pro/docs-callout-ui/lib/index.css";
+@import "@univerjs-pro/docs-chart-ui/lib/index.css";
+@import "@univerjs-pro/docs-code-ui/lib/index.css";
+@import "@univerjs-pro/docs-latex-ui/lib/index.css";
+@import "@univerjs-pro/docs-print/lib/index.css";
+@import "@univerjs-pro/docs-list-ui/lib/index.css";
+@import "@univerjs-pro/docs-quote-ui/lib/index.css";
+@import "@univerjs-pro/docs-shape-ui/lib/index.css";
+@import "@univerjs-pro/docs-table-ui/lib/index.css";
 @import "@univerjs-pro/sheets-print/lib/index.css";
 @import "@univerjs-pro/sheets-chart-ui/lib/index.css";
 @import "@univerjs-pro/sheets-pivot-ui/lib/index.css";
@@ -45,8 +42,13 @@
 @import "@univerjs-pro/slides-table-ui/lib/index.css";
 @import "@univerjs-pro/bases-ui/lib/index.css";
 @import "@univerjs-pro/bases-exchange-client/lib/index.css";
-@import "@univerjs-pro/boards-ui/lib/index.css";
+@import "@univerjs-pro/exchange-client/lib/index.css";
+@import "@univerjs-pro/shape-editor-ui/lib/index.css";
+@import "@univerjs-pro/ink-ui/lib/index.css";
 @import "@univerjs-pro/boards-chart-ui/lib/index.css";
 @import "@univerjs-pro/boards-mind-ui/lib/index.css";
 @import "@univerjs-pro/boards-print/lib/index.css";
 @import "@univerjs-pro/boards-table-ui/lib/index.css";
+/* Keep the broad Board UI sheet last in this multi-Unit bundle. Feature sheets
+ * contain partial utility sets and must not become the final cascade authority. */
+@import "@univerjs-pro/boards-ui/lib/index.css";
