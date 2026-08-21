@@ -224,6 +224,10 @@ try {
 
 	const gatewayKey = Buffer.from(file).toString("base64url");
 	const exchangeBase = `${origin}/uf/${gatewayKey}/universer-api`;
+	const history = await waitForHistory(exchangeBase, unitId);
+	if (history.error?.code !== 1 || !Array.isArray(history.historyIds) || history.historyIds.length === 0) {
+		throw new Error(`trunk Sheet History was not indexed: ${JSON.stringify(history)}`);
+	}
 	const exchangeCsv = Buffer.from("name,value\nserver,7\n", "utf8");
 	const exchangeForm = new FormData();
 	exchangeForm.append("file", new Blob([exchangeCsv], { type: "text/csv" }), "服务端.csv");
@@ -334,6 +338,17 @@ async function waitForExchangeTask(exchangeBase, taskId) {
 		await new Promise((resolve) => setTimeout(resolve, 10));
 	}
 	throw new Error(`exchange task ${taskId} did not settle`);
+}
+
+async function waitForHistory(exchangeBase, unitId) {
+	for (let attempt = 0; attempt < 100; attempt += 1) {
+		const response = await fetch(`${exchangeBase}/history/${encodeURIComponent(unitId)}/list?length=20`);
+		if (!response.ok) throw new Error(`History request failed: ${await response.text()}`);
+		const history = await response.json();
+		if (Array.isArray(history.historyIds) && history.historyIds.length > 0) return history;
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
+	throw new Error(`History for ${unitId} was not indexed`);
 }
 
 async function expectTransition(worktreeId, action, expectedStatus) {

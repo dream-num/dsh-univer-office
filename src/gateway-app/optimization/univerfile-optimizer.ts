@@ -356,6 +356,9 @@ function resetCurrentHistory(database: Database.Database): void {
   });
 
   runUniverfileSQLiteTransaction(database, () => {
+    if (tableExists(database, "collaboration_history_revisions")) {
+      database.exec("DELETE FROM collaboration_history_revisions;");
+    }
     database.exec(`
       DELETE FROM collaboration_changesets;
       DELETE FROM collaboration_units WHERE soft_deleted_at_ms IS NOT NULL;

@@ -18,6 +18,8 @@ export {
   UNIVERFILE_UNIT_METADATA_KEY,
   UniverfileSQLiteDatabaseAdapter,
 } from "./database-adapters/collaboration-database-adapter.js";
+export { UniverfileSQLiteHistoryDatabaseAdapter } from "./database-adapters/history-database-adapter.js";
+export type { UniverfileSQLiteHistoryDatabaseAdapterOptions } from "./database-adapters/history-database-adapter.js";
 export type {
   UniverfileSQLiteDatabaseAdapterOptions,
   UniverfileUnitMetadata,

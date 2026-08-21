@@ -5,6 +5,8 @@ import {
   UniverCollabEndpoint,
 } from "@univerjs-pro/collaboration-endpoint";
 import { UniverCollabService } from "@univerjs-pro/collaboration-service";
+import { UniverHistoryEndpoint } from "@univerjs-pro/collaboration-history-endpoint";
+import { UniverHistoryService } from "@univerjs-pro/collaboration-history-service";
 import {
   createNodeTransport,
   type INodeTransport,
@@ -20,9 +22,11 @@ import {
   type UniverfileSQLite,
   type UniverfileSQLiteAssetStore,
   type UniverfileSQLiteDatabaseAdapter,
+  type UniverfileSQLiteHistoryDatabaseAdapter,
   type UniverfileUpgradeResult,
   type UniverfileSQLiteWorktreeDatabaseAdapter,
 } from './univerfile-sqlite';
+import { reconcileUniverfileHistory } from "./history/reconcile-history.js";
 
 export interface GatewayFileRuntimeOptions {
   /** `.univer` SQLite filename, or `:memory:` for tests. */
@@ -39,15 +43,21 @@ export interface GatewayFileRuntimeOptions {
 export class GatewayFileRuntime {
   public readonly trunkAdapter: UniverfileSQLiteDatabaseAdapter;
   public readonly worktreeAdapter: UniverfileSQLiteWorktreeDatabaseAdapter;
+  public readonly historyAdapter: UniverfileSQLiteHistoryDatabaseAdapter;
   public readonly assetStore: UniverfileSQLiteAssetStore;
   public readonly upgrade: UniverfileUpgradeResult;
   public readonly trunkService: UniverCollabService;
   public readonly worktreeService: UniverCollabWorktreeService;
+  public readonly historyService: UniverHistoryService;
+  public readonly historyReady: Promise<void>;
 
   private readonly _univerfile: UniverfileSQLite;
   private readonly _ticketStore: MemorySessionTicketStore;
   private readonly _trunkEndpoint: UniverCollabEndpoint;
   private readonly _worktreeEndpoint: UniverCollabWorktreeEndpoint;
+  private readonly _historyEndpoint: UniverHistoryEndpoint;
+  private readonly _historyAttachment: { dispose(): void };
+  private readonly _historySettlement: Promise<void>;
   private readonly _transport: INodeTransport;
   private readonly _connectionIds = new Set<string>();
   private _disposed = false;
@@ -62,6 +72,7 @@ export class GatewayFileRuntime {
       this.upgrade = this._univerfile.upgrade;
       this.trunkAdapter = this._univerfile.databaseAdapter;
       this.worktreeAdapter = this._univerfile.worktreeDatabaseAdapter;
+      this.historyAdapter = this._univerfile.historyDatabaseAdapter;
       this.assetStore = this._univerfile.assetStore;
 
       this.trunkService = new UniverCollabService({
@@ -74,6 +85,19 @@ export class GatewayFileRuntime {
         },
         dbAdapter: this.worktreeAdapter,
       });
+      this.historyService = new UniverHistoryService({
+        collabService: this.trunkService,
+        dbAdapter: this.historyAdapter,
+      });
+      this._historyAttachment = this.historyService.attach(this.trunkService);
+      this.historyReady = reconcileUniverfileHistory({
+        trunkAdapter: this.trunkAdapter,
+        historyAdapter: this.historyAdapter,
+        historyService: this.historyService,
+      });
+      // Own the async reconciliation immediately so a startup failure cannot become an unhandled
+      // rejection before the first request observes `historyReady`.
+      this._historySettlement = this.historyReady.catch(() => undefined);
       this._ticketStore = new MemorySessionTicketStore();
       this._trunkEndpoint = new UniverCollabEndpoint(this.trunkService, {
         ticketStore: this._ticketStore,
@@ -81,6 +105,7 @@ export class GatewayFileRuntime {
       this._worktreeEndpoint = new UniverCollabWorktreeEndpoint(this.worktreeService, {
         ticketStore: this._ticketStore,
       });
+      this._historyEndpoint = new UniverHistoryEndpoint(this.historyService);
       this._transport = createNodeTransport();
 
       this._transport.use(async (context, next) => {
@@ -88,6 +113,11 @@ export class GatewayFileRuntime {
         context.customData.gateway = { userId: context.userID };
         await next();
       });
+      this._transport.use(async (_context, next) => {
+        await this.historyReady;
+        await next();
+      });
+      this._transport.register(this._historyEndpoint);
       this._transport.register(
         trackEndpointConnections(this._worktreeEndpoint, this._connectionIds),
       );
@@ -143,7 +173,11 @@ export class GatewayFileRuntime {
   public async dispose(): Promise<void> {
     if (this._disposed) return;
     this._disposed = true;
+    // A failed derived-index rebuild must not prevent the runtime from releasing its resources.
+    await this._historySettlement;
     await this._transport.dispose();
+    this._historyAttachment.dispose();
+    await this.historyService.dispose();
     await this.worktreeService.dispose();
     await this.trunkService.dispose();
     await this._ticketStore.dispose();

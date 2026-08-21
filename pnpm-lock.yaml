@@ -171,6 +171,12 @@ importers:
       '@univerjs-pro/collaboration-endpoint':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)
+      '@univerjs-pro/collaboration-history-endpoint':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/collaboration-history-service':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/collaboration-service':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)
@@ -241,6 +247,12 @@ importers:
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/docs-table-ui':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/edit-history-loader':
+        specifier: 1.0.0-insiders.20260821-c2f0ba5
+        version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/edit-history-viewer':
         specifier: 1.0.0-insiders.20260821-c2f0ba5
         version: 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs-pro/embed':
@@ -2656,6 +2668,12 @@ packages:
   '@univerjs-pro/collaboration-endpoint@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-gFafiNjAJqPF/NkEpkUXTqxbfqWnGBUuGA4ILfvo97CHRjjJk+9BV6uRHLV9qSBMdI7ymNSSJCsAqTdK017z3Q==}
 
+  '@univerjs-pro/collaboration-history-endpoint@1.0.0-insiders.20260821-c2f0ba5':
+    resolution: {integrity: sha512-wVHCDo8ohIGcsAyfQyJn3mDbhscM2SsaeSQfqc83GBgUWXbxRYKHPcw2e3bbcdXxWIyTdAGkfuYxGYMiJU2rng==}
+
+  '@univerjs-pro/collaboration-history-service@1.0.0-insiders.20260821-c2f0ba5':
+    resolution: {integrity: sha512-v5n23wZL8CRkCcXbRR9UR+/8nQ9UEyoqFQpYRZys0d0FpOKx4qTBHEoogXwJaQ6TRoKstBt7yvhWMkxoFHwiOw==}
+
   '@univerjs-pro/collaboration-service@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-Z/sbRdlolvS/egXNpqBb7JKJpM3MsulRr6otcsZtwTnr5v/jwHWxpOn+2iOQql8UHepMvfhNNFdKx3AdbrbZbQ==}
 
@@ -2771,6 +2789,17 @@ packages:
   '@univerjs-pro/docs-table@1.0.0-insiders.20260821-c2f0ba5':
     resolution: {integrity: sha512-0SAWeBnc55Xgb8ygDdgW3NtFlqrvVk3h2Nt77DJUrXfO0P4o535Y6glTZ1fpDzY8j6tFX2/Q+/OdMc0Z8y6ijQ==}
     peerDependencies:
+      rxjs: '>=7.0.0'
+
+  '@univerjs-pro/edit-history-loader@1.0.0-insiders.20260821-c2f0ba5':
+    resolution: {integrity: sha512-qK17AUnqS2YrGg9FoL/Ulretb0xg7fXYcW31Tip/bpo5FSbo9gfS2G8phZf/1BMCH9IZCvDTT4Wh+ftd353Zwg==}
+    peerDependencies:
+      rxjs: '>=7.0.0'
+
+  '@univerjs-pro/edit-history-viewer@1.0.0-insiders.20260821-c2f0ba5':
+    resolution: {integrity: sha512-2CHteA5SjH9oq6zOmWjz+HdFw43joVE6ttBt/YbSeCoDbP8eBQyar+F5TFU294gYMPDAdMNWpQJZUOmpdMrsjg==}
+    peerDependencies:
+      react: ^16.9.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
       rxjs: '>=7.0.0'
 
   '@univerjs-pro/embed-ui@1.0.0-insiders.20260821-c2f0ba5':
@@ -6278,6 +6307,27 @@ snapshots:
       - react
       - utf-8-validate
 
+  '@univerjs-pro/collaboration-history-endpoint@1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs-pro/collaboration-history-service': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/collaboration-service': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)
+      '@univerjs-pro/collaboration-transport-node': 1.0.0-insiders.20260821-c2f0ba5
+      '@univerjs/protocol': 1.0.0-insiders.20260821-c2f0ba5
+    transitivePeerDependencies:
+      - bufferutil
+      - react
+      - rxjs
+      - utf-8-validate
+
+  '@univerjs-pro/collaboration-history-service@1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs-pro/collaboration': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/collaboration-service': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)
+      '@univerjs/protocol': 1.0.0-insiders.20260821-c2f0ba5
+    transitivePeerDependencies:
+      - react
+      - rxjs
+
   '@univerjs-pro/collaboration-service@1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)':
     dependencies:
       '@univerjs-pro/bases': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
@@ -6670,6 +6720,89 @@ snapshots:
       rxjs: 7.8.2
     transitivePeerDependencies:
       - react
+
+  '@univerjs-pro/edit-history-loader@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs-pro/collaboration': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/collaboration-client': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/collaboration-client-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/edit-history-viewer': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/license': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-chart': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-chart-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-pivot': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-shape': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-shape-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-sparkline': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-sparkline-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/core': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/data-validation': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/design': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@univerjs/docs': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/docs-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/drawing': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/drawing-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-formula': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-render': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/icons': 1.38.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@univerjs/network': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/rpc': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-conditional-formatting': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-conditional-formatting-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-data-validation': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-data-validation-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-drawing': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-drawing-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-filter': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-filter-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-formula': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-formula-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-hyper-link': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-hyper-link-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-numfmt': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-table': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - react
+      - react-dom
+
+  '@univerjs-pro/edit-history-viewer@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs-pro/collaboration': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/collaboration-client': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/collaboration-client-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/license': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-chart': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-pivot': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-shape': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs-pro/sheets-sparkline': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/core': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/data-validation': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/design': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@univerjs/drawing': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-render': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/icons': 1.38.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@univerjs/network': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/protocol': 1.0.0-insiders.20260821-c2f0ba5
+      '@univerjs/sheets': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-conditional-formatting': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-data-validation': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-drawing': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-filter': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-table': 1.0.0-insiders.20260821-c2f0ba5(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/ui': 1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      react: 18.3.1
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - react-dom
 
   '@univerjs-pro/embed-ui@1.0.0-insiders.20260821-c2f0ba5(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
     dependencies:

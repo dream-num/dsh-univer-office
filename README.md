@@ -179,6 +179,7 @@ The plugin also ships eight version-matched, lazily loaded skills: core orchestr
 - **Session isolation** — each DSH session shows only its own windows, cards, and review state.
 - **English and Chinese UI** — the plugin shell and every open Viewer follow the DSH locale.
 - **Viewer import, export, and print** — a live trunk Viewer uses the Univer Ribbon to import Office files as new Units in the current `.univer`, export Sheet, Doc, Slide, or Base Units, and print supported Units. Worktree and merge-preview Views remain read-only for exchange but retain print; Board provides print only.
+- **Sheet version history** — a live trunk Sheet exposes time-grouped versions in the Ribbon. Read-only review can inspect but not restore; an editable trunk lets the user explicitly restore a version. Worktree and merge-preview Views do not expose History.
 
 ## Requirements and current limits
 

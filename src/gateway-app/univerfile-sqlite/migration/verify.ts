@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { UniverfileSQLiteConnection } from "../connection.js";
 import { UniverfileSQLiteAssetStore } from "../database-adapters/asset-store.js";
 import { UniverfileSQLiteDatabaseAdapter } from "../database-adapters/collaboration-database-adapter.js";
+import { UniverfileSQLiteHistoryDatabaseAdapter } from "../database-adapters/history-database-adapter.js";
 import { UniverfileSQLiteWorktreeDatabaseAdapter } from "../database-adapters/worktree-database-adapter.js";
 import { UniverfileSQLiteError } from "../errors.js";
 import { detectUniverfileSQLiteFormat } from "../schema/detect.js";
@@ -23,6 +24,7 @@ export function verifyV2Candidate(filename: string): UniverfileVerification {
   let connection: UniverfileSQLiteConnection | undefined;
   let trunk: UniverfileSQLiteDatabaseAdapter | undefined;
   let worktrees: UniverfileSQLiteWorktreeDatabaseAdapter | undefined;
+  let history: UniverfileSQLiteHistoryDatabaseAdapter | undefined;
   try {
     if (detectUniverfileSQLiteFormat(filename) !== "v2") {
       throw new Error("candidate did not identify as v2");
@@ -38,6 +40,7 @@ export function verifyV2Candidate(filename: string): UniverfileVerification {
     }
     trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection });
     worktrees = new UniverfileSQLiteWorktreeDatabaseAdapter({ filename, connection });
+    history = new UniverfileSQLiteHistoryDatabaseAdapter({ connection });
     const assetStore = new UniverfileSQLiteAssetStore({ connection });
     const units = trunk.listUnits();
     const worktreeRows = worktrees.listWorktrees();
@@ -75,6 +78,7 @@ export function verifyV2Candidate(filename: string): UniverfileVerification {
       { cause: error },
     );
   } finally {
+    if (history !== undefined) void history.dispose();
     if (worktrees !== undefined) void worktrees.dispose();
     if (trunk !== undefined) void trunk.dispose();
     connection?.dispose();

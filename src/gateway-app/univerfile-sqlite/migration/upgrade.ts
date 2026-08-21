@@ -3,6 +3,7 @@ import { copyFileSync, existsSync, renameSync, unlinkSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { UniverfileSQLiteConnection } from "../connection.js";
 import { UniverfileSQLiteAssetStore } from "../database-adapters/asset-store.js";
+import { UniverfileSQLiteHistoryDatabaseAdapter } from "../database-adapters/history-database-adapter.js";
 import { UniverfileSQLiteError } from "../errors.js";
 import { detectUniverfileSQLiteFormat } from "../schema/detect.js";
 import { createUniverfileBackup, sha256 } from "./backup.js";
@@ -85,6 +86,7 @@ function migrateV0(candidatePath: string): number {
     const result = migrateV0CandidateToV2(connection);
     if (result.status !== "migrated") throw new Error("v0 reader did not migrate the candidate");
     new UniverfileSQLiteAssetStore({ connection });
+    new UniverfileSQLiteHistoryDatabaseAdapter({ connection });
     migrateLegacyBaseContentToV2(connection.database);
     pruneCandidateToCurrentV2Schema(connection.database);
     return 0;
@@ -98,6 +100,7 @@ function migrateV1(candidatePath: string): number {
   try {
     const normalizedMergingWorktrees = migrateV1CandidateToV2(connection);
     new UniverfileSQLiteAssetStore({ connection });
+    new UniverfileSQLiteHistoryDatabaseAdapter({ connection });
     migrateLegacyBaseContentToV2(connection.database);
     pruneCandidateToCurrentV2Schema(connection.database);
     return normalizedMergingWorktrees;

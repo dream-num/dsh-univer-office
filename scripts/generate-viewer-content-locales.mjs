@@ -40,6 +40,8 @@ const PACKAGES = [
   "@univerjs/docs-thread-comment-ui",
   "@univerjs/drawing-ui",
   "@univerjs-pro/embed-ui",
+  "@univerjs-pro/edit-history-loader",
+  "@univerjs-pro/edit-history-viewer",
   "@univerjs-pro/bases",
   "@univerjs-pro/bases-ui",
   "@univerjs-pro/bases-exchange-client",

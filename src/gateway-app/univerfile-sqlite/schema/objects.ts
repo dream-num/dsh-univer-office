@@ -31,11 +31,14 @@ export const WORKTREE_V1_ONLY_TABLES = ["collaboration_worktree_commits"] as con
 
 export const ASSET_V1_TABLES = ["collaboration_asset_blobs", "collaboration_assets"] as const;
 
+export const HISTORY_V1_TABLES = ["collaboration_history_revisions"] as const;
+
 export const CURRENT_V2_TABLES = [
   "collaboration_schema_versions",
   ...CORE_V1_TABLES,
   ...WORKTREE_COMMON_TABLES,
   ...ASSET_V1_TABLES,
+  ...HISTORY_V1_TABLES,
 ] as const;
 
 export const CURRENT_V2_INDEXES = [
@@ -43,4 +46,6 @@ export const CURRENT_V2_INDEXES = [
   "collaboration_changesets_revision_range",
   "collaboration_worktree_changesets_revision",
   "collaboration_assets_scope",
+  "collaboration_history_record_lookup",
+  "collaboration_history_creator_lookup",
 ] as const;

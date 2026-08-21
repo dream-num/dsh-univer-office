@@ -2,6 +2,7 @@ import { existsSync, unlinkSync } from "node:fs";
 import { UniverfileSQLiteConnection } from "./connection.js";
 import { UniverfileSQLiteAssetStore } from "./database-adapters/asset-store.js";
 import { UniverfileSQLiteDatabaseAdapter } from "./database-adapters/collaboration-database-adapter.js";
+import { UniverfileSQLiteHistoryDatabaseAdapter } from "./database-adapters/history-database-adapter.js";
 import { UniverfileSQLiteWorktreeDatabaseAdapter } from "./database-adapters/worktree-database-adapter.js";
 import { UniverfileSQLiteError } from "./errors.js";
 import {
@@ -19,6 +20,7 @@ export interface UniverfileSQLite {
   readonly connection: UniverfileSQLiteConnection;
   readonly databaseAdapter: UniverfileSQLiteDatabaseAdapter;
   readonly worktreeDatabaseAdapter: UniverfileSQLiteWorktreeDatabaseAdapter;
+  readonly historyDatabaseAdapter: UniverfileSQLiteHistoryDatabaseAdapter;
   readonly assetStore: UniverfileSQLiteAssetStore;
   readonly upgrade: UniverfileUpgradeResult;
   dispose(): Promise<void>;
@@ -61,26 +63,32 @@ function openCurrent(
   });
   let databaseAdapter: UniverfileSQLiteDatabaseAdapter | undefined;
   let worktreeDatabaseAdapter: UniverfileSQLiteWorktreeDatabaseAdapter | undefined;
+  let historyDatabaseAdapter: UniverfileSQLiteHistoryDatabaseAdapter | undefined;
   try {
     const trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection });
     databaseAdapter = trunk;
     const worktree = new UniverfileSQLiteWorktreeDatabaseAdapter({ filename, connection });
     worktreeDatabaseAdapter = worktree;
+    const history = new UniverfileSQLiteHistoryDatabaseAdapter({ connection });
+    historyDatabaseAdapter = history;
     const assetStore = new UniverfileSQLiteAssetStore({ connection });
     return {
       filename,
       connection,
       databaseAdapter: trunk,
       worktreeDatabaseAdapter: worktree,
+      historyDatabaseAdapter: history,
       assetStore,
       upgrade,
       async dispose(): Promise<void> {
+        await history.dispose();
         await worktree.dispose();
         await trunk.dispose();
         connection.dispose();
       },
     };
   } catch (error) {
+    if (historyDatabaseAdapter !== undefined) void historyDatabaseAdapter.dispose();
     if (worktreeDatabaseAdapter !== undefined) void worktreeDatabaseAdapter.dispose();
     if (databaseAdapter !== undefined) void databaseAdapter.dispose();
     connection.dispose();

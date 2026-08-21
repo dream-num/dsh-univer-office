@@ -144,3 +144,7 @@ minimumReleaseAgeExclude:
   - '@univerjs-pro/docs-print@1.0.0-insiders.20260821-c2f0ba5'
   - '@univerjs-pro/sheets-exchange-client@1.0.0-insiders.20260821-c2f0ba5'
   - '@univerjs-pro/slides-exchange-client@1.0.0-insiders.20260821-c2f0ba5'
+  - '@univerjs-pro/collaboration-history-endpoint@1.0.0-insiders.20260821-c2f0ba5'
+  - '@univerjs-pro/collaboration-history-service@1.0.0-insiders.20260821-c2f0ba5'
+  - '@univerjs-pro/edit-history-loader@1.0.0-insiders.20260821-c2f0ba5'
+  - '@univerjs-pro/edit-history-viewer@1.0.0-insiders.20260821-c2f0ba5'

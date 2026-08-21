@@ -3,6 +3,7 @@ import { UniverfileSQLiteError } from "../errors.js";
 import {
   ASSET_V1_TABLES,
   CORE_V1_TABLES,
+  HISTORY_V1_TABLES,
   V0_TABLES,
   WORKTREE_COMMON_TABLES,
   WORKTREE_V1_ONLY_TABLES,
@@ -50,7 +51,7 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
           .all() as unknown as VersionRow[]
       ).map(({ component, version }) => [component, version]),
     );
-    const known = new Set(["core", "worktree", "assets"]);
+    const known = new Set(["core", "worktree", "assets", "history"]);
     const unknown = [...versions.keys()].filter((component) => !known.has(component));
     if (unknown.length > 0) {
       throw unsupported(`unknown schema components: ${unknown.join(", ")}`);
@@ -70,8 +71,18 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
       throw unsupported("assets schema must be complete, or absent on a Gateway v1 file");
     }
 
+    const historyVersion = versions.get("history");
+    const presentHistoryTables = HISTORY_V1_TABLES.filter((table) => tables.has(table));
+    const hasCompleteHistorySchema =
+      historyVersion === 1 && presentHistoryTables.length === HISTORY_V1_TABLES.length;
+    const hasNoHistorySchema = historyVersion === undefined && presentHistoryTables.length === 0;
+    if (!hasCompleteHistorySchema && !hasNoHistorySchema) {
+      throw unsupported("history schema must be complete or absent");
+    }
+
     const required: string[] = [...CORE_V1_TABLES, ...WORKTREE_COMMON_TABLES];
     if (hasCompleteAssetSchema) required.push(...ASSET_V1_TABLES);
+    if (hasCompleteHistorySchema) required.push(...HISTORY_V1_TABLES);
     if (worktreeVersion === 1) required.push(...WORKTREE_V1_ONLY_TABLES);
     const missing = required.filter((table) => !tables.has(table));
     if (missing.length > 0) {
