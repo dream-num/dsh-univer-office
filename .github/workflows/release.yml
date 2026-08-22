@@ -115,6 +115,9 @@ jobs:
           fi
           echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
+      - name: Verify public runtime dependencies
+        run: pnpm run verify:public-dependencies
+
       - name: Build
         run: pnpm run build
 

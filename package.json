@@ -67,6 +67,7 @@
     "test:client": "node test/client-smoke.mjs",
     "test:skills": "node test/skills-smoke.mjs",
     "test": "pnpm run build && pnpm run test:host && pnpm run test:integration && pnpm run test:client && pnpm run test:skills",
+    "verify:public-dependencies": "node scripts/verify-public-runtime-dependencies.mjs",
     "prepublishOnly": "pnpm run build && pnpm run test"
   },
   "dependencies": {
