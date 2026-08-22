@@ -53,7 +53,11 @@ import {
   UNIT_TYPE_SLIDE,
   type UnitType,
 } from "@univer/collab-gateway-contract";
-import { blockLocalEditingCommands, resolveViewerReadOnlyEnforcement } from "./viewer-readonly";
+import {
+  blockLocalEditingCommands,
+  enforceSheetViewerReadOnlyPermissions,
+  resolveViewerReadOnlyEnforcement,
+} from "./viewer-readonly";
 import { createCollaborationSheetResourceRefDataProvider } from "./collaboration-sheet-resource-ref-data-provider";
 import { installHistoryShapeFormulaCompatibility } from "./history-shape-formula-compatibility";
 import { loadViewerLocale } from "./locales/generated/load";
@@ -230,7 +234,10 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
 
   const readOnlyEnforcement = resolveViewerReadOnlyEnforcement(opts.unitType, editable);
   if (readOnlyEnforcement === "sheet-permission") {
-    makeReadonly(univer, opts.unitId);
+    enforceSheetViewerReadOnlyPermissions(
+      univer.__getInjector().get(IPermissionService),
+      opts.unitId,
+    );
   } else if (readOnlyEnforcement === "mutation-gate") {
     blockLocalEditingCommands(univer.__getInjector().get(ICommandService));
   }

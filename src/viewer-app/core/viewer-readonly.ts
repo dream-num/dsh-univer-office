@@ -1,4 +1,14 @@
-import { CommandType, CustomCommandExecutionError, type ICommandService } from "@univerjs/core";
+import {
+  CommandType,
+  CustomCommandExecutionError,
+  type ICommandService,
+  type IPermissionService,
+} from "@univerjs/core";
+import {
+  WorkbookCreateProtectPermission,
+  WorkbookEditablePermission,
+  WorkbookPrintPermission,
+} from "@univerjs/sheets";
 import { UNIT_TYPE_SHEET, type UnitType } from "@univer/collab-gateway-contract";
 
 type ViewerReadOnlyEnforcement = "none" | "sheet-permission" | "mutation-gate";
@@ -12,6 +22,27 @@ export function resolveViewerReadOnlyEnforcement(
     return "none";
   }
   return unitType === UNIT_TYPE_SHEET ? "sheet-permission" : "mutation-gate";
+}
+
+/** Disable Sheet actions whose Ribbon state is governed by dedicated workbook permissions. */
+export function enforceSheetViewerReadOnlyPermissions(
+  permissionService: Pick<
+    IPermissionService,
+    "addPermissionPoint" | "getPermissionPoint" | "updatePermissionPoint"
+  >,
+  unitId: string,
+): void {
+  const points = [
+    new WorkbookEditablePermission(unitId),
+    new WorkbookCreateProtectPermission(unitId),
+    new WorkbookPrintPermission(unitId),
+  ];
+  for (const point of points) {
+    if (!permissionService.getPermissionPoint(point.id)) {
+      permissionService.addPermissionPoint(point);
+    }
+    permissionService.updatePermissionPoint(point.id, false);
+  }
 }
 
 /** Keep a viewer navigable while accepting model changes that stay outside collaboration submit. */

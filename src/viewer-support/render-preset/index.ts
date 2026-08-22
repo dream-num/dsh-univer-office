@@ -66,7 +66,7 @@ import { UniverDocsDrawingPlugin } from "@univerjs/docs-drawing";
 import { UniverDocsDrawingUIPlugin } from "@univerjs/docs-drawing-ui";
 import { UniverDocsHyperLinkPlugin } from "@univerjs/docs-hyper-link";
 import { UniverDocsHyperLinkUIPlugin } from "@univerjs/docs-hyper-link-ui";
-import { UniverDocsThreadCommentUIPlugin } from "@univerjs/docs-thread-comment-ui";
+// import { UniverDocsThreadCommentUIPlugin } from "@univerjs/docs-thread-comment-ui";
 import { UniverDocsUIPlugin } from "@univerjs/docs-ui";
 import { UniverDrawingPlugin } from "@univerjs/drawing";
 import { UniverDrawingUIPlugin } from "@univerjs/drawing-ui";
@@ -97,10 +97,10 @@ import { UniverSheetsSortPlugin } from "@univerjs/sheets-sort";
 import { UniverSheetsSortUIPlugin } from "@univerjs/sheets-sort-ui";
 import { UniverSheetsTablePlugin } from "@univerjs/sheets-table";
 import { UniverSheetsTableUIPlugin } from "@univerjs/sheets-table-ui";
-import { UniverSheetsThreadCommentPlugin } from "@univerjs/sheets-thread-comment";
-import { UniverSheetsThreadCommentUIPlugin } from "@univerjs/sheets-thread-comment-ui";
+// import { UniverSheetsThreadCommentPlugin } from "@univerjs/sheets-thread-comment";
+// import { UniverSheetsThreadCommentUIPlugin } from "@univerjs/sheets-thread-comment-ui";
 import { UniverSheetsUIPlugin } from "@univerjs/sheets-ui";
-import { UniverThreadCommentUIPlugin } from "@univerjs/thread-comment-ui";
+// import { UniverThreadCommentUIPlugin } from "@univerjs/thread-comment-ui";
 import { UniverUIPlugin, type RibbonType } from "@univerjs/ui";
 import { createViewBaseResourceRefDataProviderRegistration } from "./view-base-resource-ref-data-provider.js";
 
@@ -181,7 +181,8 @@ function registerDocPlugins(univer: Univer): void {
   univer.registerPlugin(UniverDocsCodeUIPlugin);
   univer.registerPlugin(UniverDocsQuotePlugin);
   univer.registerPlugin(UniverDocsQuoteUIPlugin);
-  univer.registerPlugin(UniverDocsThreadCommentUIPlugin);
+  // Thread comments stay hidden until Gateway-backed durable comment storage is available.
+  // univer.registerPlugin(UniverDocsThreadCommentUIPlugin);
 }
 
 /**
@@ -212,9 +213,9 @@ function registerSheetPlugins(univer: Univer): void {
   univer.registerPlugin(UniverSheetsDrawingUIPlugin);
   univer.registerPlugin(UniverSheetsSortPlugin);
   univer.registerPlugin(UniverSheetsSortUIPlugin);
-  univer.registerPlugin(UniverThreadCommentUIPlugin);
-  univer.registerPlugin(UniverSheetsThreadCommentPlugin);
-  univer.registerPlugin(UniverSheetsThreadCommentUIPlugin);
+  // univer.registerPlugin(UniverThreadCommentUIPlugin);
+  // univer.registerPlugin(UniverSheetsThreadCommentPlugin);
+  // univer.registerPlugin(UniverSheetsThreadCommentUIPlugin);
   univer.registerPlugin(UniverSheetsPivotTablePlugin);
   univer.registerPlugin(UniverSheetsPivotTableUIPlugin);
   univer.registerPlugin(UniverSheetsChartPlugin);
