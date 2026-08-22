@@ -1,6 +1,6 @@
 name: Release to npm
 
-run-name: ${{ inputs.latest_version && format('Set npm latest to {0}', inputs.latest_version) || format('Release {0} to npm{1}', inputs.version || github.ref_name, inputs.dry_run && ' (dry-run)' || '') }}
+run-name: ${{ inputs.deprecated_version && format('Deprecate npm {0}', inputs.deprecated_version) || inputs.latest_version && format('Set npm latest to {0}', inputs.latest_version) || format('Release {0} to npm{1}', inputs.version || github.ref_name, inputs.dry_run && ' (dry-run)' || '') }}
 
 on:
   push:
@@ -19,6 +19,14 @@ on:
         default: true
       latest_version:
         description: Existing npm version to assign to the latest dist-tag; skips the release job.
+        required: false
+        type: string
+      deprecated_version:
+        description: Existing npm version to deprecate; skips the release job.
+        required: false
+        type: string
+      deprecation_message:
+        description: Required when deprecated_version is set.
         required: false
         type: string
 
@@ -78,8 +86,64 @@ jobs:
           echo "- package: dsh-univer-office" >> "$GITHUB_STEP_SUMMARY"
           echo "- latest: $TARGET_VERSION" >> "$GITHUB_STEP_SUMMARY"
 
+  deprecate-version:
+    needs: retag-latest
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.deprecated_version != '' && (needs.retag-latest.result == 'success' || needs.retag-latest.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      TARGET_VERSION: ${{ inputs.deprecated_version }}
+      DEPRECATION_MESSAGE: ${{ inputs.deprecation_message }}
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Validate published version and message
+        shell: bash
+        run: |
+          if [[ ! "$TARGET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid npm version: $TARGET_VERSION" >&2
+            exit 1
+          fi
+          if [ -z "$DEPRECATION_MESSAGE" ]; then
+            echo "deprecation_message is required when deprecated_version is set" >&2
+            exit 1
+          fi
+          PUBLISHED_VERSION="$(npm view "dsh-univer-office@$TARGET_VERSION" version --registry=https://registry.npmjs.org/)"
+          test "$PUBLISHED_VERSION" = "$TARGET_VERSION"
+
+      - name: Deprecate npm version
+        run: npm deprecate "dsh-univer-office@$TARGET_VERSION" "$DEPRECATION_MESSAGE" --registry=https://registry.npmjs.org/
+
+      - name: Verify npm deprecation
+        shell: bash
+        run: |
+          for attempt in {1..10}; do
+            ACTUAL_MESSAGE="$(npm view "dsh-univer-office@$TARGET_VERSION" deprecated --registry=https://registry.npmjs.org/)"
+            if [ "$ACTUAL_MESSAGE" = "$DEPRECATION_MESSAGE" ]; then
+              exit 0
+            fi
+            echo "Waiting for npm deprecation propagation ($attempt/10)" >&2
+            sleep 3
+          done
+          echo "npm deprecation did not converge for dsh-univer-office@$TARGET_VERSION" >&2
+          exit 1
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "## npm deprecated version" >> "$GITHUB_STEP_SUMMARY"
+          echo "- package: dsh-univer-office" >> "$GITHUB_STEP_SUMMARY"
+          echo "- deprecated: $TARGET_VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "- message: $DEPRECATION_MESSAGE" >> "$GITHUB_STEP_SUMMARY"
+
   release:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.latest_version == '' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.latest_version == '' && inputs.deprecated_version == '') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
