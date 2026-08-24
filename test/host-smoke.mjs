@@ -1,7 +1,7 @@
 // Host browser-protocol smoke: real node:http server over the generated router,
 // with a deterministic service double. No global CLI or existing demo file.
 import { createServer } from 'node:http'
-import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
@@ -17,8 +17,12 @@ if (defaultConfig.gatewayPort !== 9080) throw new Error(`default Gateway port mu
 if (defaultConfig.screenshotMaxPages !== 30 || defaultConfig.screenshotMaxPixels !== 16_777_216) {
   throw new Error(`default screenshot limits drifted: ${JSON.stringify(defaultConfig)}`)
 }
-if (!defaultConfig.resourceCacheRoot.endsWith('/cache/dsh-univer-office/resources')) {
+if (!defaultConfig.resourceCacheRoot.endsWith(join('cache', 'dsh-univer-office', 'resources'))) {
   throw new Error(`default resource cache root drifted: ${defaultConfig.resourceCacheRoot}`)
+}
+const hostBundle = await readFile(new URL('../lib/index.js', import.meta.url), 'utf8')
+if (!hostBundle.includes('ELECTRON_RUN_AS_NODE')) {
+  throw new Error('Host bundle must set ELECTRON_RUN_AS_NODE so bundled Gateway/Worker entry scripts run as plain Node inside an Electron Desktop host')
 }
 try {
   resolveConfig({ gatewayPort: 0 })

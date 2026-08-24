@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import { delimiter } from 'node:path'
 import { PLUGIN_NODE_MODULES, UNIT_CONTENT_WORKER_ENTRY } from '../../artifacts/paths.ts'
+import { spawnEnvironment } from '../../processes/spawn-env.ts'
 import { UniverError } from '../../service/errors.ts'
 import type { JsonValue } from '../../service/types.ts'
 import { parseUnitContentWorkerEnvelope, type UnitContentWorkerRequest } from './protocol.ts'
@@ -79,5 +80,5 @@ function unitContentWorkerEnvironment(): NodeJS.ProcessEnv {
   // Let the worker resolve its native dependencies (@univerjs-pro/exchange-node-binding,
   // engine-formula-rust-binding, and platform sub-packages) from this plugin's node_modules.
   env.NODE_PATH = [PLUGIN_NODE_MODULES, process.env.NODE_PATH].filter((value): value is string => value !== undefined && value.length > 0).join(delimiter)
-  return env
+  return spawnEnvironment(env)
 }
