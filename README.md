@@ -2,7 +2,9 @@
 
 # DSH × Univer Office
 
-> Give DeepSeek Harness the ability to create, edit, inspect, and deliver spreadsheets, documents, presentations, databases, and canvases.
+> Give DeepSeek Harness a real office environment.
+>
+> Univer Office Plugin brings spreadsheets, docs, slides, canvases, relational tables, and more into one runtime — with connected data, validation, versioned changes, and isolated worktrees for multi-agent collaboration.
 
 English · [简体中文](README.zh-CN.md)
 
