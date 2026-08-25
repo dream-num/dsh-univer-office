@@ -13,16 +13,17 @@ export function useUniverStates(files: readonly string[], sessionId: SessionId, 
   const [missing, setMissing] = React.useState<Record<string, true>>({})
   const key = files.join('\u0000')
   React.useEffect(() => {
-    if (files.length === 0) {
+    if (key === '') {
       setStates({})
       setMissing({})
       return
     }
+    const trackedFiles = key.split('\u0000')
     setStates({})
     setMissing({})
     let active = true
     const poll = async (): Promise<void> => {
-      for (const file of files) {
+      for (const file of trackedFiles) {
         try {
           const state = await getFileState(file, sessionId)
           if (!active) return
@@ -94,7 +95,7 @@ export function useGatewayStatus(): {
     try {
       const result = await startGateway()
       setPhase(result.ok ? 'running' : 'failed')
-    } catch (error) {
+    } catch {
       setPhase('failed')
     }
   }, [])

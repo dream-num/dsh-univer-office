@@ -65,7 +65,7 @@ export class UnitContentWorker {
 function workerDiagnostic(stderr: readonly Buffer[], fallback: string): string {
   const diagnostic = Buffer.concat(stderr)
     .toString('utf8')
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/gu, '')
+    .replace(/\p{Cc}/gu, (character) => character === '\t' || character === '\n' || character === '\r' ? character : '')
     .trim()
   if (diagnostic.length === 0) return fallback
   const limit = 2_000

@@ -1,6 +1,6 @@
 import type { WorktreeReviewAction } from '../../../shared/wire/actions.ts'
 import type { JsonValue, UniverUnitKind } from '../../service/types.ts'
-import { GatewayClient } from './client.ts'
+import type { GatewayClient } from './client.ts'
 import { fileKeyOf } from './file-api.ts'
 
 /** Gateway worktree API used by the Provider. */

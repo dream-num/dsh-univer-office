@@ -238,7 +238,7 @@ function parseRecord(text: string): Record<string, unknown> | null {
   try {
     const value = JSON.parse(text) as unknown
     return isRecord(value) ? value : null
-  } catch (error) {
+  } catch {
     return null
   }
 }

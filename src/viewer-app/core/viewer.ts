@@ -191,9 +191,10 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
         sendChangesetTimeout: 200,
         ...urls,
       });
-      univer.registerPlugin(UniverCollaborationClientUIPlugin, {
-        ...(opts.unitType === UNIT_TYPE_BASE ? { enableDocumentCollaborationUI: false } : {}),
-      });
+      univer.registerPlugin(
+        UniverCollaborationClientUIPlugin,
+        opts.unitType === UNIT_TYPE_BASE ? { enableDocumentCollaborationUI: false } : {},
+      );
       if (opts.unitType === UNIT_TYPE_SHEET && opts.worktreeId === undefined) {
         univer.registerPlugin(UniverEditHistoryLoaderPlugin, {
           historyListServerUrl: urls.snapshotServerUrl.replace(/\/snapshot$/u, "/history"),

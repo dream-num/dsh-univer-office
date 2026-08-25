@@ -1,4 +1,5 @@
-import { Context, Service } from '@deepseek-ai/cordis'
+import type { Context} from '@deepseek-ai/cordis';
+import { Service } from '@deepseek-ai/cordis'
 import type { UniverServiceMethods } from './types.ts'
 
 declare module '@deepseek-ai/cordis' {

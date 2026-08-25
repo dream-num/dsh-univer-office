@@ -1,4 +1,4 @@
-import { Menu } from "@base-ui-components/react/menu";
+import { Menu } from "@base-ui/react/menu";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../../lib/utils";
 

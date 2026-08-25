@@ -40,7 +40,10 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
   const [selected, setSelected] = React.useState<string | undefined>(props.preferredUnitId ?? undefined)
   const rectRef = React.useRef(rect)
   const cancelPointerSessionRef = React.useRef<() => void>(() => undefined)
-  rectRef.current = rect
+
+  React.useLayoutEffect(() => {
+    rectRef.current = rect
+  }, [rect])
 
   React.useEffect(() => {
     if (props.preferredUnitId !== null) setSelected(props.preferredUnitId)

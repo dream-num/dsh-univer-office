@@ -14,14 +14,14 @@ import { type DatabaseContext, UniverUnitRuntime } from "@univerjs-pro/collabora
 import type { UniverType } from "@univerjs/protocol";
 import { externalizeEmbeddedImages } from "../assets/externalize-embedded-images.js";
 import { GatewaySemanticError } from "../errors.js";
-import { UniverfileSQLiteAssetStore } from "../univerfile-sqlite";
 import {
+  UniverfileSQLiteAssetStore,
   UniverfileSQLiteConnection,
   detectUniverfileSQLiteFormat,
   runUniverfileSQLiteTransaction,
   upgradeUniverfileSQLite,
+  UniverfileSQLiteDatabaseAdapter,
 } from "../univerfile-sqlite";
-import { UniverfileSQLiteDatabaseAdapter } from "../univerfile-sqlite";
 
 const BINARY_TAG = "__univerCollaborationBinary";
 

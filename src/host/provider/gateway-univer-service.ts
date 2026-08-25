@@ -2,7 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { createStandardApiReference, type ApiReference } from '@univer-cli/api-reference'
 import type { ResolvedConfig } from '../config.ts'
 import type { WorktreeActionResult } from '../../shared/wire/actions.ts'
-import type { FileState, WorktreeState } from '../../shared/wire/state.ts'
+import type { FileState, WorktreeState, ChangedUnit } from '../../shared/wire/state.ts'
 import type { EnsureGatewayResult, GatewayStatus } from '../../shared/wire/status.ts'
 import { GatewayClient, gatewayErrorMessage } from '../adapters/gateway/client.ts'
 import { GatewayFileApi, fileKeyOf } from '../adapters/gateway/file-api.ts'
@@ -50,7 +50,7 @@ export class GatewayUniverService extends UniverService {
   private readonly renderSources: RenderSourceOperations
   private readonly resourceOperations: ResourceOperations
   private readonly stateCache: StateCache<string, FileState>
-  private readonly unitCache: StateCache<string, readonly import('../../shared/wire/state.ts').ChangedUnit[]>
+  private readonly unitCache: StateCache<string, readonly ChangedUnit[]>
   private readonly api: ApiReference
 
   constructor(ctx: Context, private readonly config: ResolvedConfig) {

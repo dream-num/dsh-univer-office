@@ -1,4 +1,4 @@
-import { Dialog } from "@base-ui-components/react/dialog";
+import { Dialog } from "@base-ui/react/dialog";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 

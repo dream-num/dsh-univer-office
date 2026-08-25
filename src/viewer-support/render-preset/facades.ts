@@ -1,3 +1,4 @@
+// oxlint-disable import/no-unassigned-import
 import "@univerjs/ui/facade";
 import "@univerjs/docs/facade";
 import "@univerjs/docs-ui/facade";

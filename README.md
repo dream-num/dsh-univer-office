@@ -1,3 +1,5 @@
+![Univer × DeepSeek](docs/assets/readme/univer-deepseek-banner.png)
+
 # DSH × Univer Office
 
 > Give DeepSeek Harness the ability to create, edit, inspect, and deliver spreadsheets, documents, presentations, databases, and canvases.
@@ -65,9 +67,9 @@ Give the agent a topic, audience, page count, content outline, and visual direct
 - **Create and revise presentations** — generate a deck from an outline, redesign selected pages, edit text, shapes, images, tables, charts, and transitions, then detect off-page, overflowing, and overlapping text.
 - **Build lightweight databases** — create Base tables, fields, records, and views with formula fields, filters, sorting, grouping, and Sheet-backed references.
 - **Draw editable canvases** — create shapes, text, connectors, images, native charts, and diagrams, with connector and layout analysis.
-- **Compose several content types** — one `.univer` file can contain Sheet, Doc, Slide, Base, and Board Units. Formulas and embedded content can reference other Units in the same file.
+- **Compose several content types** — one `.univer` file can contain Sheets, Docs, Slides, Bases, and Boards. Formulas and embedded content can reference other content in the same file.
 - **Work with Office files** — import `.xlsx`, `.csv`, `.tsv`, `.docx`, and `.pptx`, then export the edited content in the matching format.
-- **Review agent changes safely** — every write starts in an isolated worktree. Watch changes live, then merge or discard them from the conversation instead of letting the agent overwrite the current version.
+- **Review agent changes safely** — every write starts in an isolated draft. Watch changes live, then approve or discard them instead of letting the agent overwrite the current version.
 
 ### Example requests
 
@@ -90,10 +92,10 @@ Create a sales Sheet and a summary Slide in the same .univer file, with the Slid
 | Sheet | Cells, formulas, styles, tables, charts, pivots, filters, validation, images, and more | Structured range inspection, recalculation, range/workbook screenshots, live preview | `.xlsx` `.csv` `.tsv` | `.xlsx` `.csv` `.tsv` |
 | Doc | Paragraphs, rich text, lists, tasks, tables, images, charts, headers, footers, pagination | Document readback, page screenshots, live preview | `.docx` | `.docx` |
 | Slide | Pages, text, shapes, images, tables, charts, SVG layouts, transitions | Structure inspection, text bounds/overflow/overlap lint, page/contact-sheet screenshots, live preview | `.pptx` | `.pptx` |
-| Base | Tables, fields, records, views, formulas, filters, sorting, grouping | Facade readback, workbench screenshot, live preview | — | `.xlsx` `.csv` `.tsv` |
+| Base | Tables, fields, records, views, formulas, filters, sorting, grouping | Structured data checks, workbench screenshot, live preview | — | `.xlsx` `.csv` `.tsv` |
 | Board | Shapes, text, connectors, images, native charts, routing | Element and connector analysis, overview/region/element screenshots, live preview | — | — |
 
-Every content type supports isolated worktree editing, review submission, reopening, merging, and discarding. Base and Board currently use exact Facade readback for structural verification. Board file export is not yet supported.
+Every content type supports isolated draft editing, review, revision, approval, and discarding. Base and Board support structural verification; Board file export is not yet supported.
 
 ## Get started in 3 minutes
 
@@ -121,85 +123,69 @@ After DSH starts successfully, refresh the existing DeepSeek Harness browser pag
 Create reports/q2-review.univer. Read data/q2-sales.xlsx and build a management dashboard with summary metrics, monthly trends, and regional rankings.
 ```
 
-The agent automatically loads the relevant skills and selects the `univer_*` tools. A typical task creates the file and a worktree, imports or creates a Unit, edits it, reads the result back for verification, and submits the worktree for review.
-
 ### 3. Review it in the conversation
 
-- Creating a `.univer` file, creating or reopening a worktree, writing content, and submitting for review opens a live window in the top-right. A non-terminal worktree left open in one turn stays open in the next.
-- Every touched `.univer` file that still exists at the end of the Turn uses the same foldable, fullscreen-capable Turn card; historical Turns keep the same card collapsed by default. Temporary files created and then removed during the Turn do not leave cards behind.
-- Submit, merge, and discard through the full Univer page embedded in the card instead of duplicate controls outside the Viewer.
+- Changes appear in a live, movable preview window while the agent works.
+- Review cards remain in the conversation and can be folded or opened fullscreen later.
+- Continue editing, approve, or discard changes from the Univer page embedded in the card.
 
 ## How it works
 
-A `.univer` file is a composable office container that can hold several Units of different types. The plugin puts each agent task in an isolated worktree:
+1. Describe the result you want and provide any source files.
+2. The agent creates an isolated draft and edits the Univer content there.
+3. Follow the live preview and ask for revisions until the result is ready.
+4. Approve the result to update the current version, or discard the draft without changing it.
 
-```text
-Your request
-   ↓
-Load the matching Univer skill
-   ↓
-Create / import / edit in a draft worktree
-   ↓
-Readback + recalculation + layout lint + PNG screenshot review
-   ↓
-Live preview and in-conversation review
-   ↓
-Revise / merge / discard
-```
-
-Only `merge` and `discard` end a worktree, and both require an explicit user request plus DSH approval. `ready` only submits the worktree for review; it does not change the trunk.
+Approval and discarding always require an explicit user request.
 
 ## Built-in tools
 
-You do not need to call tools manually in normal use; DSH selects them from your request. This list shows what the plugin exposes to the agent.
+DSH selects these tools automatically; you normally do not need to call them manually.
 
 | Tool | Purpose |
 | --- | --- |
 | `univer_new` | Create an empty `.univer` file without overwriting an existing file |
-| `univer_status` | List Units and worktrees in trunk or a selected worktree |
-| `univer_worktree` | Create, submit, reopen, merge, or discard an isolated worktree |
-| `univer_unit` | Create or remove a Sheet, Doc, Slide, Base, or Board Unit |
-| `univer_import` | Import an Office file as a new Unit |
+| `univer_status` | View the content and draft status of a file |
+| `univer_worktree` | Create, submit, revise, approve, or discard an isolated draft |
+| `univer_unit` | Add or remove Sheet, Doc, Slide, Base, or Board content |
+| `univer_import` | Import an Office file into a `.univer` file |
 | `univer_inspect` | Read document structure or a selected Sheet range |
-| `univer_execute` | Read or modify content with the exact Univer Facade API |
-| `univer_export` | Export a Sheet, Doc, Slide, or Base Unit |
-| `univer_lint` | Detect off-page, overflowing, and overlapping Slide text |
-| `univer_compile_svg` | Compile SVG into an explicit Slide page with real font metrics |
-| `univer_screenshot` | Render Sheet, Doc, Slide, Base, or Board PNGs and return them to an image-capable model |
-| `univer_api` | Search the exact Univer Facade API bundled with this plugin |
-| `univer_resources` | Find, read, and export bundled SVG icons, logos, emoji, and illustrations, and manage their download cache |
-
-The plugin also ships eight version-matched, lazily loaded skills: core orchestration, Sheet, Doc, Slide, Base, Board, Embed, and cross-Unit formulas.
+| `univer_execute` | Read or edit content through the Univer API |
+| `univer_export` | Export Sheet, Doc, Slide, or Base content |
+| `univer_lint` | Find off-page, overflowing, and overlapping Slide text |
+| `univer_compile_svg` | Add an SVG layout to a Slide with measured text |
+| `univer_screenshot` | Render supported content as PNG images for review |
+| `univer_api` | Search the Univer API included with this plugin |
+| `univer_resources` | Find and use bundled icons, logos, emoji, and illustrations |
 
 ## Preview and review experience
 
-- **Live Univer window** — file creation plus worktree creation, reopening, writing, and submission open it automatically. Drag, resize, fold, or maximize it; non-terminal windows left open carry into the next Turn.
-- **Unified Turn cards** — every touched `.univer` file that still exists has its own full Univer card, later reads do not erase a lifecycle result already produced in that Turn, and deleted temporary files do not leave loading cards behind.
-- **Historical review** — draft, ready, merged, and discarded results all remain in the same card layout at their original Turn, with historical cards collapsed by default.
+- **Live Univer window** — changes open automatically in a window you can drag, resize, fold, or maximize.
+- **Conversation review cards** — each edited `.univer` file has its own full preview card, while deleted temporary files leave no stale cards behind.
+- **Historical review** — drafts, submitted changes, approvals, and discarded results remain in the conversation, with older cards collapsed by default.
 - **Session isolation** — each DSH session shows only its own windows, cards, and review state.
 - **English and Chinese UI** — the plugin shell and every open Viewer follow the DSH locale.
-- **Viewer import, export, and print** — a live trunk Viewer uses the Univer Ribbon to import Office files as new Units in the current `.univer`, export Sheet, Doc, Slide, or Base Units, and print supported Units. Protect and Print are unavailable in read-only Sheet Views. Worktree and merge-preview Views do not allow import or export; other supported Units can still print, and Board provides print only.
-- **Sheet version history** — a live trunk Sheet exposes time-grouped versions in the Ribbon. Read-only review can inspect but not restore; an editable trunk lets the user explicitly restore a version. Worktree and merge-preview Views do not expose History.
+- **Import, export, and print** — the current version can import Office files, export supported content, and print from the Univer Ribbon. Draft and review previews do not allow import or export; Board provides print only.
+- **Sheet version history** — the current version shows time-grouped history in the Ribbon. Read-only views can inspect versions, while editable views can restore one explicitly.
 
 ## Requirements and current limits
 
 - DeepSeek Harness and Node.js `>=22.19.0`.
-- Slide layout lint, real SVG text measurement, and PNG screenshots require a local Chrome/Chromium executable. Set `UNIVER_RENDER_BROWSER` to use a specific browser path.
-- Screenshots run only when the current model route declares image input. PNGs are saved under an explicit output directory in the session workspace and returned as model-visible attachments. Structural readback, Slide lint, and screenshots prove different facts; the live Viewer remains available for human review.
+- Some Slide layout checks and SVG text measurement require a local Chrome/Chromium executable. Set `UNIVER_RENDER_BROWSER` to use a specific browser path.
 - Slide master pages, layout pages, and speaker notes are outside the current editing scope.
 - Board mind maps, tables, ink, advanced editing, and file export are not yet supported.
 
 ## Configuration
 
-The defaults are designed for local use: the Gateway starts on the first file-state request at `9080`. If that port is occupied, it tries `9081`, then continues upward one port at a time. Configure the bundle's Cordis layer when you need different values:
+The defaults are designed for local use: the service starts at port `9080`. If that port is occupied, it tries `9081`, then continues upward one port at a time. Set these plugin options when you need different values:
 
 | Field | Default | Purpose |
 | --- | --- | --- |
-| `gatewayPort` | `9080` | Initial loopback port for the bundled Gateway; occupied ports advance by one |
-| `autoStartGateway` | `true` | Start the Gateway on first use |
-| `gatewayStartupTimeoutMs` | `10000` | Gateway startup timeout |
+| `gatewayPort` | `9080` | Initial loopback service port; occupied ports advance by one |
+| `autoStartGateway` | `true` | Start the service on first use |
+| `gatewayStartupTimeoutMs` | `10000` | Service startup timeout |
 | `gatewayRequestTimeoutMs` | `3000` | State-read timeout |
-| `gatewayMutationTimeoutMs` | `60000` | Gateway mutation timeout |
+| `gatewayMutationTimeoutMs` | `60000` | Write-operation timeout |
 | `unitContentOperationTimeoutMs` | `120000` | Import, export, inspection, and execution timeout |
 | `screenshotOperationTimeoutMs` | `120000` | Overall timeout for one browser screenshot operation |
 | `screenshotMaxPages` | `30` | Maximum Doc or Slide pages rendered by one screenshot call |
@@ -207,10 +193,8 @@ The defaults are designed for local use: the Gateway starts on the first file-st
 | `resourceCacheRoot` | `$DSH_HOME/cache/dsh-univer-office/resources` | Persistent downloaded-SVG cache; falls back to `~/.dsh` when `DSH_HOME` is unset |
 | `resourceDownloadTimeoutMs` | `15000` | Timeout for one SVG resource download |
 | `resourceOperationTimeoutMs` | `120000` | Overall timeout for one resource-library tool operation |
-| `tools` | `true` | Register the `univer_*` tools |
-| `skills` | `true` | Register the bundled Univer skills |
-
-See [`src/host/config.ts`](src/host/config.ts) for the remaining cache and commit-confirmation options.
+| `tools` | `true` | Enable agent editing capabilities |
+| `skills` | `true` | Enable bundled task guidance |
 
 ## Uninstall
 
@@ -222,19 +206,15 @@ dsh plugin --profile web remove dsh-univer-office
 
 This project is a standard [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md). Its Host composes the Univer Service Provider, Tools Consumer, webServer Consumer, and Skill Provider. The bundle includes its Gateway, Viewer, headless Unit Content Worker, and Slide render machine. See the [architecture document](docs/architecture.md) for dependency directions and runtime boundaries.
 
+The project requires Node.js `>=22.19.0` and `pnpm@11.23.0`.
+
 ```sh
 pnpm install
+pnpm run lint
+pnpm run typecheck
 pnpm run build
 pnpm run test
 ```
-
-Build the npm tarball and zip distribution:
-
-```sh
-bash scripts/build-dist.sh
-```
-
-`lib/`, `artifacts/`, `dist/`, `*.tgz`, and `univer-dsh-plugin.zip` are generated and are not committed.
 
 ## Official package name
 

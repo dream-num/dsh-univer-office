@@ -1,60 +1,100 @@
 # AGENTS.md
 
-`dsh-univer-office` 是 DeepSeek Harness（DSH）的可安装 Cordis bundle。DSH 中一切能力都由插件组合；修改实现前阅读 [架构文档](docs/architecture.md)，修改用户能力或配置时同时阅读 [中文 README](README.zh-CN.md) 与 [English README](README.md)。
+This file defines repository-specific instructions for `dsh-univer-office`, an installable Univer bundle for DeepSeek Harness (DSH). Follow inherited instructions as well.
 
-## 开发命令
+## 1. Sources of truth
 
-本项目要求 Node.js `>=22.19.0` 和 `pnpm@11.20.0`。使用 `pnpm install` 安装依赖，使用 `pnpm run typecheck` 检查全部 TypeScript compiler face。
+- Read [`docs/architecture.md`](docs/architecture.md) before changing architecture, ownership, trust boundaries, cross-process protocols, tool flows, or deployment behavior.
+- Keep standing development rules and commands in this file.
+- Keep user-visible capabilities, configuration, and limitations synchronized in both [`README.md`](README.md) and [`README.zh-CN.md`](README.zh-CN.md).
+- Keep model workflows in `skills/`. Do not duplicate tool schemas or step-by-step agent workflows elsewhere.
+- Describe only the current implementation. Do not preserve prototype behavior unless it remains a documented product contract.
 
-`pnpm run build` 依次生成 Host/Client、Worker、Gateway、Render Machine 和 Viewer；也可运行 `build:lib`、`build:worker`、`build:gateway`、`build:render` 或 `build:viewer`。Smoke 测试消费生成的 `lib/` 与 `artifacts/`，必须先构建受影响目标。
+## 2. Commands and validation
 
-按改动范围运行最窄的有效检查：Host/HTTP/Tools 用 `build:lib` 后运行 `test:host`；Client 用 `build:lib` 后运行 `test:client`；Skills 用 `test:skills`；Gateway、Worker、文件持久化、worktree 生命周期、Render Machine 或跨进程协议用对应构建后运行 `test:integration`。跨层或发布改动运行 `pnpm test`。仓库没有 lint 或 format 脚本。
+Use Node.js `>=22.19.0` and `pnpm@11.23.0`.
 
-## DSH 与 Cordis 约定
+```sh
+pnpm install
+pnpm run lint
+pnpm run lint:fix
+pnpm run typecheck
+pnpm run format:check
+pnpm run format
+```
 
-- 一个完整 capability seam 包含 Service Definition、Provider 和 Consumer。Service 是 Host 内部稳定入口；WebServer 与 Tools 保留 Consumer 职责，bundled Skills 保留 Provider 职责，不把 HTTP、工具 schema、UI 或具体 Gateway/Worker 实现泄漏进 Service。
-- 函数插件命名导出 `name`、`inject`、`Config` 和 `apply` 中适用的成员，不添加 default export。依赖通过 `inject` 声明，不依赖手工挂载顺序。
-- `cordis.patch.yml` 必须以裸包名挂载根插件，使 Loader 能从 `package.json` 的 `dsh.client` 清单发现浏览器 bundle；不要把组合入口改为相对路径或内部子路径。
-- 注册是当前 Cordis fiber 拥有的可撤销 effect。使用 `ctx.effect()`、`ctx.on()` 或返回精确 disposer 的 registry API；卸载完成后不得遗留路由、工具、Skill provider、监听器、定时器或子进程。
-- 可部署参数由已校验的 `Config` 提供；缺失或非法配置在最早可判断的位置失败。请求默认值在拥有该行为的 Provider 中通过显式 resolve 步骤产生，不在执行深处隐藏 `?? default`。
-- 模型可见事实必须来自可回放的结构化会话事件。`univer_*` 工具返回恢复文件、worktree 和 Unit 目标所需的结构化值；Client 不解析自由文本或 bash 输出。工具 presentation 只依赖参数和持久结果。
-- 工具 schema 和描述只使用模型完成任务所需的领域概念。新增工具时先确定执行、取消、超时、结构化输出、UI presentation、审批和 Skills 指引，并通过真实 Consumer 路径验证。
+- Treat `oxlint.config.ts` as project policy. Fix lint errors instead of weakening rules; change rule severity only when the task explicitly targets lint policy.
+- `lint:fix` and `format` mutate files. Run them only when their full write scope is intended and reviewed.
+- `format` and `format:check` are repository-wide. Do not create unrelated formatting churn. For a narrow change, check supported files directly with `pnpm exec oxfmt --check <files>`.
+- `pnpm run build` builds Host/Client, Worker, Gateway, Render Machine, and Viewer. Use `build:lib`, `build:worker`, `build:gateway`, `build:render`, or `build:viewer` for a narrower build.
+- Smoke tests consume `lib/` and `artifacts/`. Always build the affected target from the current source before running its smoke test.
 
-## 运行时与依赖边界
+Choose the narrowest validation that proves the change:
 
-- 保持 [架构文档](docs/architecture.md) 中的依赖方向。WebServer 与 Tools 只调用 `ctx.univer`；Provider 才能组合 Gateway adapter、Unit Content adapter、缓存和 worktree 规则；Gateway Supervisor 只拥有进程生命周期。
-- Client component 不直接 `fetch`；HTTP 集中在 `src/client/api/`，轮询和 mutation 集中在 hooks。Client 是会话日志与 Host 状态的投影，不拥有 worktree 真相，不读取本地文件或管理 Gateway。
-- `src/shared/wire/` 只包含可 JSON 序列化的数据，不依赖 Node.js、React、Cordis 或 Univer。Host、Client、Gateway 和 Worker 的进程或 wire 边界需要运行时校验；同一进程内已由 TypeScript 保证的值不重复做敌意输入校验。
-- 跨边界的 file、worktree 和 Unit ID 使用已有 branded 类型。所有文件、导入、导出和 SVG 资源都绑定显式 DSH session/tool workspace，并在 Provider 以 realpath 再次授权；共享 Gateway 进程不代表共享文件权限。
-- Viewer URL 由 Host 基于已授权资源生成。Client 将文件、worktree、Unit、mode 和 scope 视为不透明身份参数，只能追加语言等纯展示参数。
-- Gateway、Worker、Viewer 与 Render Machine 是独立 application。通过明确协议通信，不跨进程导入实现状态，不引入全局 `univer` CLI 或外部源码 checkout 依赖。
+| Change                                                                                        | Build first                      | Test                                                            |
+| --------------------------------------------------------------------------------------------- | -------------------------------- | --------------------------------------------------------------- |
+| Host, HTTP, or tools                                                                          | `pnpm run build:lib`             | `pnpm run test:host`                                            |
+| DSH Client                                                                                    | `pnpm run build:lib`             | `pnpm run test:client`                                          |
+| Bundled skills                                                                                | None                             | `pnpm run test:skills`                                          |
+| Viewer UI                                                                                     | `pnpm run build:viewer`          | Add `test:integration` when behavior crosses a process boundary |
+| Gateway, Worker, persistence, worktree lifecycle, Render Machine, or a cross-process protocol | Build every affected application | `pnpm run test:integration`                                     |
+| Cross-layer or release change                                                                 | None separately                  | `pnpm test` (builds every target first)                         |
 
-## 生命周期与安全不变量
+Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before every handoff. Report the exact commands that completed successfully.
 
-- 内容写入只允许显式 `draft` worktree。`ready` 与 `reopen` 是正常 Agent 工作流；`merge` 与 `discard` 仅在用户明确要求且 DSH 审批通过后执行，不能作为自动收尾。
-- `merged` 和 `discarded` 是终态，不可 reopen 或复用。Client 必须保留历史审阅投影，但移除终态 worktree 的修改操作和实时浮窗。
-- 会话 ID 与 workspace scope 参与每次浏览器状态查询和 mutation 授权。缓存、轮询、窗口去重及审阅状态不得跨会话泄漏。
-- 并发 Gateway 启动共享一个启动操作；失败、提前退出和卸载都释放状态并允许重试。只终止本插件拥有的进程，跳过被其他服务占用的端口，并验证健康端点身份。
-- 取消与 teardown 必须达到静止状态：先阻止新的通知，再 abort/kill，并等待 Worker、浏览器或子进程退出。异步操作由一个明确 owner 管理 settlement、取消和清理，不留下孤儿任务。
-- 当前插件不向模型提供截图。结构回读和 Slide lint 不能表述为逐像素视觉验收；视觉结果重要时明确说明仍需 Viewer 人工检查。
+## 3. Architecture and Cordis boundaries
 
-## TypeScript 与源码规则
+- A complete capability seam consists of a Service Definition, Provider, and Consumer. `UniverService` is the stable Host boundary; HTTP and tools remain Consumers, while concrete Gateway, Worker, cache, and worktree behavior remains in the Provider.
+- WebServer and tools call only `ctx.univer`. They must not access Gateway adapters, workers, subprocesses, or the filesystem directly.
+- Function plugins export the applicable named members among `name`, `inject`, `Config`, and `apply`; do not add a default export. Declare dependencies through `inject`, not mounting order.
+- Mount the root plugin by bare package name in `cordis.patch.yml`. A relative or internal entry prevents DSH from discovering the browser bundle declared by `package.json#dsh.client`.
+- Every registration belongs to the current Cordis fiber and must be reversible. Use `ctx.effect()`, `ctx.on()`, or a registry API that returns an exact disposer. Unload must leave no routes, tools, skill providers, listeners, timers, or subprocesses behind.
+- Validate deployable configuration before use. Resolve behavioral defaults explicitly in the Provider that owns them; do not hide deployment defaults deep inside execution code.
+- Model-visible facts must come from replayable structured session events. `univer_*` tools return the file, worktree, and Unit identities required to recover a target; Client code must not parse free text or shell output.
+- Tool presentation depends only on arguments and persisted results. Before adding a tool, define execution, cancellation, timeout, structured output, presentation, approval, and skill guidance, then validate the real Consumer path.
 
-- 使用 ESM、显式 `.ts` 相对导入和 `import type`。保持 `strict`、`noUncheckedIndexedAccess`、`exactOptionalPropertyTypes` 与 `verbatimModuleSyntax` 通过，不用宽泛断言或无说明的 `any` 绕过类型问题。
-- Closed union 按 discriminant 穷尽处理；稳定错误由拥有该失败语义的层定义，HTTP 和工具 Consumer 映射错误，不解析错误字符串或暴露堆栈、内部绝对资源路径和原始子进程输出。
-- 注释和 JSDoc 记录非显然的行为、失败、时序、所有权与安全用法，不复述代码或保留推理过程。空 `catch` 必须说明只吞掉哪一种预期失败。
-- 延续所在文件的格式与命名，避免无关格式化。文件以一个换行结束，交付前运行 `git diff --check`。
+## 4. Runtime boundaries
 
-## 测试与文档
+- Client components do not call `fetch` directly. Keep HTTP in `src/client/api/` and polling or mutations in hooks.
+- The Client projects replayable session events and authoritative Host state; it does not own worktree truth, read local files, or manage Gateway processes.
+- `src/shared/wire/` contains JSON-serializable data only and must not depend on Node.js, React, Cordis, or Univer.
+- Validate every process, HTTP, and wire boundary at runtime. Do not duplicate hostile-input validation for values that remain in one TypeScript process.
+- Use existing branded types for file, worktree, and Unit identities across boundaries.
+- Host creates Viewer URLs only after authorizing the resource. Client treats file, worktree, Unit, mode, and scope parameters as opaque and may append only presentation-only values such as language.
+- Gateway, Worker, Viewer, and Render Machine are independent applications. Communicate through explicit protocols; do not import process-owned state across applications or depend on a global `univer` CLI or external source checkout.
 
-- 测试描述行为并验证外部世界，不信任实现的自述。文件操作回读文件，生命周期测试检查最终状态与资源清理；新增回归覆盖成功、拒绝、取消及相关竞态。
-- 测试使用临时 workspace 和动态端口，不依赖全局 CLI、已有演示文件、固定端口或本机遗留进程。只 mock 网络、时钟等昂贵或不确定边界，尽量通过真实 Service、Router、Gateway 或发布入口运行其余路径。
-- Source plane 与 artifact plane 不混用：类型检查面向 `src/`；built smoke 明确消费刚生成的 `lib/`/`artifacts/`。不要让陈旧生成物掩盖源码或发布入口问题。
-- 文档只描述当前状态，一项事实只保留一个归属位置：长期开发命令与 standing orders 属于本文件；架构、信任边界和设计决策属于 [架构文档](docs/architecture.md)；用户能力、配置和限制属于双语 README；具体模型工作流属于 `skills/`。
-- 用户可见行为、配置或限制变化时同步更新两份 README；工具工作流变化时更新核心或对应 Unit Skill。不要在多处复制工具 schema、目录清单或实现细节。
+## 5. Security and lifecycle invariants
 
-## 生成物与工作区
+- Content writes require an explicit `draft` worktree. `ready` and `reopen` are normal agent operations. `merge` and `discard` require an explicit user request plus DSH approval and must never be automatic cleanup.
+- `merged` and `discarded` are terminal. Preserve their historical review projection, but remove live windows and mutation controls.
+- Bind every browser query and mutation to both the DSH session and workspace scope. Caches, polling, window deduplication, and review state must never leak across sessions.
+- Authorize every file, import, export, screenshot output, and SVG resource against the explicit tool/session workspace, then verify it again with `realpath` at the Provider boundary. A shared Gateway process does not grant shared file access.
+- Concurrent Gateway starts share one startup operation. Failure, early exit, and unload must clear ownership and allow retry. Stop only subprocesses started by this plugin, skip occupied ports, and verify the health endpoint identity.
+- Cancellation and teardown must reach quiescence: reject new notifications, abort or kill owned work, and await Worker, browser, and subprocess exit. One clear owner manages settlement and cleanup for each asynchronous operation.
+- `univer_screenshot` may return model-visible PNG attachments only when the current model supports image input and every output path is authorized. Claim visual verification only for images actually inspected; structural readback and Slide lint are not pixel-level proof.
 
-- `lib/`、`artifacts/`、`dist/`、`*.tgz` 和 `*.zip` 是生成物，不手工编辑或提交。发布只包含从当前 `src/` 构建的产物；只有明确制作发布包时才运行会覆盖输出的 `scripts/build-dist.sh`。
-- 精确锁定的 Univer SDK、API Reference 和 insiders 包是跨 application 的版本契约；升级时统一兼容版本族，并运行完整构建和集成测试。原生依赖必须在目标平台安装和验证，不能复制一个平台的 `node_modules` 作为通用产物。
-- 开始工作先查看 `git status`，保留用户已有改动。搜索优先使用 `rg`/`rg --files`，只修改任务所需文件，不回退无关变化。
+## 6. TypeScript and error contracts
+
+- Use ESM, explicit `.ts` relative imports, and top-level `import type` declarations. Keep `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, and `verbatimModuleSyntax` passing.
+- Do not bypass type safety with broad assertions or unexplained `any`.
+- Handle closed unions exhaustively by discriminant.
+- Define stable errors in the layer that owns the failure. HTTP and tool Consumers map those errors without parsing messages or exposing stacks, internal absolute paths, or raw subprocess output.
+- Comments and JSDoc explain non-obvious behavior, failure modes, timing, ownership, or security constraints. Do not restate code or preserve reasoning transcripts. An empty `catch` must name the expected failure it ignores.
+- Follow the surrounding format and naming. Avoid repository-wide cleanup during a scoped task.
+
+## 7. Testing
+
+- Test observable behavior and external effects, not implementation claims. Read files back after file operations and assert final state plus resource cleanup for lifecycle behavior.
+- Cover relevant success, rejection, cancellation, and race paths for new behavior.
+- Use temporary workspaces and dynamic ports. Tests must not depend on a global CLI, existing demo files, fixed ports, or leftover local processes.
+- Mock only expensive or nondeterministic external boundaries such as network and time. Prefer real Service, Router, Gateway, and package entry paths elsewhere.
+- Keep source and artifact validation separate: typecheck `src/`; built smoke tests consume artifacts generated from the same checkout immediately before the test.
+
+## 8. Documentation, generated files, and workspace safety
+
+- Keep public README sections such as How it works, Built-in tools, and Development written for users or external contributors. Internal layering, trust boundaries, protocol details, and packaging decisions belong in `docs/architecture.md` or this file.
+- Update both READMEs for any user-visible capability, configuration, or limitation change. Update the relevant core or Unit skill when a model workflow changes.
+- Do not hand-edit or commit `lib/`, `artifacts/`, `dist/`, `*.tgz`, or `*.zip`. Run `scripts/build-dist.sh` only when explicitly producing release artifacts.
+- Exact Univer SDK, API Reference, and insiders versions form one cross-application compatibility contract. Upgrade them as one compatible family and run the full build and integration suite. Install and validate native dependencies on the target platform; never copy `node_modules` between platforms as a release artifact.
+- Inspect `git status` before editing. Preserve staged, unstaged, and untracked user work, including intentional manifest and lockfile versions. Run dependency installation only when the task requires dependency changes.
+- Prefer `rg` and `rg --files`. Modify only files required by the task and never revert unrelated changes.

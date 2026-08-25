@@ -9,7 +9,6 @@
 //   pnpm run build:viewer  → artifacts/viewer/
 //   pnpm run build         → all five applications
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
 import { builtinModules, createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
@@ -216,17 +215,6 @@ async function assertViewerRibbonUtilityOrder(viewerOut) {
   if (fixedHeight < 0 || fullHeight < 0 || fullHeight < fixedHeight) {
     throw new Error('viewer CSS utility order would collapse full-height grid ribbon buttons')
   }
-}
-
-async function run(command, args) {
-  await new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit' })
-    child.once('error', reject)
-    child.once('exit', (code, signal) => {
-      if (code === 0) resolve()
-      else reject(new Error(`${command} exited with ${signal ?? code ?? 'unknown'}`))
-    })
-  })
 }
 
 function indent(value, spaces) {

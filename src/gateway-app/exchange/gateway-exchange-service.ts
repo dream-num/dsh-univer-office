@@ -233,7 +233,7 @@ export class GatewayExchangeService {
   public async dispose(): Promise<void> {
     if (this._disposed) return;
     this._disposed = true;
-    await Promise.allSettled([...this._runningTasks]);
+    await Promise.allSettled(this._runningTasks);
     this._artifacts.clear();
     this._tasks.clear();
   }
@@ -594,7 +594,7 @@ function importedName(data: Readonly<Record<string, unknown>>, filename: string)
 }
 
 function safeFilename(value: string): string {
-  return value.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_").slice(0, 200) || "univer-export";
+  return value.replace(/[\\/:*?"<>|\p{Cc}]/gu, "_").slice(0, 200) || "univer-export";
 }
 
 function stripExtension(filename: string): string {

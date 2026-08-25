@@ -81,7 +81,7 @@ function ConfirmDialog({
                 <Badge
                   key={chip.id}
                   variant="neutral"
-                  className="min-w-0 max-w-full shrink whitespace-normal break-words text-left leading-5"
+                  className="max-w-full min-w-0 shrink text-left leading-5 wrap-break-word whitespace-normal"
                 >
                   {chip.label}
                 </Badge>

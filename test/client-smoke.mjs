@@ -47,13 +47,9 @@ const UNITS = [
 const DEFAULT_UNIT_URL = VIEW_URL + '&unit=' + encodeURIComponent(UNITS[0].unitId)
 const SLIDE_UNIT_URL = VIEW_URL + '&unit=' + encodeURIComponent(UNITS[1].unitId)
 const DEFAULT_MERGE_URL = MERGE_URL + '&unit=' + encodeURIComponent(UNITS[0].unitId)
-const ZH_OPEN_URL = withLang(OPEN_URL, 'zh-CN')
-const EN_OPEN_URL = withLang(OPEN_URL, 'en-US')
 const ZH_DEFAULT_UNIT_URL = withLang(DEFAULT_UNIT_URL, 'zh-CN')
-const EN_DEFAULT_UNIT_URL = withLang(DEFAULT_UNIT_URL, 'en-US')
 const ZH_SLIDE_UNIT_URL = withLang(SLIDE_UNIT_URL, 'zh-CN')
 const EN_SLIDE_UNIT_URL = withLang(SLIDE_UNIT_URL, 'en-US')
-const ZH_DEFAULT_MERGE_URL = withLang(DEFAULT_MERGE_URL, 'zh-CN')
 const ZH_FULL_DEFAULT_UNIT_URL = withLang(asReviewPage(DEFAULT_UNIT_URL), 'zh-CN')
 const EN_FULL_DEFAULT_UNIT_URL = withLang(asReviewPage(DEFAULT_UNIT_URL), 'en-US')
 const ZH_FULL_DEFAULT_MERGE_URL = withLang(asReviewPage(DEFAULT_MERGE_URL), 'zh-CN')
@@ -144,7 +140,7 @@ const { createRoot } = repoRequire('react-dom/client')
 
 let pluginExports = null
 dom.window.__ModuleLoader__ = {
-  load({ id, factory }) {
+  load({ factory }) {
     const requireMock = (spec) => {
       if (spec === 'react') return React
       if (spec === 'react/jsx-runtime') return jsxRuntime

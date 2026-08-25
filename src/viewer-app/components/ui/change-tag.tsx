@@ -10,7 +10,7 @@ const changeTagVariants = cva(
         modified: "bg-blue-50 text-blue-600",
         added: "bg-emerald-50 text-emerald-700",
         deleted: "bg-red-50 text-red-600",
-        conflict: "bg-red-100 text-red-700 ring-1 ring-inset ring-red-200",
+        conflict: "bg-red-100 text-red-700 ring-1 ring-red-200 ring-inset",
         updated: "bg-neutral-100 text-neutral-500"
       }
     }

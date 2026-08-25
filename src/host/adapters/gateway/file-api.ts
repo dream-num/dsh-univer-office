@@ -1,5 +1,5 @@
 import type { JsonValue, UniverUnitKind } from '../../service/types.ts'
-import { GatewayClient } from './client.ts'
+import type { GatewayClient } from './client.ts'
 
 /** Encode an absolute file path as the key used by the collaboration Gateway. */
 export function fileKeyOf(file: string): string {
