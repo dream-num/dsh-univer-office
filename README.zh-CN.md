@@ -16,8 +16,6 @@
 
 ## 看看实际效果
 
-[▶ 观看 DSH × Univer Office 演示视频](docs/assets/readme/dsh-univer-office-demo-2026-08-26.mp4)
-
 下面的电子表格由 Agent 根据自然语言要求创建，并在同一个会话中继续添加条件格式和图表。完成后可以直接预览、继续修改、合入当前版本或丢弃。
 
 ![在 DSH 会话中审阅带条件格式和图表的电子表格](docs/assets/readme/chart-and-formatting.png)
