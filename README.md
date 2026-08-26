@@ -18,7 +18,7 @@ After installation, describe the result you want in natural language. The agent 
 
 ## See it in action
 
-[▶ Watch the DSH × Univer Office demo video](docs/assets/readme/dsh-univer-office-demo-2026-08-26.mp4)
+[▶ Watch the DSH × Univer Office demo video](https://www.youtube.com/watch?v=k-2zW_CMiew)
 
 The agent created this spreadsheet from a natural-language request, then added conditional formatting and a chart in the same conversation. The result can be previewed, revised, merged into the current version, or discarded in place.
 
