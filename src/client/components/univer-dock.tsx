@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import type { ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import {
@@ -80,7 +81,8 @@ function UniverSessionDock(props: UniverDockProps & { readonly timeline: Convers
 
   if (!running) return <></>
   const windows = Object.values(open)
-  return <>{windows.length === 0 ? null : <div className="uvf_root">{windows.map((target, stackIndex) => <WorktreeWindow
+  if (windows.length === 0) return <></>
+  return createPortal(<div className="uvf_root">{windows.map((target, stackIndex) => <WorktreeWindow
     key={target.file}
     file={target.file}
     state={states[target.file]}
@@ -94,7 +96,7 @@ function UniverSessionDock(props: UniverDockProps & { readonly timeline: Convers
       delete next[target.file]
       return next
     })}
-  />)}</div>}</>
+  />)}</div>, document.body)
 }
 
 function openWindowOf(operation: UniverTurnOperation, file: string): OpenWindow | null {

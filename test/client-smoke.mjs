@@ -437,6 +437,7 @@ await waitFor('no UI without targets', () => q('.uvf_root') === null && q('.uvf_
 worktrees = []
 render(sessionWithFiles([turnFile(DEMO_FILE, null, 'new')], true))
 await waitFor('new 主动拉起当前版本浮窗', () => q('.uvf_win') !== null && q('.uvf_frame')?.getAttribute('src') === ZH_LIVE_TRUNK_URL)
+if (q('.uvf_root')?.parentElement !== document.body) throw new Error('floating windows must portal outside the input dock')
 if (q('.uvf_chip')?.getAttribute('data-status') !== 'trunk') throw new Error('new window must identify the current version')
 render(sessionWithFiles([turnFile(DEMO_FILE, null, 'status')], true))
 await waitFor('纯读取不主动拉起浮窗', () => q('.uvf_win') === null)
