@@ -175,7 +175,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 
 ## Requirements and current limits
 
-- DeepSeek Harness and Node.js `>=22.19.0`.
+- DeepSeek Harness `0.1.1-rc.1`, `0.1.1-rc.2`, or `0.1.2-alpha.1`, and Node.js `>=22.19.0`. The browser plugin supports both the combined `0.1.1` Conversation snapshot and the split `0.1.2` Session/Chat APIs.
 - Some Slide layout checks and SVG text measurement require a local Chrome/Chromium executable. Set `UNIVER_RENDER_BROWSER` to use a specific browser path.
 - Slide master pages, layout pages, and speaker notes are outside the current editing scope.
 - Board mind maps, tables, ink, advanced editing, and file export are not yet supported.

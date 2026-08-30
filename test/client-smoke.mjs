@@ -4,7 +4,8 @@
 // link) → click-to-maximize / fold / drag / dismiss → ready + session end
 // closes the window and embeds the merge panel → merged panel shows trunk.
 //
-//   node test/client-smoke.mjs
+//   node test/client-smoke.mjs combined
+//   node test/client-smoke.mjs split
 import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { join, dirname, isAbsolute } from 'node:path'
@@ -16,6 +17,10 @@ const here = dirname(fileURLToPath(import.meta.url))
 const packageRoot = process.env.UNIVER_PLUGIN_ROOT
 if (packageRoot !== undefined && !isAbsolute(packageRoot)) throw new Error('UNIVER_PLUGIN_ROOT must be absolute')
 const root = packageRoot ?? dirname(here)
+const conversationApi = process.argv[2] ?? 'combined'
+if (conversationApi !== 'combined' && conversationApi !== 'split') {
+  throw new Error(`expected Client conversation API "combined" or "split", received "${conversationApi}"`)
+}
 // jsdom/react/react-dom come from this repo's devDependencies.
 const repoRequire = createRequire(import.meta.url)
 const { JSDOM } = repoRequire('jsdom')
@@ -160,6 +165,12 @@ let localeDicts = null
 let conversationDefinition = null
 let activeLocale = 'zh'
 let localeRevision = 0
+const conversationEventRegistry = {
+  register(definition) {
+    conversationDefinition = definition
+    return () => {}
+  },
+}
 const fakeCtx = {
   effect(fn) {
     const disposer = fn()
@@ -187,11 +198,10 @@ const fakeCtx = {
       return { active: activeLocale, revision: localeRevision }
     },
   },
-  conversationEvents: {
-    register(definition) {
-      conversationDefinition = definition
-      return () => {}
-    },
+  get(name) {
+    if (name === 'uiConversation') return conversationApi === 'split' ? { events: conversationEventRegistry } : undefined
+    if (name === 'conversationEvents') return conversationApi === 'combined' ? conversationEventRegistry : undefined
+    throw new Error(`unexpected ctx.get("${name}")`)
   },
 }
 pluginExports.apply(fakeCtx)
@@ -201,7 +211,8 @@ if (dockEntry === undefined) throw new Error('dock entry missing: ' + slotEntrie
 if (tailEntry === undefined) throw new Error('turn-tail entry missing (existing preview card must stay registered)')
 if ('id' in tailEntry.options) throw new Error('chain entries must not declare a list-slot id')
 if (localeDicts === null || localeDicts.ns !== 'univer') throw new Error('locale dictionaries not registered')
-if (conversationDefinition === null || conversationDefinition.kind !== 'univerTurn') throw new Error('conversationEvents definition not registered')
+if (conversationDefinition === null || conversationDefinition.kind !== 'univerTurn') throw new Error(`${conversationApi} Conversation definition not registered`)
+if (pluginExports.inject.join(',') !== 'slots,locale,conversation') throw new Error('Client must depend only on Conversation services shared by DSH 0.1.1 and 0.1.2')
 if (dockEntry.options.locale !== 'univer' || tailEntry.options.locale !== 'univer') throw new Error('both UI entries must declare the Univer locale namespace')
 const dockInjected = dockEntry.options.inject()
 const tailInjected = tailEntry.options.inject()
@@ -276,6 +287,16 @@ const sessionWithFiles = (files, running, turns = new Map()) => ({
   running,
   chat: { timeline: { turns: new Map([...turns, [3, { data: { get: (key) => (key === 'univerTurn' ? { files } : undefined) } }]]) } },
 })
+const runtimeProps = (session) => conversationApi === 'split'
+  ? {
+      session: { sessionId: session.sessionId, running: session.running },
+      useSession: (selector) => selector({ sessionId: session.sessionId, running: session.running }),
+      useChat: (selector) => selector(session.chat),
+    }
+  : {
+      session,
+      useSession: (selector) => selector(session),
+    }
 const rootEl = document.createElement('div')
 document.body.appendChild(rootEl)
 const reactRoot = createRoot(rootEl)
@@ -291,7 +312,7 @@ function render(session, remount = true, cwd = SESSION_CWD) {
   if (remount) scenario += 1
   reactRoot.render(React.createElement(dockEntry.Component, {
     key: 's' + scenario,
-    session,
+    ...runtimeProps(session),
     t,
     getViewerLocale: dockInjected.getViewerLocale,
     sessionId: 'test-session-id',
@@ -303,7 +324,7 @@ function render(session, remount = true, cwd = SESSION_CWD) {
     t,
     getViewerLocale: tailInjected.getViewerLocale,
     sessionId: 'test-session-id',
-    useSession: (selector) => selector(session),
+    ...runtimeProps(session),
     useSessions: (selector) => selector({ byId: { 'test-session-id': { cwd } } }),
   }))
 }
@@ -328,7 +349,7 @@ const tailProps = {
   sessionId: 'test-session-id',
   t,
   getViewerLocale: tailInjected.getViewerLocale,
-  useSession: (selector) => selector(sessionWithTargets([{ file: DEMO_FILE, worktreeId: WORKTREE }], true)),
+  ...runtimeProps(sessionWithTargets([{ file: DEMO_FILE, worktreeId: WORKTREE }], true)),
   useSessions: (selector) => selector({ byId: { 'test-session-id': { cwd: SESSION_CWD } } }),
 }
 tailRoot.render(React.createElement(tailEntry.Component, tailProps))
@@ -399,7 +420,7 @@ const historicalSession = {
 tailRoot.render(React.createElement(tailEntry.Component, {
   ...tailProps,
   matched: { turn: 3, files: [turnFile(DEMO_FILE, WORKTREE)] },
-  useSession: (selector) => selector(historicalSession),
+  ...runtimeProps(historicalSession),
 }))
 await waitFor('旧回合保留新版审阅 header', () => tailRootEl.querySelector('.uvf_panel_history') !== null)
 await waitFor('历史 header 显示 worktree 名称', () => tailRootEl.querySelector('.uvf_panelWorktree')?.textContent === 'v3smoke')
@@ -678,4 +699,4 @@ await waitFor('targets 清空后全部关闭', () => q('.uvf_win') === null && q
 reactRoot.unmount()
 reviewRoot.unmount()
 server.close()
-console.log('client smoke OK')
+console.log(`client smoke OK (${conversationApi} Conversation API)`)

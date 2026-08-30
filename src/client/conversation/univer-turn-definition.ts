@@ -1,5 +1,5 @@
 import type {
-  ConversationNodeDefinition, ConversationSnapshot,
+  ConversationNodeDefinition, ConversationTimelineSnapshot,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import type { TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
@@ -140,11 +140,11 @@ export function outcomeOfTurnFile(target: UniverTurnFile): UniverTurnOutcome {
   return { primaryWorktreeId, lifecycle, preferredUnitId, changedContent }
 }
 
-/** Targets referenced anywhere in a session, used to restore deliberate floating-window intent. */
-export function turnFilesOfSession(session: ConversationSnapshot | undefined, cwd?: string): UniverTurnFile[] {
-  if (session === undefined) return []
+/** Targets referenced anywhere in a timeline, used to restore deliberate floating-window intent. */
+export function turnFilesOfTimeline(timeline: ConversationTimelineSnapshot | undefined, cwd?: string): UniverTurnFile[] {
+  if (timeline === undefined) return []
   const files: UniverTurnFile[] = []
-  for (const turn of session.chat.timeline.turns.values()) {
+  for (const turn of timeline.turns.values()) {
     const data = turn.data.get('univerTurn')
     if (data !== undefined) files.push(...data.files)
   }
