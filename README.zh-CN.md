@@ -175,7 +175,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 
 ## 要求与限制
 
-- DeepSeek Harness `0.1.1-rc.1`、`0.1.1-rc.2` 或 `0.1.2-alpha.1`，以及 Node.js `>=22.19.0`。浏览器插件同时兼容 `0.1.1` 的合并 Conversation snapshot 与 `0.1.2` 拆分后的 Session/Chat API。
+- DeepSeek Harness，以及 Node.js `>=22.19.0`。
 - 部分 Slide 布局检查和 SVG 文字度量需要本机 Chrome/Chromium；也可以通过 `UNIVER_RENDER_BROWSER` 指定浏览器路径。
 - Slide 的母版、版式页和演讲者备注不在当前编辑范围内。
 - Board 的思维导图、表格、墨迹和高级编辑，以及 Board 文件导出尚未开放。
