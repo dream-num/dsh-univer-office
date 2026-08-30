@@ -14,13 +14,13 @@ interface SplitSnapshotPreviewCardProps extends PreviewCardProps {
   readonly useChat?: <Selected>(selector: (snapshot: { readonly timeline: ConversationTimelineSnapshot }) => Selected) => Selected
 }
 
-/** DSH <= 0.1.1 adapter: Chat remains nested in the Session snapshot. */
+/** DSH 0.1.1-rc.2 adapter: Chat remains nested in the Session snapshot. */
 export function CombinedSnapshotPreviewCard(props: PreviewCardProps): React.ReactElement {
   const timeline = props.useSession((snapshot) => snapshot.chat.timeline)
   return <PreviewCardContent {...props} timeline={timeline} />
 }
 
-/** DSH >= 0.1.2 adapter: Chat owns its independently selected snapshot. */
+/** DSH 0.1.2-alpha.1 adapter: Chat owns its independently selected snapshot. */
 export function SplitSnapshotPreviewCard(props: SplitSnapshotPreviewCardProps): React.ReactElement {
   if (props.useChat === undefined) throw new Error('dsh-univer-office: split DSH Client supplied no Chat selector')
   const timeline = props.useChat((snapshot) => snapshot.timeline)

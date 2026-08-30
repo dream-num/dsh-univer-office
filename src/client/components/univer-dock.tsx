@@ -21,12 +21,12 @@ interface OpenWindow {
   readonly preferredUnitId: string | null
 }
 
-/** DSH <= 0.1.1 adapter: Chat remains nested in the input owner's Session snapshot. */
+/** DSH 0.1.1-rc.2 adapter: Chat remains nested in the input owner's Session snapshot. */
 export function CombinedSnapshotUniverDock(props: UniverDockProps): React.ReactElement {
   return <UniverSessionDock key={props.sessionId} {...props} timeline={props.session?.chat.timeline} />
 }
 
-/** DSH >= 0.1.2 adapter: Chat owns its independently selected snapshot. */
+/** DSH 0.1.2-alpha.1 adapter: Chat owns its independently selected snapshot. */
 export function SplitSnapshotUniverDock(props: SplitSnapshotUniverDockProps): React.ReactElement {
   if (props.useChat === undefined) throw new Error('dsh-univer-office: split DSH Client supplied no Chat selector')
   const timeline = props.useChat((snapshot) => snapshot.timeline)
@@ -82,6 +82,8 @@ function UniverSessionDock(props: UniverDockProps & { readonly timeline: Convers
   if (!running) return <></>
   const windows = Object.values(open)
   if (windows.length === 0) return <></>
+  // DSH 0.1.2-alpha.1 renders the input dock inside a translucent, non-draggable
+  // container. Portaling avoids inheriting that container's opacity and hit-testing.
   return createPortal(<div className="uvf_root">{windows.map((target, stackIndex) => <WorktreeWindow
     key={target.file}
     file={target.file}

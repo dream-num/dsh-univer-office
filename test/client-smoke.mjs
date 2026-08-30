@@ -212,7 +212,7 @@ if (tailEntry === undefined) throw new Error('turn-tail entry missing (existing 
 if ('id' in tailEntry.options) throw new Error('chain entries must not declare a list-slot id')
 if (localeDicts === null || localeDicts.ns !== 'univer') throw new Error('locale dictionaries not registered')
 if (conversationDefinition === null || conversationDefinition.kind !== 'univerTurn') throw new Error(`${conversationApi} Conversation definition not registered`)
-if (pluginExports.inject.join(',') !== 'slots,locale,conversation') throw new Error('Client must depend only on Conversation services shared by DSH 0.1.1 and 0.1.2')
+if (pluginExports.inject.join(',') !== 'slots,locale,conversation') throw new Error('Client must depend only on Conversation services shared by DSH 0.1.1-rc.2 and 0.1.2-alpha.1')
 if (dockEntry.options.locale !== 'univer' || tailEntry.options.locale !== 'univer') throw new Error('both UI entries must declare the Univer locale namespace')
 const dockInjected = dockEntry.options.inject()
 const tailInjected = tailEntry.options.inject()
