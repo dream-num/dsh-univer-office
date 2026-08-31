@@ -6,10 +6,13 @@ import {
   opensFloatingWindow, turnFilesOfTimeline, type UniverTurnOperation,
 } from '../conversation/univer-turn-definition.ts'
 import { useUniverStates } from '../hooks/use-univer-state.ts'
+import type { LivePreviewPreference } from '../settings/live-preview-preference.ts'
 import type { ViewerLocaleInjected } from '../viewer-locale.ts'
 import { WorktreeWindow } from './worktree-window.tsx'
 
-export type UniverDockProps = PropsRuntime<'conversation.input.dock'> & PropsLocale<'univer'> & ViewerLocaleInjected
+export type UniverDockProps = PropsRuntime<'conversation.input.dock'> & PropsLocale<'univer'> & ViewerLocaleInjected & {
+  readonly livePreview: LivePreviewPreference
+}
 
 interface SplitSnapshotUniverDockProps extends UniverDockProps {
   readonly useChat?: <Selected>(selector: (snapshot: { readonly timeline: ConversationTimelineSnapshot }) => Selected) => Selected
@@ -40,8 +43,14 @@ function UniverSessionDock(props: UniverDockProps & { readonly timeline: Convers
   const [open, setOpen] = React.useState<Record<string, OpenWindow>>({})
   const seen = React.useRef(new Set<string>())
   const running = props.session?.running === true
+  const livePreviewEnabled = React.useSyncExternalStore(
+    props.livePreview.subscribe,
+    props.livePreview.getSnapshot,
+    props.livePreview.getSnapshot,
+  )
 
   React.useEffect(() => {
+    if (!livePreviewEnabled) return
     const additions: OpenWindow[] = []
     for (const file of turnFiles) {
       for (const operation of file.operations) {
@@ -58,10 +67,10 @@ function UniverSessionDock(props: UniverDockProps & { readonly timeline: Convers
       for (const addition of additions) next[addition.file] = addition
       return next
     })
-  }, [turnFiles])
+  }, [turnFiles, livePreviewEnabled])
 
   const files = Object.keys(open)
-  const { states } = useUniverStates(running ? files : [], props.sessionId)
+  const { states } = useUniverStates(running && livePreviewEnabled ? files : [], props.sessionId)
 
   React.useEffect(() => {
     setOpen((previous) => {
@@ -79,7 +88,7 @@ function UniverSessionDock(props: UniverDockProps & { readonly timeline: Convers
     })
   }, [states])
 
-  if (!running) return <></>
+  if (!running || !livePreviewEnabled) return <></>
   const windows = Object.values(open)
   if (windows.length === 0) return <></>
   // DSH 0.1.2-alpha.1 renders the input dock inside a translucent, non-draggable

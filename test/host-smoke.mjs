@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import { CallId } from '@deepseek-ai/dsh-llm'
+import { SettingsProvider } from '@deepseek-ai/dsh-settings'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import * as UniverPlugin from '../lib/index.js'
@@ -39,6 +40,29 @@ for (const invalid of [{ screenshotMaxPages: 0 }, { resourceCacheRoot: 'relative
     if (!(error instanceof Error) || !error.message.includes(key)) throw error
   }
 }
+
+class MemorySettings extends SettingsProvider {
+  writable = true
+  storedDocument = {}
+  async load() { return this.storedDocument }
+  async persist(namespace, section) { this.storedDocument = { ...this.storedDocument, [namespace]: section } }
+}
+
+const settingsContext = new Context()
+try {
+  await settingsContext.plugin(MemorySettings)
+  await settingsContext.plugin(UniverPlugin, { tools: false, skills: false })
+  const descriptor = settingsContext.settings.describe().find((entry) => entry.ns === 'univer-office')
+  if (descriptor?.value?.autoOpenLivePreview !== true || descriptor.applies !== 'live') {
+    throw new Error(`Univer Settings default missing: ${JSON.stringify(descriptor)}`)
+  }
+  await settingsContext.settings.update('univer-office', { autoOpenLivePreview: false })
+  const updated = settingsContext.settings.describe().find((entry) => entry.ns === 'univer-office')
+  if (updated?.value?.autoOpenLivePreview !== false) throw new Error(`Univer Settings update failed: ${JSON.stringify(updated)}`)
+} finally {
+  await settingsContext.fiber.dispose()
+}
+
 const WORKSPACE = await mkdtemp(join(tmpdir(), 'dsh-univer-host-smoke-'))
 const FILE = join(WORKSPACE, 'smoke.univer')
 const CODE_FILE = join(WORKSPACE, 'facade-program.js')

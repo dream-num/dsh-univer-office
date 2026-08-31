@@ -12,6 +12,7 @@
 - `service` 定义稳定的 Univer 领域接口；
 - `provider` 实现该接口并拥有状态缓存、文件操作和 worktree 操作；
 - `webServer` 把需要浏览器访问的服务能力映射为 Host HTTP API；
+- `settings` 在 DSH Settings 可用时注册浏览器展示偏好；
 - `tools` 把适合模型调用的内容创作能力映射为 DSH 工具；
 - `skills` 向 DSH Skill Registry 提供按需加载的 Univer 工作流与 Unit 专项知识；
 - `processes/gateway` 负责插件内置 Gateway 进程和 Viewer 资源；
@@ -29,6 +30,7 @@
 - 在 DSH 会话中发现 `.univer` 文件，并为每个文件显示采用统一审阅布局的回合尾部卡片；
 - 在 DSH 内以 Viewer 全屏预览文件；
 - worktree 创建或更新后显示实时浮动窗口；
+- 用户可在 DSH 插件设置中关闭实时浮动窗口，且不影响回合尾部审阅卡片；
 - 一个 worktree 改动多个 unit 时，只列出有改动的 unit 并允许切换；
 - 会话结束后在最近一次操作各 worktree 的回合末尾为 `draft` 或 `ready` worktree 显示嵌入式审阅面板；
 - 后续回合再次操作同一 worktree 时，旧回合保留同一张完整卡片并默认折叠，不回退到旧文件预览卡片或单独历史 header；
@@ -129,6 +131,8 @@ src/
         resources.ts
     skills/
       plugin.ts                      # bundled lazy Skill Provider
+    settings/
+      plugin.ts                      # 可选 DSH Settings 命名空间
     telemetry/
       product-telemetry.ts           # 匿名产品遥测：state、去重与白名单发送
       entry.ts                       # 打包为 lib/telemetry-entry.js 的 lifecycle 发送入口
@@ -177,12 +181,17 @@ src/
       review-panel.tsx
       unit-chips.tsx
       univer-dock.tsx
+      settings-card.tsx
     locales/
       en.ts
       zh.ts
+    settings/
+      live-preview-preference.ts     # Settings scope 的浮窗偏好投影
     styles/
+      settings.ts
       worktree.ts
   shared/
+    settings.ts                      # Host/Client 共用的纯设置契约与默认值
     wire/
       status.ts
       state.ts
@@ -325,6 +334,8 @@ Client 是状态投影，不拥有 worktree 真相。预览目标来自可回放
 Client 通过 `univerTurnDefinition` 按 `callId` 配对结构化工具调用与结果，并分别归约生命周期、内容写入和读取操作；读取操作不能覆盖同一 Turn 已完成的 ready、reopen、merge 或 discard 转换。统一回合卡片把该投影与 Host `FileState` 组合，按权威状态打开 trunk、worktree 或 merge preview 完整页面；若 Host 明确确认投影中的文件已不存在，则不渲染该卡片，以覆盖 Agent 在同一 Turn 中创建并通过其他工具删除临时文件的场景。
 
 实时浮窗只由 `univer_new`、worktree create/reopen/ready 和内容写入主动拉起，纯 status、inspect、lint、screenshot 与 export 不主动打开窗口。用户保持打开的文件或非终态 worktree 会在下一 Turn 继续显示；用户关闭优先，merged 与 discarded 清除打开意图。
+
+`univer-office` Settings 命名空间拥有 `autoOpenLivePreview` 用户偏好，默认开启且实时生效。Settings 服务或对应 Client 设置表面缺席时，Client 保持默认开启，不让可选设置能力阻塞预览与审阅注册；关闭该偏好只移除实时浮窗及其轮询，回合尾部审阅投影不受影响。
 
 Client 必须满足：
 

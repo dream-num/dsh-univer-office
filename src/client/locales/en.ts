@@ -14,4 +14,9 @@ export const en = {
   'dock.fullscreen': 'Review fullscreen', 'dock.exitFullscreen': 'Exit fullscreen',
   'dock.currentVersion': 'Current version', 'dock.loading': 'Loading', 'dock.unavailable': 'Unavailable',
   'dock.notReady': 'Submit this modification for confirmation before merging or discarding it', 'dock.merge': 'Merge into current version', 'dock.discard': 'Discard',
+  'settings.title': 'Univer Office', 'settings.description': 'Control live previews while documents are being edited.',
+  'settings.autoOpenLivePreview': 'Open live previews automatically', 'settings.autoOpenLivePreviewHint': 'Show a floating preview while the agent edits a document. Conversation review cards remain available when this is off.',
+  'settings.expand': 'Expand', 'settings.collapse': 'Collapse', 'settings.unsaved': 'Unsaved', 'settings.overridden': 'Overridden', 'settings.reset': 'Reset to default',
+  'settings.readOnly': 'The current settings document is read-only.',
+  'settings.discard': 'Discard changes', 'settings.save': 'Save', 'settings.saving': 'Saving…', 'settings.saveFailed': 'Could not save. Try again.',
 } satisfies Record<UniverLocaleKey, string>

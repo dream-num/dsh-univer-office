@@ -35,6 +35,7 @@ const external = [
   '@deepseek-ai/dsh-host-webserver',
   '@deepseek-ai/dsh-llm',
   '@deepseek-ai/dsh-session',
+  '@deepseek-ai/dsh-settings',
   '@deepseek-ai/dsh-skill',
   '@deepseek-ai/dsh-tools',
   '@deepseek-ai/schemastery',

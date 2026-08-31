@@ -165,6 +165,47 @@ let localeDicts = null
 let conversationDefinition = null
 let activeLocale = 'zh'
 let localeRevision = 0
+let settingsRevision = 0
+let settingsValue = true
+let settingsUser = {}
+const settingsListeners = new Set()
+const makeSettingsSnapshot = () => ({
+  status: 'ready',
+  value: { autoOpenLivePreview: settingsValue },
+  base: { autoOpenLivePreview: true },
+  user: settingsUser,
+  revision: settingsRevision,
+  writable: true,
+  mode: 'host',
+})
+let settingsSnapshot = makeSettingsSnapshot()
+const settingsScope = {
+  getSnapshot() {
+    if (this !== settingsScope) throw new Error('SettingsScope.getSnapshot lost its receiver')
+    return settingsSnapshot
+  },
+  subscribe(listener) {
+    if (this !== settingsScope) throw new Error('SettingsScope.subscribe lost its receiver')
+    settingsListeners.add(listener)
+    return () => settingsListeners.delete(listener)
+  },
+  async set(field, value) {
+    if (field !== 'autoOpenLivePreview' || typeof value !== 'boolean') throw new Error('unexpected settings write')
+    settingsValue = value
+    settingsUser = { autoOpenLivePreview: value }
+    settingsRevision += 1
+    settingsSnapshot = makeSettingsSnapshot()
+    for (const listener of settingsListeners) listener()
+  },
+  async unset(field) {
+    if (field !== 'autoOpenLivePreview') throw new Error('unexpected settings reset')
+    settingsValue = true
+    settingsUser = {}
+    settingsRevision += 1
+    settingsSnapshot = makeSettingsSnapshot()
+    for (const listener of settingsListeners) listener()
+  },
+}
 const conversationEventRegistry = {
   register(definition) {
     conversationDefinition = definition
@@ -172,6 +213,10 @@ const conversationEventRegistry = {
   },
 }
 const fakeCtx = {
+  inject(services, callback) {
+    if (services.join(',') !== 'settingsScope') throw new Error(`unexpected ctx.inject(${JSON.stringify(services)})`)
+    return callback(fakeCtx)
+  },
   effect(fn) {
     const disposer = fn()
     return () => { if (typeof disposer === 'function') disposer() }
@@ -182,8 +227,14 @@ const fakeCtx = {
       return () => {}
     },
     inject(key, callback) {
-      if (key !== 'conversation.input.dock' && key !== 'conversation.chat.turnTail') throw new Error(`unexpected slots.inject("${key}")`)
+      if (key !== 'conversation.input.dock' && key !== 'conversation.chat.turnTail' && key !== 'settings.plugin.item') throw new Error(`unexpected slots.inject("${key}")`)
       return callback()
+    },
+  },
+  settingsScope: {
+    bind(spec) {
+      if (spec.namespace !== 'univer-office') throw new Error(`unexpected settings namespace ${spec.namespace}`)
+      return settingsScope
     },
   },
   locale: {
@@ -207,16 +258,20 @@ const fakeCtx = {
 pluginExports.apply(fakeCtx)
 const dockEntry = slotEntries.find((entry) => entry.options.name === 'conversation.input.dock' && entry.options.id === 'univer-dock')
 const tailEntry = slotEntries.find((entry) => entry.options.name === 'conversation.chat.turnTail' && entry.options.priority === -10)
+const settingsEntry = slotEntries.find((entry) => entry.options.name === 'settings.plugin.item' && entry.options.key === 'univer-office')
 if (dockEntry === undefined) throw new Error('dock entry missing: ' + slotEntries.map((e) => e.options.name + '/' + e.options.id).join(','))
 if (tailEntry === undefined) throw new Error('turn-tail entry missing (existing preview card must stay registered)')
+if (settingsEntry === undefined) throw new Error('Univer settings card missing')
 if ('id' in tailEntry.options) throw new Error('chain entries must not declare a list-slot id')
 if (localeDicts === null || localeDicts.ns !== 'univer') throw new Error('locale dictionaries not registered')
 if (conversationDefinition === null || conversationDefinition.kind !== 'univerTurn') throw new Error(`${conversationApi} Conversation definition not registered`)
 if (pluginExports.inject.join(',') !== 'slots,locale,conversation') throw new Error('Client must depend only on Conversation services shared by DSH 0.1.1-rc.2 and 0.1.2-alpha.1')
-if (dockEntry.options.locale !== 'univer' || tailEntry.options.locale !== 'univer') throw new Error('both UI entries must declare the Univer locale namespace')
+if (dockEntry.options.locale !== 'univer' || tailEntry.options.locale !== 'univer' || settingsEntry.options.locale !== 'univer') throw new Error('all UI entries must declare the Univer locale namespace')
 const dockInjected = dockEntry.options.inject()
 const tailInjected = tailEntry.options.inject()
+const settingsInjected = settingsEntry.options.inject()
 if (typeof dockInjected.getViewerLocale !== 'function' || typeof tailInjected.getViewerLocale !== 'function') throw new Error('Viewer locale getter missing')
+if (dockInjected.livePreview === undefined || settingsInjected.settings !== settingsScope) throw new Error('Settings preference injection missing')
 {
   const selected = tailEntry.options.select({ turn: { turn: 3, data: { get: () => ({ files: [{ file: '/tmp/demo.univer', operations: [] }] }) } } })
   if (selected?.turn !== 3 || selected.files.length !== 1) throw new Error('turn-tail selector must preserve the owning Turn for review placement')
@@ -315,6 +370,7 @@ function render(session, remount = true, cwd = SESSION_CWD) {
     ...runtimeProps(session),
     t,
     getViewerLocale: dockInjected.getViewerLocale,
+    livePreview: dockInjected.livePreview,
     sessionId: 'test-session-id',
     useSessions: (selector) => selector({ byId: { 'test-session-id': { cwd } } }),
   }))
@@ -501,6 +557,33 @@ if (q('.uvf_frame')?.getAttribute('src') !== ZH_DEFAULT_UNIT_URL) throw new Erro
 if ((q('.uvf_windowTitle')?.textContent ?? '').includes('v3smoke') === false) throw new Error('title must name the draft worktree')
 if (qa('.uvf_win').length !== 1) throw new Error('worktrees the session never mentioned must stay hidden')
 if (q('.uvf_panel') === null) throw new Error('the unified Turn card must exist while the worktree is draft')
+
+// ---- scenario 1a: Settings card disables and re-enables automatic live windows ----
+{
+  const settingsRootEl = document.createElement('ul')
+  document.body.appendChild(settingsRootEl)
+  const settingsRoot = createRoot(settingsRootEl)
+  settingsRoot.render(React.createElement(settingsEntry.Component, { t, ...settingsInjected }))
+  await waitFor('Univer 设置卡片出现', () => settingsRootEl.querySelector('.uvf_settingsCard') !== null)
+  settingsRootEl.querySelector('.uvf_settingsHeader').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await waitFor('实时预览开关出现', () => settingsRootEl.querySelector('[role=switch]')?.getAttribute('aria-checked') === 'true')
+  settingsRootEl.querySelector('[role=switch]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await waitFor('关闭设置进入待保存状态', () => settingsRootEl.querySelector('[role=switch]')?.getAttribute('aria-checked') === 'false')
+  settingsRootEl.querySelector('.uvf_settingsSave').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await waitFor('关闭设置后浮窗消失', () => settingsValue === false && q('.uvf_win') === null)
+  await waitFor('设置保存后卡片自动收起', () => settingsRootEl.querySelector('.uvf_settingsHeader')?.getAttribute('aria-expanded') === 'false')
+  if (q('.uvf_panel') === null) throw new Error('disabling live windows must preserve conversation review cards')
+  settingsRootEl.querySelector('.uvf_settingsHeader').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await waitFor('重新展开设置显示覆盖状态', () => settingsRootEl.querySelector('.uvf_settingsBadge')?.textContent === '已覆盖')
+  settingsRootEl.querySelector('[role=switch]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await waitFor('重新开启设置进入待保存状态', () => settingsRootEl.querySelector('[role=switch]')?.getAttribute('aria-checked') === 'true')
+  settingsRootEl.querySelector('.uvf_settingsSave').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await waitFor('重新开启后当前修改恢复浮窗', () => settingsValue === true && q('.uvf_win') !== null)
+  document.querySelectorAll('.uvf_win .uvf_unit')[1].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await waitFor('重新开启后可恢复切换 unit', () => q('.uvf_frame')?.getAttribute('src') === ZH_SLIDE_UNIT_URL)
+  settingsRoot.unmount()
+  settingsRootEl.remove()
+}
 
 // ---- scenario 1b: DSH locale switch updates shell copy and the live Viewer in place ----
 {

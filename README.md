@@ -165,7 +165,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 
 ## Preview and review experience
 
-- **Live Univer window** — changes open automatically in a window you can drag, resize, fold, or maximize.
+- **Live Univer window** — changes open automatically in a window you can drag, resize, fold, or maximize. Disable automatic opening under **Settings → Plugins → Plugin configuration → Univer Office** without removing conversation review cards.
 - **Conversation review cards** — each edited `.univer` file has its own full preview card, while deleted temporary files leave no stale cards behind.
 - **Historical review** — drafts, submitted changes, approvals, and discarded results remain in the conversation, with older cards collapsed by default.
 - **Session isolation** — each DSH session shows only its own windows, cards, and review state.

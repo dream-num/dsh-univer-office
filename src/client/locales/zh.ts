@@ -12,6 +12,11 @@ export const zh = {
   'dock.fullscreen': '全屏审阅', 'dock.exitFullscreen': '退出全屏',
   'dock.currentVersion': '当前版本', 'dock.loading': '正在加载', 'dock.unavailable': '暂不可用',
   'dock.notReady': '提交确认后，可以合入或丢弃这处修改', 'dock.merge': '合入当前版本', 'dock.discard': '丢弃',
+  'settings.title': 'Univer Office', 'settings.description': '控制文档编辑期间的实时预览体验。',
+  'settings.autoOpenLivePreview': '自动打开实时预览', 'settings.autoOpenLivePreviewHint': 'Agent 修改文档时自动显示浮动预览窗口；关闭后仍保留会话审阅卡片。',
+  'settings.expand': '展开', 'settings.collapse': '收起', 'settings.unsaved': '未保存', 'settings.overridden': '已覆盖', 'settings.reset': '恢复默认',
+  'settings.readOnly': '当前设置文件为只读。',
+  'settings.discard': '放弃修改', 'settings.save': '保存', 'settings.saving': '保存中…', 'settings.saveFailed': '保存失败，请重试。',
 } as const
 
 /** Translation keys owned by the Univer browser surfaces. */
