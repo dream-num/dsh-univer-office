@@ -6,6 +6,9 @@
 @import "@univerjs/docs-thread-comment-ui/lib/index.css";
 @import "@univerjs/drawing-ui/lib/index.css";
 @import "@univerjs-pro/embed-ui/lib/index.css";
+@import "@univerjs-pro/bases-history-ui/lib/index.css";
+@import "@univerjs-pro/boards-history-ui/lib/index.css";
+@import "@univerjs-pro/edit-history-ui/lib/index.css";
 @import "@univerjs-pro/sheets-history-ui/lib/index.css";
 @import "@univerjs/thread-comment-ui/lib/index.css";
 @import "@univerjs/sheets-ui/lib/index.css";

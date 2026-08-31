@@ -4,8 +4,10 @@ import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { launch } from "puppeteer-core";
 
 const { Context } = await import("@deepseek-ai/cordis");
+const { resolveUniverRenderBrowser } = await import("@univer-cli/univer-render-runtime");
 const packageRoot = process.env.UNIVER_PLUGIN_ROOT;
 if (packageRoot !== undefined && !isAbsolute(packageRoot)) throw new Error("UNIVER_PLUGIN_ROOT must be absolute");
 const manifestPath = packageRoot === undefined ? new URL("../package.json", import.meta.url) : join(packageRoot, "package.json");
@@ -83,6 +85,9 @@ try {
 	if (typeof temporary.result?.unitId !== "string") throw new Error(`temporary Unit failed: ${JSON.stringify(temporary)}`);
 	const removed = await service.unit({ ...scoped, action: "remove", worktreeId, unitId: temporary.result.unitId });
 	if (removed.result?.removed !== true) throw new Error(`remove Unit failed: ${JSON.stringify(removed)}`);
+	const doc = await service.unit({ ...scoped, action: "create", worktreeId, kind: "doc", name: "History Document" });
+	const docUnitId = doc.result?.unitId;
+	if (typeof docUnitId !== "string") throw new Error(`Doc Unit failed: ${JSON.stringify(doc)}`);
 
 	const slide = await service.unit({ ...scoped, action: "create", worktreeId, kind: "slide", name: "Rendered" });
 	const slideUnitId = slide.result?.unitId;
@@ -177,7 +182,7 @@ try {
 	}
 
 	const selected = await service.status({ ...scoped, worktreeId });
-	if (selected.result?.selectedWorktree?.units?.length !== 5) {
+	if (selected.result?.selectedWorktree?.units?.length !== 6) {
 		throw new Error(`worktree status did not return explicit Units: ${JSON.stringify(selected)}`);
 	}
 	const inspected = await service.inspectUnitContent({ ...scoped, worktreeId, unitId, range: "A1:B2" });
@@ -270,14 +275,41 @@ try {
 	await expectTransition(worktreeId, "ready", "ready");
 	await expectTransition(worktreeId, "merge", "merged");
 	const merged = await service.status(scoped);
-	if (merged.result?.trunk?.units?.length !== 5) throw new Error(`merge did not publish Units: ${JSON.stringify(merged)}`);
+	if (merged.result?.trunk?.units?.length !== 6) throw new Error(`merge did not publish Units: ${JSON.stringify(merged)}`);
 
 	const gatewayKey = Buffer.from(file).toString("base64url");
 	const exchangeBase = `${origin}/uf/${gatewayKey}/universer-api`;
-	const history = await waitForHistory(exchangeBase, unitId);
-	if (history.error?.code !== 1 || !Array.isArray(history.historyIds) || history.historyIds.length === 0) {
-		throw new Error(`trunk Sheet History was not indexed: ${JSON.stringify(history)}`);
+	await verifyAllowAllAuthz(exchangeBase, boardUnitId);
+	for (const [kind, historyUnitId] of [
+		["Sheet", unitId],
+		["Doc", docUnitId],
+		["Slide", slideUnitId],
+		["Base", baseUnitId],
+		["Board", boardUnitId],
+	]) {
+		const history = await waitForHistory(exchangeBase, historyUnitId);
+		const historyId = history.historyIds?.[0];
+		const historyEntry = typeof historyId === "string" ? history.entities?.datas?.[historyId] : undefined;
+		if (history.error?.code !== 1 || typeof historyId !== "string" || historyEntry?.unitId !== historyUnitId) {
+			throw new Error(`trunk ${kind} History was not indexed: ${JSON.stringify(history)}`);
+		}
+		const changesets = await fetchHistoryChangesets(
+			exchangeBase,
+			historyUnitId,
+			historyEntry.startRevision,
+			historyEntry.endRevision,
+		);
+		if (changesets.error?.code !== 1 || !Array.isArray(changesets.changesets)) {
+			throw new Error(`trunk ${kind} History changesets were not readable: ${JSON.stringify(changesets)}`);
+		}
 	}
+	await verifyViewerHistoryMenus(origin, gatewayKey, [
+		["Sheet", unitId, "Edit History", null],
+		["Doc", docUnitId, "Version history", "docs-history-ui.operation.open"],
+		["Slide", slideUnitId, "Version history", "slides-history-ui.operation.open"],
+		["Base", baseUnitId, "Version history", "bases-history-ui.operation.open"],
+		["Board", boardUnitId, null, "boards-history-ui.operation.open"],
+	]);
 	const exchangeCsv = Buffer.from("name,value\nserver,7\n", "utf8");
 	const exchangeForm = new FormData();
 	exchangeForm.append("file", new Blob([exchangeCsv], { type: "text/csv" }), "服务端.csv");
@@ -321,7 +353,7 @@ try {
 		throw new Error(`discard transition failed: ${JSON.stringify(discarded)}`);
 	}
 
-	console.log("integration smoke OK (new/status/Unit/import/API/execute/Sheet/Base/Board inspect/export/lint/compile-svg/screenshot/resources/Worktree lifecycle, no global CLI)");
+	console.log("integration smoke OK (new/status/Unit/import/API/execute/5-Unit History/Sheet/Base/Board inspect/export/lint/compile-svg/screenshot/resources/Worktree lifecycle, no global CLI)");
 } finally {
 	await service.dispose();
 	const releasedPort = createNetServer();
@@ -399,6 +431,114 @@ async function waitForHistory(exchangeBase, unitId) {
 		await new Promise((resolve) => setTimeout(resolve, 10));
 	}
 	throw new Error(`History for ${unitId} was not indexed`);
+}
+
+async function fetchHistoryChangesets(exchangeBase, unitId, startRevision, endRevision) {
+	const response = await fetch(
+		`${exchangeBase}/history/${encodeURIComponent(unitId)}/cs?startRevision=${startRevision}&endRevision=${endRevision}`,
+	);
+	if (!response.ok) throw new Error(`History changeset request failed: ${await response.text()}`);
+	return response.json();
+}
+
+async function verifyViewerHistoryMenus(viewerOrigin, gatewayKey, units) {
+	const browserResolution = await resolveUniverRenderBrowser();
+	if (browserResolution.status !== "found") {
+		throw new Error(`Viewer History browser was not found: ${JSON.stringify(browserResolution)}`);
+	}
+	const browser = await launch({
+		executablePath: browserResolution.executablePath,
+		headless: true,
+		args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
+	});
+	try {
+		for (const [kind, unitId, label, openOperation] of units) {
+			const page = await browser.newPage();
+			const browserMessages = [];
+			page.on("console", (message) => browserMessages.push(`${message.type()}: ${message.text()}`));
+			page.on("pageerror", (error) => browserMessages.push(`pageerror: ${String(error)}`));
+			try {
+				page.setDefaultTimeout(20_000);
+				await page.goto(
+					`${viewerOrigin}/?file=${encodeURIComponent(gatewayKey)}&mode=embedded&scope=trunk&unit=${encodeURIComponent(unitId)}&editable=false&lang=en-US`,
+					{ waitUntil: "domcontentloaded" },
+				);
+				if (openOperation === null) {
+					if (label === null) {
+						await page.waitForFunction(() =>
+							[...document.querySelectorAll("div")].some(
+								(element) => element.style.zIndex === "49" && element.style.display === "block",
+							),
+						);
+					} else {
+						await page.waitForFunction(
+							(expectedLabel) => document.documentElement.innerHTML.includes(expectedLabel),
+							{},
+							label,
+						);
+					}
+				} else {
+					await page.waitForFunction(() => window.univerAPI !== undefined);
+					const opened = await page.evaluate(
+						(operation) => window.univerAPI?.executeCommand(operation),
+						openOperation,
+					);
+					if (opened !== true) throw new Error(`${openOperation} was not accepted`);
+					if (label === null) {
+						await page.waitForFunction(() =>
+							[...document.querySelectorAll("div")].some(
+								(element) => element.style.zIndex === "49" && element.style.display === "block",
+							),
+						);
+					} else {
+						await page.waitForFunction(
+							(expectedLabel) => document.documentElement.innerHTML.includes(expectedLabel),
+							{},
+							label,
+						);
+					}
+				}
+			} catch (error) {
+				const overlays = await page.evaluate(() =>
+					[...document.querySelectorAll("div")]
+						.filter((element) => element.style.zIndex !== "" || element.style.display !== "")
+						.map((element) => ({ display: element.style.display, zIndex: element.style.zIndex })),
+				);
+				throw new Error(
+					`${kind} Viewer did not expose History UI: ${String(error)}; messages=${JSON.stringify(browserMessages)}; overlays=${JSON.stringify(overlays)}`,
+					{ cause: error },
+				);
+			} finally {
+				await page.close();
+			}
+		}
+	} finally {
+		await browser.close();
+	}
+}
+
+async function verifyAllowAllAuthz(exchangeBase, unitId) {
+	const actions = [44, 43];
+	const direct = await postJson(`${exchangeBase}/authz/7/object/${encodeURIComponent(unitId)}/allowed`, {
+		unitID: unitId,
+		objectID: unitId,
+		objectType: 7,
+		actions,
+	});
+	if (JSON.stringify(direct.actions) !== JSON.stringify(actions.map((action) => ({ action, allowed: true })))) {
+		throw new Error(`direct authz did not allow Board History actions: ${JSON.stringify(direct)}`);
+	}
+	const batch = await postJson(`${exchangeBase}/authz/-/object/-/batch_allowed`, {
+		requests: [{ unitID: unitId, objectID: unitId, objectType: 7, actions }],
+	});
+	const expected = [{
+		unitID: unitId,
+		objectID: unitId,
+		actions: actions.map((action) => ({ action, allowed: true })),
+	}];
+	if (JSON.stringify(batch.objectActions) !== JSON.stringify(expected)) {
+		throw new Error(`batch authz did not allow Board History actions: ${JSON.stringify(batch)}`);
+	}
 }
 
 async function expectTransition(worktreeId, action, expectedStatus) {

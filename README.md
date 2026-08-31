@@ -171,7 +171,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 - **Session isolation** — each DSH session shows only its own windows, cards, and review state.
 - **English and Chinese UI** — the plugin shell and every open Viewer follow the DSH locale.
 - **Import, export, and print** — the current version can import Office files, export supported content, and print from the Univer Ribbon. Draft and review previews do not allow import or export; Board provides print only.
-- **Sheet version history** — the current version shows time-grouped history in the Ribbon. Read-only views can inspect versions, while editable views can restore one explicitly.
+- **Version history for all five Unit types** — current Sheet, Doc, Slide, Base, and Board views show time-grouped history. Read-only views can inspect versions, while editable views can restore one explicitly.
 
 ## Requirements and current limits
 

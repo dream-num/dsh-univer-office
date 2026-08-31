@@ -284,7 +284,7 @@ Unit 的导入、检查、执行和导出由 Unit Content Adapter 启动一次�
 
 Viewer Ribbon 的交互式导入导出使用 Gateway 中逐 `.univer` 隔离的 Universer exchange 协议：`source=1` 上传、异步 import/export task、sign-url 与 artifact content。该协议只挂在 trunk 路径；导入在当前 `.univer` trunk 创建新 Unit 并发布结构化 `unit_added` 事件，导出从 trunk head 物化快照。临时 artifact 和 task 有界、可过期，并随文件 runtime 一起释放。嵌入资源继续使用 `source=3` 且按 Unit/worktree 授权，两类文件协议不得混用。
 
-Gateway 还为 trunk revision 组合 Collaboration SDK History Service 与 Endpoint。Gateway 自己在共享 `.univer` connection 上实现 History database adapter；`history@1` 表是可按 Unit 从 core Unit/changeset 重建的派生索引。文件 runtime 启动时先 reconcile 到 trunk head，再开放 SDK transport。Viewer 只为 trunk Sheet 注册 History Loader；只读审阅不能恢复，worktree、merge preview 和其他 Unit 不呈现历史入口。
+Gateway 还为 trunk revision 组合 Collaboration SDK History Service 与 Endpoint。Gateway 自己在共享 `.univer` connection 上实现 History database adapter；`history@1` 表是可按 Unit 从 core Unit/changeset 重建的派生索引。文件 runtime 启动时先 reconcile 到 trunk head，再开放 SDK transport。Viewer 为 trunk 的 Sheet、Doc、Slide、Base 与 Board 分别注册官方 History UI；只读审阅可检查历史但不能恢复，可编辑 trunk 视图可显式恢复，worktree 与 merge preview 不呈现历史入口。
 
 它不得复用或终止外部启动的 Gateway。内置 Gateway 默认从 `9080` 启动，端口被占用时逐次加一；只有结构化确认端口占用时才能继续尝试下一端口，其他启动失败必须立即返回。健康检查需要验证 Viewer 身份，不能把任意返回 HTTP 200 的本地服务误认为 Gateway。
 

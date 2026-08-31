@@ -28,9 +28,11 @@ import {
 } from "@univerjs-pro/collaboration";
 import { UniverCollaborationClientPlugin } from "@univerjs-pro/collaboration-client";
 import { UniverCollaborationEmbedPlugin } from "@univerjs-pro/collaboration-embed";
-import { UniverEditHistoryPlugin } from "@univerjs-pro/edit-history";
-import { UniverSheetsHistoryPlugin } from "@univerjs-pro/sheets-history";
+import { UniverBasesHistoryUIPlugin } from "@univerjs-pro/bases-history-ui";
+import { UniverBoardsHistoryUIPlugin } from "@univerjs-pro/boards-history-ui";
+import { UniverDocsHistoryUIPlugin } from "@univerjs-pro/docs-history-ui";
 import { UniverSheetsHistoryUIPlugin } from "@univerjs-pro/sheets-history-ui";
+import { UniverSlidesHistoryUIPlugin } from "@univerjs-pro/slides-history-ui";
 import {
   BrowserCollaborationSocketService,
   UniverCollaborationClientUIPlugin,
@@ -197,14 +199,26 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
         UniverCollaborationClientUIPlugin,
         opts.unitType === UNIT_TYPE_BASE ? { enableDocumentCollaborationUI: false } : {},
       );
-      if (opts.unitType === UNIT_TYPE_SHEET && opts.worktreeId === undefined) {
+      if (opts.worktreeId === undefined) {
         const historyServerUrl = urls.snapshotServerUrl.replace(/\/snapshot$/u, "/history");
-        univer.registerPlugin(UniverEditHistoryPlugin, { historyServerUrl });
-        univer.registerPlugin(UniverSheetsHistoryPlugin);
-        univer.registerPlugin(UniverSheetsHistoryUIPlugin, {
-          historyListServerUrl: historyServerUrl,
+        const historyConfig = {
+          historyServerUrl,
           univerContainerId: opts.container,
-        });
+        };
+        if (opts.unitType === UNIT_TYPE_DOC) {
+          univer.registerPlugin(UniverDocsHistoryUIPlugin, historyConfig);
+        } else if (opts.unitType === UNIT_TYPE_SLIDE) {
+          univer.registerPlugin(UniverSlidesHistoryUIPlugin, historyConfig);
+        } else if (opts.unitType === UNIT_TYPE_BASE) {
+          univer.registerPlugin(UniverBasesHistoryUIPlugin, historyConfig);
+        } else if (opts.unitType === UNIT_TYPE_BOARD) {
+          univer.registerPlugin(UniverBoardsHistoryUIPlugin, historyConfig);
+        } else if (opts.unitType === UNIT_TYPE_SHEET) {
+          univer.registerPlugin(UniverSheetsHistoryUIPlugin, {
+            historyListServerUrl: historyServerUrl,
+            univerContainerId: opts.container,
+          });
+        }
       }
     },
     registerAfterEmbedCore: () => {

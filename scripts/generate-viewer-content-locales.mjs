@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../src/viewer-support/render-preset");
 const OUTPUT_DIR = resolve(ROOT, "locales/generated");
+const VIEWER_OUTPUT_DIR = resolve(ROOT, "../../viewer-app/core/locales/generated");
 const CHECK = process.argv.includes("--check");
 
 const LOCALES = [
@@ -25,6 +26,26 @@ const LOCALES = [
   "id-ID",
   "pl-PL"
 ];
+
+const SDK_LOCALES = {
+  "en-US": "enUS",
+  "fr-FR": "frFR",
+  "zh-CN": "zhCN",
+  "ru-RU": "ruRU",
+  "zh-TW": "zhTW",
+  "zh-HK": "zhHK",
+  "vi-VN": "viVN",
+  "ja-JP": "jaJP",
+  "ko-KR": "koKR",
+  "es-ES": "esES",
+  "ca-ES": "caES",
+  "sk-SK": "skSK",
+  "pt-BR": "ptBR",
+  "de-DE": "deDE",
+  "it-IT": "itIT",
+  "id-ID": "idID",
+  "pl-PL": "plPL"
+};
 
 const PACKAGES = [
   "@univerjs/design",
@@ -116,8 +137,20 @@ function loaderModule() {
   return `import type { ILanguagePack } from "@univerjs/core";\n\nexport const CONTENT_LOCALES = [\n${localeUnion}\n] as const;\n\nexport type ContentLocale = (typeof CONTENT_LOCALES)[number];\n\nconst loaders: Record<ContentLocale, () => Promise<ILanguagePack>> = {\n${loaders}\n};\n\nconst cache = new Map<ContentLocale, Promise<ILanguagePack>>();\n\nexport function loadContentLocale(locale: ContentLocale): Promise<ILanguagePack> {\n  const cached = cache.get(locale);\n  if (cached !== undefined) {\n    return cached;\n  }\n  const pending = loaders[locale]().catch((error: unknown) => {\n    cache.delete(locale);\n    throw error;\n  });\n  cache.set(locale, pending);\n  return pending;\n}\n`;
 }
 
-function emit(relativePath, content) {
-  const outputPath = resolve(OUTPUT_DIR, relativePath);
+function viewerLocaleModule(locale) {
+  return `import basesHistoryUI from "@univerjs-pro/bases-history-ui/locale/${locale}";\nimport boardsHistoryUI from "@univerjs-pro/boards-history-ui/locale/${locale}";\nimport collaborationClient from "@univerjs-pro/collaboration-client/locale/${locale}";\nimport collaborationClientUI from "@univerjs-pro/collaboration-client-ui/locale/${locale}";\nimport docsHistoryUI from "@univerjs-pro/docs-history-ui/locale/${locale}";\nimport editHistoryUI from "@univerjs-pro/edit-history-ui/locale/${locale}";\nimport exchangeClient from "@univerjs-pro/exchange-client/locale/${locale}";\nimport sheetsHistoryUI from "@univerjs-pro/sheets-history-ui/locale/${locale}";\nimport slidesHistoryUI from "@univerjs-pro/slides-history-ui/locale/${locale}";\nimport { loadContentLocale, mergeLocalePacks } from "@univer/render-preset";\nimport type { ILanguagePack } from "@univerjs/core";\n\nexport default async function loadLocale(): Promise<ILanguagePack> {\n  const content = await loadContentLocale("${locale}");\n  return mergeLocalePacks([\n    content,\n    collaborationClient,\n    collaborationClientUI,\n    exchangeClient,\n    editHistoryUI,\n    sheetsHistoryUI,\n    docsHistoryUI,\n    slidesHistoryUI,\n    basesHistoryUI,\n    boardsHistoryUI\n  ]);\n}\n`;
+}
+
+function viewerLoaderModule() {
+  const loaders = LOCALES.map(
+    (locale) =>
+      `  ${SDK_LOCALES[locale]}: () => import("./${locale}.js").then(({ default: load }) => load())`
+  ).join(",\n");
+  return `import type { ILanguagePack, LocaleType } from "@univerjs/core";\n\nconst loaders: Partial<Record<LocaleType, () => Promise<ILanguagePack>>> = {\n${loaders}\n};\n\nconst cache = new Map<LocaleType, Promise<ILanguagePack>>();\n\nexport function loadViewerLocale(locale: LocaleType): Promise<ILanguagePack> {\n  const cached = cache.get(locale);\n  if (cached !== undefined) {\n    return cached;\n  }\n  const loader = loaders[locale];\n  if (loader === undefined) {\n    return Promise.reject(new Error(\`Unsupported Gateway Viewer locale: \${locale}\`));\n  }\n  const pending = loader().catch((error: unknown) => {\n    cache.delete(locale);\n    throw error;\n  });\n  cache.set(locale, pending);\n  return pending;\n}\n`;
+}
+
+function emit(outputDirectory, relativePath, content) {
+  const outputPath = resolve(outputDirectory, relativePath);
   if (CHECK) {
     let current = "";
     try {
@@ -135,8 +168,12 @@ function emit(relativePath, content) {
 }
 
 for (const locale of LOCALES) {
-  emit(`${locale}.ts`, localeModule(locale));
+  emit(OUTPUT_DIR, `${locale}.ts`, localeModule(locale));
+  emit(VIEWER_OUTPUT_DIR, `${locale}.ts`, viewerLocaleModule(locale));
 }
-emit("load.ts", loaderModule());
+emit(OUTPUT_DIR, "load.ts", loaderModule());
+emit(VIEWER_OUTPUT_DIR, "load.ts", viewerLoaderModule());
 
-console.log(`${CHECK ? "Verified" : "Generated"} ${LOCALES.length} content locale modules.`);
+console.log(
+  `${CHECK ? "Verified" : "Generated"} ${LOCALES.length} content and Viewer locale modules.`
+);

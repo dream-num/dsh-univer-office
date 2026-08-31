@@ -182,7 +182,7 @@ async function dispatch(
 
     // Auth stub under the prefix: allow everything under universer-api/authz.
     if (rest[0] === "universer-api" && rest[1] === "authz") {
-      sendAllowAllAuthz(res);
+      sendAllowAllAuthz(res, method === "POST" ? await readJsonBody(req) : undefined);
       return;
     }
 
@@ -600,7 +600,7 @@ async function handleWorktrees(
   if (sub[0] === "universer-api") {
     const handled = await handleAssetApi(univerfile, worktreeId, sub, method, url, req, res);
     if (handled) return;
-    handleWorktreeUniverApi(univerfile, worktreeId, sub, url, req, res);
+    await handleWorktreeUniverApi(univerfile, worktreeId, sub, url, req, res);
     return;
   }
 
@@ -687,18 +687,18 @@ async function handleAssetApi(
   }
 }
 
-function handleWorktreeUniverApi(
+async function handleWorktreeUniverApi(
   univerfile: Univerfile,
   worktreeId: string,
   sub: readonly string[],
   url: URL,
   req: IncomingMessage,
   res: ServerResponse,
-): void {
+): Promise<void> {
   const collab = univerfile.collab;
 
   if (sub[1] === "authz") {
-    sendAllowAllAuthz(res);
+    sendAllowAllAuthz(res, req.method === "POST" ? await readJsonBody(req) : undefined);
     return;
   }
   if (sub[1] === "user" && sub[2] === "session-ticket") {
@@ -933,8 +933,52 @@ function acceptsGatewayDescriptor(accept: string | string[] | undefined): boolea
   );
 }
 
-function sendAllowAllAuthz(res: ServerResponse): void {
+function sendAllowAllAuthz(res: ServerResponse, body: unknown): void {
+  const request = isRecord(body) ? body : undefined;
+  const requests = request?.requests;
+  if (Array.isArray(requests)) {
+    sendJson(res, 200, {
+      error: { code: 1, message: "" },
+      objectActions: requests.flatMap((item) => {
+        if (
+          !isRecord(item) ||
+          typeof item.unitID !== "string" ||
+          typeof item.objectID !== "string"
+        ) {
+          return [];
+        }
+        return [
+          {
+            unitID: item.unitID,
+            objectID: item.objectID,
+            actions: allowedAuthzActions(item.actions),
+          },
+        ];
+      }),
+    });
+    return;
+  }
+  if (request !== undefined && Array.isArray(request.actions)) {
+    sendJson(res, 200, {
+      error: { code: 1, message: "" },
+      actions: allowedAuthzActions(request.actions),
+    });
+    return;
+  }
   sendJson(res, 200, { error: { code: 1, message: "" }, actions: [], objectActions: [] });
+}
+
+function allowedAuthzActions(value: unknown): Array<{ action: number; allowed: true }> {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((action) =>
+    typeof action === "number" && Number.isInteger(action) ? [{ action, allowed: true }] : [],
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** Map univerfile addressing errors to HTTP status (400 bad / 404 missing / 409 exists); rethrow others. */
