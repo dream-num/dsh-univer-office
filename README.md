@@ -154,8 +154,8 @@ DSH selects these tools automatically; you normally do not need to call them man
 | `univer_worktree` | Create, submit, revise, approve, or discard an isolated draft |
 | `univer_unit` | Add or remove Sheet, Doc, Slide, Base, or Board content |
 | `univer_import` | Import an Office file into a `.univer` file |
-| `univer_inspect` | Read Sheet ranges, Doc/Slide structure, Base overviews, or Board overview/element details |
-| `univer_execute` | Read or edit content through the Univer API; explicitly return readback values |
+| `univer_inspect` | Read document structure or a selected Sheet range |
+| `univer_execute` | Read or edit content through the Univer API |
 | `univer_export` | Export Sheet, Doc, Slide, or Base content |
 | `univer_lint` | Find off-page, overflowing, and overlapping Slide text |
 | `univer_compile_svg` | Add an SVG layout to a Slide with measured text |
