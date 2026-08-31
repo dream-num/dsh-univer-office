@@ -420,26 +420,11 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
     const payload = encode(input.changeset);
 
     return this._transaction(() => {
-      const { changeset, expectedHeadRevision } = input;
+      const { changeset } = input;
+      const expectedHeadRevision = changeset.baseRev;
       const unit = this._getActiveUnitRow(changeset.unitID);
       if (!unit) {
         throw new CollabError("UNIT_NOT_FOUND", "Cannot commit to a missing unit");
-      }
-
-      const existing = this._database
-        .prepare(
-          `SELECT payload_json
-           FROM collaboration_changesets
-           WHERE unit_id = ? AND sid = ? AND req_id = ?`,
-        )
-        .get(changeset.unitID, changeset.sid as string, changeset.reqId as number) as
-        | PayloadRow
-        | undefined;
-      if (existing) {
-        return {
-          status: "already-committed",
-          changeset: decode<IChangeset>(existing.payload_json),
-        };
       }
 
       if (unit.head_revision !== expectedHeadRevision) {
@@ -807,11 +792,10 @@ function validateSubmissionIdentity(changeset: IChangeset): void {
 }
 
 function validateCandidate(record: UnitRecord, input: CommitChangesetInput): void {
-  const { changeset, expectedHeadRevision } = input;
+  const { changeset } = input;
   if (
     changeset.type !== record.type ||
-    changeset.baseRev !== expectedHeadRevision ||
-    changeset.revision !== expectedHeadRevision + 1
+    changeset.revision !== changeset.baseRev + 1
   ) {
     throw invalidRequest("Confirmed changeset must match the unit type and expected revision");
   }
