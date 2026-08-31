@@ -10,12 +10,12 @@ import { existingToolFile, existingToolPath } from '../workspace.ts'
 export function executeTool(ctx: Context, timeoutMs: number) {
   return defineTool({
     name: 'univer_execute',
-    description: 'Execute Univer Facade JavaScript and commit mutations to a draft agent worktree. Use code only for small snippets; prefer codeFile for multi-line or reusable programs. Provide exactly one of code or codeFile.',
+    description: 'Execute Univer Facade JavaScript and commit mutations to a draft agent worktree. Use code only for a small snippet and codeFile for multiline or reusable code. Provide exactly one source. Explicitly return readback values; bare expressions and console.log do not populate value. Read-only code creates no revision.',
     timeoutMs,
     parameters: {
       file: { type: 'string', required: true, description: 'Workspace-relative or absolute .univer path.' },
-      code: { type: 'string', description: 'Small Facade API JavaScript snippet. Mutually exclusive with codeFile.' },
-      codeFile: { type: 'string', description: 'Workspace-relative or absolute JavaScript body file to execute. Preferred for multi-line code; mutually exclusive with code.' },
+      code: { type: 'string', description: 'Inline Facade code; use codeFile for multiline code. Mutually exclusive with codeFile.' },
+      codeFile: { type: 'string', description: 'Workspace-relative or absolute multiline Facade JavaScript body file. Mutually exclusive with code.' },
       worktreeId: { type: 'string', required: true, description: 'Writable agent worktree id.' },
       unitId: { type: 'string', required: true, description: 'Target unit id.' },
     },

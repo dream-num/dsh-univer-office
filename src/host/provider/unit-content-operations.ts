@@ -42,7 +42,7 @@ export class UnitContentOperations {
     const result = await this.worker.run({
       ...target,
       operation: 'inspect',
-      query: inspectionQuery(target.unitType, request.range),
+      query: inspectionQuery(target.unitType, request.range, request.elementId),
     }, signal)
     return { ok: true, operation: 'inspect', file: request.file, result }
   }
@@ -147,9 +147,16 @@ function selectUnit(units: readonly GatewayUnit[], requested: string | undefined
   throw new UniverError('Specify unitId when the selected scope has zero or multiple Units.', 'UNIT_REQUIRED')
 }
 
-function inspectionQuery(unitType: number, range: string | undefined): UnitContentInspectionQuery {
+function inspectionQuery(
+  type: number,
+  range: string | undefined,
+  elementId: string | undefined,
+): UnitContentInspectionQuery {
+  if (range !== undefined && elementId !== undefined) {
+    throw new UniverError('Provide at most one of range or elementId.', 'INSPECTION_INPUT_INVALID')
+  }
   if (range !== undefined) {
-    if (unitType !== 2) throw new UniverError('Range inspection requires a Sheet Unit.', 'INSPECTION_UNIT_TYPE_MISMATCH')
+    if (type !== 2) throw new UniverError('Range inspection requires a Sheet Unit.', 'INSPECTION_UNIT_TYPE_MISMATCH')
     const split = range.lastIndexOf('!')
     const selector = split < 0
       ? { index: 0 as const }
@@ -158,10 +165,16 @@ function inspectionQuery(unitType: number, range: string | undefined): UnitConte
     if (address.trim().length === 0) throw new UniverError('Inspection range must not be empty.', 'INSPECTION_RANGE_INVALID')
     return { kind: 'worksheet-range', ranges: [{ range: address, worksheet: selector }] }
   }
-  if (unitType === 2) return { kind: 'workbook' }
-  if (unitType === 3) return { kind: 'presentation' }
-  if (unitType === 1) return { kind: 'document' }
-  throw new UniverError(`Unit type ${String(unitType)} does not support structured inspection.`, 'INSPECTION_UNIT_TYPE_UNSUPPORTED')
+  if (elementId !== undefined) {
+    if (type !== 6) throw new UniverError('Board element inspection requires a Board Unit.', 'INSPECTION_UNIT_TYPE_MISMATCH')
+    return { kind: 'board-element', elements: [{ id: elementId }] }
+  }
+  if (type === 2) return { kind: 'workbook' }
+  if (type === 3) return { kind: 'presentation' }
+  if (type === 1) return { kind: 'document' }
+  if (type === 5) return { kind: 'base' }
+  if (type === 6) return { kind: 'board' }
+  throw new UniverError(`Unit type ${String(type)} does not support structured inspection.`, 'INSPECTION_UNIT_TYPE_UNSUPPORTED')
 }
 
 function unquoteSheetName(value: string): string {

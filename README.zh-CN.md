@@ -154,8 +154,8 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `univer_worktree` | 创建、提交、继续修改、确认或放弃隔离草稿 |
 | `univer_unit` | 添加或删除 Sheet、Doc、Slide、多维表格或 Board 内容 |
 | `univer_import` | 把 Office 文件导入 `.univer` 文件 |
-| `univer_inspect` | 读取文档结构或指定 Sheet 范围 |
-| `univer_execute` | 通过 Univer API 读取或编辑内容 |
+| `univer_inspect` | 读取 Sheet 范围、Doc/Slide 结构、Base 概览或 Board 概览/元素详情 |
+| `univer_execute` | 通过 Univer API 读取或编辑内容；回读值需要显式返回 |
 | `univer_export` | 导出 Sheet、Doc、Slide 或多维表格内容 |
 | `univer_lint` | 检查 Slide 文字越界、溢出和重叠 |
 | `univer_compile_svg` | 将 SVG 布局按文字度量添加到 Slide |

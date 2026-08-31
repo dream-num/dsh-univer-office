@@ -42,6 +42,7 @@ if (
 	!core.content.includes("univer_resources") ||
 	!core.content.includes('await import("node:fs/promises")') ||
 	!core.content.includes("codeFile") ||
+	!core.content.includes("- Base: `base`") ||
 	!core.content.includes("Do not wait for the user to name a tool") ||
 	!core.content.includes("A class is known: use `show` on the class to inspect its APIs") ||
 	!core.content.includes("Each query is searched independently") ||
@@ -62,6 +63,36 @@ if (
 	!slide.content.includes("A new Slide Unit already contains one empty page")
 ) {
 	throw new Error("bundled Slide skill is missing proactive generation guidance");
+}
+
+const base = await ctx.skills.get("univer-base");
+if (
+	base === undefined ||
+	!base.content.includes("FBaseTableField") ||
+	!base.content.includes("FBaseTableRecord") ||
+	!base.content.includes("FBaseTableView") ||
+	!base.content.includes("there is no `addFields` method") ||
+	!base.content.includes("selected `FBase` as `base`") ||
+	!base.content.includes("bindings are reserved and must not be redeclared") ||
+	!base.content.includes("A new Base already contains `Table 1`") ||
+	!base.content.includes("explicitly `return` record values") ||
+	base.content.includes("const base =")
+) {
+	throw new Error("bundled Base skill is missing the current injected handle and authoring contracts");
+}
+
+const board = await ctx.skills.get("univer-board");
+if (
+	board === undefined ||
+	!board.content.includes("Pass one exact `elementId`") ||
+	!board.content.includes("arrangeElementsInLayers") ||
+	!board.content.includes('start: { elementId: source.getId() }') ||
+	!board.content.includes("connector-terminal-direction-reversed") ||
+	!board.content.includes("connector-excessive-detour") ||
+	!board.content.includes("## Connector animation") ||
+	board.content.includes("fromElementId")
+) {
+	throw new Error("bundled Board skill is missing current inspection and connector guidance");
 }
 
 for (const unit of ["univer-base", "univer-board", "univer-doc", "univer-sheet", "univer-slide"]) {

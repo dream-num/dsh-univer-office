@@ -357,7 +357,7 @@ Client 必须满足：
 
 1. `univer_new` 只创建空 `.univer` 容器，Unit 由 `univer_unit` 或 `univer_import` 显式加入 draft worktree；
 2. `univer_execute` 只写入显式 draft worktree 与 Unit，并由 Gateway revision 确认提交；
-3. `univer_inspect` 与 `univer_export` 可读取 trunk 或显式 worktree；
+3. `univer_inspect` 可读取 trunk 或显式 worktree 中的 Sheet 范围、Doc/Slide 结构、Base 概览、Board 概览和单个 Board 元素详情；`univer_export` 可读取 trunk 或显式 worktree；
 4. `univer_api` 使用包依赖的精确版本 API Reference，不调用外部 CLI；
 5. `univer_lint` 只返回布局 coverage 与 findings，不生成或返回图片；
 6. `univer_compile_svg` 只读取 session workspace 内的 SVG 与引用资源，并把生成程序提交到显式 draft worktree；

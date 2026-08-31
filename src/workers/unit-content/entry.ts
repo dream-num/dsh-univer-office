@@ -405,8 +405,22 @@ function requiredImportUnitType(value: unknown): ImportRequest["unitType"] {
 
 function requiredInspectionQuery(value: unknown): ContentInspectionQuery {
   if (!isRecord(value)) invalidRequest("query must be an object");
-  if (value.kind === "workbook" || value.kind === "presentation" || value.kind === "document") {
+  if (
+    value.kind === "workbook" ||
+    value.kind === "presentation" ||
+    value.kind === "document" ||
+    value.kind === "base" ||
+    value.kind === "board"
+  ) {
     return { kind: value.kind };
+  }
+  if (value.kind === "board-element") {
+    if (!Array.isArray(value.elements) || value.elements.length !== 1) {
+      invalidRequest("board-element query must contain exactly one element");
+    }
+    const element = value.elements[0];
+    if (!isRecord(element)) invalidRequest("board element selector is invalid");
+    return { kind: "board-element", elements: [{ id: requiredString(element.id, "query.elements[0].id") }] };
   }
   if (value.kind !== "worksheet-range" || !Array.isArray(value.ranges) || value.ranges.length !== 1) {
     invalidRequest("worksheet-range query must contain exactly one range");

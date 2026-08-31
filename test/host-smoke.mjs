@@ -195,6 +195,14 @@ try {
   if (!apiDefinition?.description.includes('Use find when no relevant class or API label is known') || !apiDefinition.description.includes('show the class itself') || !apiDefinition.description.includes('Each query runs independently') || !apiDefinition.description.includes('find does not interpret intent')) {
     throw new Error(`univer_api must distinguish unknown-name find from known-name show: ${apiDefinition?.description ?? 'missing'}`)
   }
+  const inspectDefinition = toolContext.tools.get('univer_inspect')
+  if (!inspectDefinition?.description.includes('Base and Board default to selector-free overviews') || !inspectDefinition.description.includes('elementId reads one Board element')) {
+    throw new Error(`univer_inspect must expose Base and Board inspection: ${inspectDefinition?.description ?? 'missing'}`)
+  }
+  const executeDefinition = toolContext.tools.get('univer_execute')
+  if (!executeDefinition?.description.includes('Explicitly return readback values') || !executeDefinition.description.includes('bare expressions and console.log do not populate value')) {
+    throw new Error(`univer_execute must document returned values: ${executeDefinition?.description ?? 'missing'}`)
+  }
   const owner = {
     ctx: toolContext,
     options: { provider: 'host-smoke', model: 'vision' },
@@ -257,6 +265,15 @@ try {
     agent: owner,
   })
   assertToolError(ambiguousCodeResult, 'INVALID_EXECUTION_SOURCE')
+
+  const ambiguousInspectResult = await toolContext.tools.execute({
+    signal: new AbortController().signal,
+    callId: CallId('host-smoke-inspect-ambiguous-selector'),
+    name: 'univer_inspect',
+    arguments: { file: FILE, unitId: 'unit-1', range: 'A1:B2', elementId: 'shape-1' },
+    agent: owner,
+  })
+  assertToolError(ambiguousInspectResult, 'INSPECTION_INPUT_INVALID')
 
   const screenshotResult = await toolContext.tools.execute({
     signal: new AbortController().signal,

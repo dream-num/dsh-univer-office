@@ -98,6 +98,7 @@ Never reopen or reuse a merged or discarded worktree; create a new worktree inst
 - Sheet: `workbook`
 - Doc: `doc`
 - Slide: `presentation`
+- Base: `base`
 - Board: `board`
 
 Do not redeclare injected variables. Use `code` only for a small snippet. For multi-line or reusable Facade logic, write a workspace JavaScript body file and pass it as `codeFile`; provide exactly one of `code` or `codeFile`.
