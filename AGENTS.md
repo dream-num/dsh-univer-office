@@ -36,6 +36,7 @@ Choose the narrowest validation that proves the change:
 | Host, HTTP, or tools                                                                          | `pnpm run build:lib`             | `pnpm run test:host`                                            |
 | DSH Client                                                                                    | `pnpm run build:lib`             | `pnpm run test:client`                                          |
 | Bundled skills                                                                                | None                             | `pnpm run test:skills`                                          |
+| Product telemetry or lifecycle packaging                                                      | `pnpm run build:lib`             | `pnpm run test:telemetry`                                       |
 | Viewer UI                                                                                     | `pnpm run build:viewer`          | Add `test:integration` when behavior crosses a process boundary |
 | Gateway, Worker, persistence, worktree lifecycle, Render Machine, or a cross-process protocol | Build every affected application | `pnpm run test:integration`                                     |
 | Cross-layer or release change                                                                 | None separately                  | `pnpm test` (builds every target first)                         |
@@ -72,6 +73,7 @@ Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before ev
 - Concurrent Gateway starts share one startup operation. Failure, early exit, and unload must clear ownership and allow retry. Stop only subprocesses started by this plugin, skip occupied ports, and verify the health endpoint identity.
 - Cancellation and teardown must reach quiescence: reject new notifications, abort or kill owned work, and await Worker, browser, and subprocess exit. One clear owner manages settlement and cleanup for each asynchronous operation.
 - `univer_screenshot` may return model-visible PNG attachments only when the current model supports image input and every output path is authorized. Claim visual verification only for images actually inspected; structural readback and Slide lint are not pixel-level proof.
+- Product telemetry sends only the allowlisted anonymous events defined in `docs/architecture.md`, from the Host process and the package lifecycle entry, and must never alter install, activation, command, or uninstall behavior. An empty endpoint, `DO_NOT_TRACK`, or `telemetry: false` must silence every entry point; never add analytics SDKs, client keys, retries, or payload fields outside the allowlist.
 
 ## 6. TypeScript and error contracts
 

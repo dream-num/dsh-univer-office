@@ -10,6 +10,7 @@
     "skills",
     "artifacts",
     "scripts/copy-gateway-dependencies.mjs",
+    "scripts/telemetry-entry.mjs",
     "README.md",
     "README.zh-CN.md",
     "cordis.patch.yml"
@@ -58,6 +59,8 @@
   },
   "scripts": {
     "prepare": "simple-git-hooks",
+    "postinstall": "node scripts/telemetry-entry.mjs postinstall",
+    "uninstall": "node scripts/telemetry-entry.mjs uninstall",
     "build": "pnpm run build:lib && pnpm run build:worker && pnpm run build:gateway && pnpm run build:render && pnpm run build:viewer",
     "build:lib": "node scripts/build.mjs lib",
     "build:worker": "node scripts/build.mjs worker",
@@ -74,7 +77,8 @@
     "test:host": "node test/host-smoke.mjs",
     "test:client": "node test/client-smoke.mjs combined && node test/client-smoke.mjs split",
     "test:skills": "node test/skills-smoke.mjs",
-    "test": "pnpm run build && pnpm run test:host && pnpm run test:integration && pnpm run test:client && pnpm run test:skills",
+    "test:telemetry": "node test/telemetry-smoke.mjs",
+    "test": "pnpm run build && pnpm run test:host && pnpm run test:integration && pnpm run test:client && pnpm run test:skills && pnpm run test:telemetry",
     "verify:public-dependencies": "node scripts/verify-public-runtime-dependencies.mjs",
     "prepublishOnly": "pnpm run build && pnpm run test"
   },

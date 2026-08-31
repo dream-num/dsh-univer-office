@@ -9,6 +9,7 @@
 //   pnpm run build:viewer  → artifacts/viewer/
 //   pnpm run build         → all five applications
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
 import { builtinModules, createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
@@ -79,7 +80,35 @@ if (target === 'all' || target === 'lib') {
   const clientCode = client.outputFiles[0]?.text
   if (clientCode === undefined) throw new Error('client build produced no JavaScript')
   await writeFile('lib/client.js', `window.__ModuleLoader__.load({\n  id: "dsh-univer-office",\n  factory: (require) => {\n    var module = { exports: {} };\n    var exports = module.exports;\n${indent(clientCode, 4)}\n    return module.exports;\n  }\n});\n`)
-  console.log('built lib/index.js + lib/client.js')
+
+  // Product telemetry entry for package lifecycle hooks (postinstall/uninstall).
+  await build({
+    entryPoints: ['src/host/telemetry/entry.ts'],
+    outfile: 'lib/telemetry-entry.js',
+    bundle: true,
+    platform: 'node',
+    target: 'node22',
+    format: 'esm',
+    legalComments: 'none',
+    sourcemap: false,
+  })
+
+  // Telemetry endpoint: only the release workflow pins the live proxy address
+  // (RELEASE_TELEMETRY_ENDPOINT); local builds stay fully inert because an
+  // empty endpoint disables every send, including the lifecycle hooks.
+  const telemetryEndpoint = process.env.RELEASE_TELEMETRY_ENDPOINT ?? ''
+  const manifest = JSON.parse(await readFile('package.json', 'utf8'))
+  let commit = ''
+  try {
+    commit = execFileSync('git', ['rev-parse', 'HEAD'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    // Building outside a git checkout: telemetry payloads simply omit the commit.
+  }
+  await writeFile(
+    'lib/build-info.json',
+    `${JSON.stringify({ commit, telemetryEndpoint, version: manifest.version }, null, 2)}\n`
+  )
+  console.log('built lib/index.js + lib/client.js + lib/telemetry-entry.js')
 }
 
 if (target === 'all' || target === 'worker') {

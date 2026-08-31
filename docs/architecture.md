@@ -17,7 +17,8 @@
 - `processes/gateway` 负责插件内置 Gateway 进程和 Viewer 资源；
 - `workers/unit-content` 是一次性 Unit Content Worker 的子进程入口；
 - `client` 负责 DSH 浏览器端的预览、实时 worktree 窗口和用户审阅界面；
-- `shared/wire` 只存放 Host 与 Client 共享的纯 JSON 数据类型。
+- `shared/wire` 只存放 Host 与 Client 共享的纯 JSON 数据类型；
+- `telemetry` 提供 best-effort 的匿名产品遥测，只在 Host 与包 lifecycle 入口发送，任何失败都不影响安装、启动与卸载。
 
 用户只安装本插件即可使用全部功能。全局 `univer` CLI 不属于运行依赖；Unit 的导入、检查、执行和导出由插件内置的一次性 Unit Content Worker 完成。
 
@@ -128,6 +129,9 @@ src/
         resources.ts
     skills/
       plugin.ts                      # bundled lazy Skill Provider
+    telemetry/
+      product-telemetry.ts           # 匿名产品遥测：state、去重与白名单发送
+      entry.ts                       # 打包为 lib/telemetry-entry.js 的 lifecycle 发送入口
     adapters/
       gateway/
         client.ts
@@ -197,6 +201,7 @@ test/
   client-smoke.mjs
   integration-smoke.mjs
   skills-smoke.mjs
+  telemetry-smoke.mjs
 scripts/
   build.mjs
 skills/
@@ -352,7 +357,7 @@ Client 必须满足：
 
 ## 12. 构建与发布
 
-`src` 包含插件发布的所有 application 源码；Viewer application、machine render page、render preset 和 IMPORTRANGE plugin 源码从 `univer-cli` 复制到本仓库后直接维护。`pnpm run build` 生成 Host/Client bundle、Unit Content Worker、Gateway、machine render page 和 Viewer；`lib` 与 `artifacts` 都被 gitignore，并在打包前重新生成。Host 构建为 Node ESM，Client 构建为 DSH ModuleLoader 可加载的浏览器 bundle，Gateway 构建为 Node CJS 子进程，Worker 构建为 Node ESM 子进程，machine render page 与 Viewer 构建为 Vite 静态资产。
+`src` 包含插件发布的所有 application 源码；Viewer application、machine render page、render preset 和 IMPORTRANGE plugin 源码从 `univer-cli` 复制到本仓库后直接维护。`pnpm run build` 生成 Host/Client bundle、Unit Content Worker、Gateway、machine render page 和 Viewer；`lib` 与 `artifacts` 都被 gitignore，并在打包前重新生成。Host 构建为 Node ESM，Client 构建为 DSH ModuleLoader 可加载的浏览器 bundle，Gateway 构建为 Node CJS 子进程，Worker 构建为 Node ESM 子进程，machine render page 与 Viewer 构建为 Vite 静态资产。lib 构建同时生成 `lib/telemetry-entry.js`（lifecycle hook 发送入口）与 `lib/build-info.json`（包版本、构建 commit 与遥测 endpoint）。
 
 发布包包含运行所需的 Gateway、Viewer、Unit Content Worker、Office 转换器、平台依赖、Univer license 与 bundled Skills。Gateway、Worker、Viewer 和 Host 直接使用 manifest 中精确版本的 Univer SDK/API Reference packages；JavaScript SDK 被 bundle，平台原生 package 由包管理器为目标机器安装。发布时只打包从当前源码生成的运行产物。
 
@@ -384,7 +389,18 @@ Client 必须满足：
 - 不在当前阶段仅为目录整齐拆成多个 npm 包；
 - 不让模型自行决定 merge 或 discard；显式用户请求仍必须经过 DSH 工具审批。
 
-## 15. 变更规则
+## 15. 产品遥测
+
+产品遥测是 best-effort 的匿名安装与活跃统计，只用于看趋势，不用于精确计量。遥测绝不影响安装、插件启动或卸载：所有失败静默吞掉，发送有 5 秒超时，无重试、无队列、无锁。
+
+- 事件共四个，统一经 `lib/build-info.json` 中固定的 Univer 代理 endpoint 上报（版本与 commit 也取自该文件），客户端不持有任何分析平台凭证。release workflow 通过 `RELEASE_TELEMETRY_ENDPOINT` 把线上代理地址注入发布构建；本地与开发构建保持为空，即遥测整体静默（`telemetry: false` 的 disabled 标记写入除外，见下）。运行时显式设置 `UNIVER_TELEMETRY_ENDPOINT`（含空值）优先于构建固定值，用作测试重定向与应急开关。服务端 allowlist 必须先于带 endpoint 的构建部署，否则事件会被整包拒绝且因 at-most-once 永久丢失；
+- `dsh_plugin_postinstall`（包 postinstall，每安装身份一次）、`dsh_plugin_activated`（Host 激活，每安装身份一次）、`dsh_plugin_daily_active`（Host 激活时检查，每安装身份每本地日一次）、`dsh_plugin_uninstall_hook`（包 uninstall，不去重，因为 state 跨重装存活，一次性标记会掩盖后续卸载）；
+- payload 只允许 `distinctId`（随机 UUID）、事件名与白名单属性（package name/version、build commit、platform、arch、Node major version、event source、state schema version），禁止路径、workspace、session、文件内容与环境变量。服务端代理对未知键整包拒绝；
+- 去重只在本机 state（`$DSH_HOME/telemetry/dsh-univer-office/state.json`，沿用 `config.ts` 的 `DSH_HOME` 约定）中做，先落盘标记再发送（at-most-once：崩溃宁可丢事件不重发，标记写失败时同样放弃发送）；并发启动的毫秒级竞态接受偶发双发；
+- `telemetry: false` 配置由 Host 同步写入 state 的 `disabled` 标记，使拿不到 Cordis 配置的 lifecycle hook 发送同样停用，这也是空 endpoint 下唯一会创建 state 的路径；`DO_NOT_TRACK` 非空在所有入口直接短路；
+- 发送只发生在 Host 进程（fire-and-forget，不注册资源、不阻塞激活与卸载）与 `scripts/telemetry-entry.mjs` 启动的 detached 子进程中；Client、Viewer、Gateway 与 Worker 不发送遥测。
+
+## 16. 变更规则
 
 后续实现若改变以下任一事项，必须先更新本文并重新评审：
 
@@ -394,4 +410,5 @@ Client 必须满足：
 - worktree 用户审阅权归属；
 - 工具能力与 bundled Skills 的对应关系；
 - 源码构建、Viewer 与许可证策略；
-- 单包与多包的发布决策。
+- 单包与多包的发布决策；
+- 遥测事件集合、payload 白名单、去重语义或上报通道。

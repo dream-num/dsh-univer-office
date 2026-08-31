@@ -1,6 +1,6 @@
-import { homedir } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
 import z from '@deepseek-ai/schemastery'
+import { resolveDshHome } from './dsh-home.ts'
 
 /** Configuration shared by the Univer service provider and its consumers. */
 export interface Config {
@@ -38,6 +38,8 @@ export interface Config {
   tools?: boolean
   /** Register version-matched bundled Univer skills. */
   skills?: boolean
+  /** Send anonymous product telemetry; `DO_NOT_TRACK` also turns it off. */
+  telemetry?: boolean
 }
 
 /** Fully resolved configuration used by the implementation. */
@@ -59,6 +61,7 @@ export interface ResolvedConfig {
   readonly unitCacheTtlMs: number
   readonly tools: boolean
   readonly skills: boolean
+  readonly telemetry: boolean
 }
 
 /** Cordis configuration schema. */
@@ -80,6 +83,7 @@ export const Config: z<Config> = z.object({
   unitCacheTtlMs: z.natural().default(5_000),
   tools: z.boolean().default(true),
   skills: z.boolean().default(true),
+  telemetry: z.boolean().default(true)
 })
 
 /** Apply defaults and reject configuration that cannot run. */
@@ -102,8 +106,13 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     unitCacheTtlMs: config.unitCacheTtlMs ?? 5_000,
     tools: config.tools ?? true,
     skills: config.skills ?? true,
+    telemetry: config.telemetry ?? true
   }
-  if (!Number.isInteger(resolved.gatewayPort) || resolved.gatewayPort < 1 || resolved.gatewayPort > 65_535) {
+  if (
+    !Number.isInteger(resolved.gatewayPort) ||
+    resolved.gatewayPort < 1 ||
+    resolved.gatewayPort > 65_535
+  ) {
     throw new Error('univer: gatewayPort must be an integer between 1 and 65535')
   }
   for (const [name, value] of Object.entries({
@@ -118,9 +127,10 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     resourceOperationTimeoutMs: resolved.resourceOperationTimeoutMs,
     unitContentCommitTimeoutMs: resolved.unitContentCommitTimeoutMs,
     stateCacheTtlMs: resolved.stateCacheTtlMs,
-    unitCacheTtlMs: resolved.unitCacheTtlMs,
+    unitCacheTtlMs: resolved.unitCacheTtlMs
   })) {
-    if (!Number.isSafeInteger(value) || value < 1) throw new Error(`univer: ${name} must be a positive integer`)
+    if (!Number.isSafeInteger(value) || value < 1)
+      throw new Error(`univer: ${name} must be a positive integer`)
   }
   return resolved
 }
@@ -132,13 +142,5 @@ function resolveResourceCacheRoot(configured: string | undefined): string {
     }
     return resolve(configured)
   }
-  const configuredHome = process.env.DSH_HOME?.trim()
-  const dshHome = configuredHome === undefined || configuredHome.length === 0
-    ? join(homedir(), '.dsh')
-    : configuredHome === '~'
-      ? homedir()
-      : configuredHome.startsWith('~/')
-        ? join(homedir(), configuredHome.slice(2))
-        : resolve(configuredHome)
-  return join(dshHome, 'cache', 'dsh-univer-office', 'resources')
+  return join(resolveDshHome(), 'cache', 'dsh-univer-office', 'resources')
 }

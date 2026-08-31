@@ -200,6 +200,11 @@ The defaults are designed for local use: the service starts at port `9080`. If t
 | `resourceOperationTimeoutMs` | `120000` | Overall timeout for one resource-library tool operation |
 | `tools` | `true` | Enable agent editing capabilities |
 | `skills` | `true` | Enable bundled task guidance |
+| `telemetry` | `true` | Send anonymous product telemetry |
+
+## Telemetry
+
+Sends anonymous usage stats (never file contents or paths). Disable with `DO_NOT_TRACK=1` or `telemetry: false`.
 
 ## Uninstall
 

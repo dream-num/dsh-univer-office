@@ -200,6 +200,11 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `resourceOperationTimeoutMs` | `120000` | 一次资源库工具操作的总超时 |
 | `tools` | `true` | 启用 Agent 编辑能力 |
 | `skills` | `true` | 启用内置任务指引 |
+| `telemetry` | `true` | 发送匿名产品遥测 |
+
+## 遥测
+
+默认发送匿名使用统计（不含文件内容与路径）。设 `DO_NOT_TRACK=1` 或配置 `telemetry: false` 关闭。
 
 ## 卸载
 
