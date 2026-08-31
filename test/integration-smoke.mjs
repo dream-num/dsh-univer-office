@@ -156,10 +156,11 @@ try {
 		...scoped,
 		worktreeId,
 		unitId: boardUnitId,
-		code: 'const shape = board.insertShape({ shapeType: api.Enum.ShapeTypeEnum.RoundRect, transform: { left: 80, top: 80, width: 180, height: 100 } }); if (!shape) throw new Error("Cannot insert Board shape"); shape.getText().setText("Review"); return shape.getId();',
+		code: 'const review = board.insertShape({ shapeType: api.Enum.ShapeTypeEnum.RoundRect, transform: { left: 80, top: 80, width: 180, height: 100 } }); const approve = board.insertShape({ shapeType: api.Enum.ShapeTypeEnum.RoundRect, transform: { left: 320, top: 80, width: 180, height: 100 } }); if (!review || !approve) throw new Error("Cannot insert Board shapes"); review.getText().setText("Review"); approve.getText().setText("Approve"); return [review.getId(), approve.getId()];',
 	});
-	const boardElementId = boardExecution.result?.value;
-	if (boardExecution.result?.committed !== true || typeof boardElementId !== "string") {
+	const boardElementIds = boardExecution.result?.value;
+	if (boardExecution.result?.committed !== true || !Array.isArray(boardElementIds)
+		|| boardElementIds.length !== 2 || boardElementIds.some((id) => typeof id !== "string")) {
 		throw new Error(`Board execution failed: ${JSON.stringify(boardExecution)}`);
 	}
 
@@ -195,19 +196,20 @@ try {
 	}
 	const inspectedBoard = await service.inspectUnitContent({ ...scoped, worktreeId, unitId: boardUnitId });
 	if (inspectedBoard.result?.kind !== "board"
-		|| !inspectedBoard.result?.elements?.some((element) => element.id === boardElementId && element.text === "Review")) {
+		|| !inspectedBoard.result?.elements?.some((element) => element.id === boardElementIds[0] && element.text === "Review")
+		|| !inspectedBoard.result?.elements?.some((element) => element.id === boardElementIds[1] && element.text === "Approve")) {
 		throw new Error(`Board overview inspection failed: ${JSON.stringify(inspectedBoard)}`);
 	}
-	const inspectedBoardElement = await service.inspectUnitContent({
+	const inspectedBoardElements = await service.inspectUnitContent({
 		...scoped,
 		worktreeId,
 		unitId: boardUnitId,
-		elementId: boardElementId,
+		elementIds: boardElementIds,
 	});
-	if (inspectedBoardElement.result?.kind !== "board-element"
-		|| inspectedBoardElement.result?.elements?.[0]?.id !== boardElementId
-		|| inspectedBoardElement.result?.elements?.[0]?.type !== "shape") {
-		throw new Error(`Board element inspection failed: ${JSON.stringify(inspectedBoardElement)}`);
+	if (inspectedBoardElements.result?.kind !== "board-element"
+		|| inspectedBoardElements.result?.elements?.length !== 2
+		|| inspectedBoardElements.result?.elements?.some((element, index) => element.id !== boardElementIds[index] || element.type !== "shape")) {
+		throw new Error(`Board element inspection failed: ${JSON.stringify(inspectedBoardElements)}`);
 	}
 
 	const found = await service.apiReference({ action: "find", queries: ["setValue"], unit: "sheet", limit: 3 });

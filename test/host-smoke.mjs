@@ -196,7 +196,7 @@ try {
     throw new Error(`univer_api must distinguish unknown-name find from known-name show: ${apiDefinition?.description ?? 'missing'}`)
   }
   const inspectDefinition = toolContext.tools.get('univer_inspect')
-  if (!inspectDefinition?.description.includes('Base and Board default to selector-free overviews') || !inspectDefinition.description.includes('elementId reads one Board element')) {
+  if (!inspectDefinition?.description.includes('Base and Board default to selector-free overviews') || !inspectDefinition.description.includes('elementIds reads one or more Board elements')) {
     throw new Error(`univer_inspect must expose Base and Board inspection: ${inspectDefinition?.description ?? 'missing'}`)
   }
   const executeDefinition = toolContext.tools.get('univer_execute')
@@ -270,10 +270,19 @@ try {
     signal: new AbortController().signal,
     callId: CallId('host-smoke-inspect-ambiguous-selector'),
     name: 'univer_inspect',
-    arguments: { file: FILE, unitId: 'unit-1', range: 'A1:B2', elementId: 'shape-1' },
+    arguments: { file: FILE, unitId: 'unit-1', range: 'A1:B2', elementIds: ['shape-1'] },
     agent: owner,
   })
   assertToolError(ambiguousInspectResult, 'INSPECTION_INPUT_INVALID')
+
+  const emptyElementIdsResult = await toolContext.tools.execute({
+    signal: new AbortController().signal,
+    callId: CallId('host-smoke-inspect-empty-element-ids'),
+    name: 'univer_inspect',
+    arguments: { file: FILE, unitId: 'unit-1', elementIds: [] },
+    agent: owner,
+  })
+  assertToolError(emptyElementIdsResult, 'INSPECTION_INPUT_INVALID')
 
   const screenshotResult = await toolContext.tools.execute({
     signal: new AbortController().signal,

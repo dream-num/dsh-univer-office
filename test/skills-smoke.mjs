@@ -84,7 +84,7 @@ if (
 const board = await ctx.skills.get("univer-board");
 if (
 	board === undefined ||
-	!board.content.includes("Pass one exact `elementId`") ||
+	!board.content.includes("Pass one or more exact IDs in `elementIds`") ||
 	!board.content.includes("arrangeElementsInLayers") ||
 	!board.content.includes('start: { elementId: source.getId() }') ||
 	!board.content.includes("connector-terminal-direction-reversed") ||

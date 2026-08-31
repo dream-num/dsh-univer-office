@@ -25,7 +25,7 @@ return { shapeId: shape.getId(), elements: board.describeElements() };
 
 Use `board.getElements()`, `board.describeElements()`, or `board.save()` for persisted model readback.
 
-Call `univer_inspect` without a selector for an overview of ordered elements, counts, bounds, relationships, and text summaries. Pass one exact `elementId` for type-specific detail without loading the full Board snapshot. Both forms are read-only; use them before editing to discover existing IDs and after editing to verify persisted structure.
+Call `univer_inspect` without a selector for an overview of ordered elements, counts, bounds, relationships, and text summaries. Pass one or more exact IDs in `elementIds` for type-specific detail without loading the full Board snapshot. Both forms are read-only; use them before editing to discover existing IDs and after editing to verify persisted structure.
 
 ## Connectors and layout verification
 

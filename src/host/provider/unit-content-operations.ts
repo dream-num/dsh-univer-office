@@ -42,7 +42,7 @@ export class UnitContentOperations {
     const result = await this.worker.run({
       ...target,
       operation: 'inspect',
-      query: inspectionQuery(target.unitType, request.range, request.elementId),
+      query: inspectionQuery(target.unitType, request.range, request.elementIds),
     }, signal)
     return { ok: true, operation: 'inspect', file: request.file, result }
   }
@@ -150,10 +150,10 @@ function selectUnit(units: readonly GatewayUnit[], requested: string | undefined
 function inspectionQuery(
   type: number,
   range: string | undefined,
-  elementId: string | undefined,
+  elementIds: readonly string[] | undefined,
 ): UnitContentInspectionQuery {
-  if (range !== undefined && elementId !== undefined) {
-    throw new UniverError('Provide at most one of range or elementId.', 'INSPECTION_INPUT_INVALID')
+  if (range !== undefined && elementIds !== undefined) {
+    throw new UniverError('Provide at most one of range or elementIds.', 'INSPECTION_INPUT_INVALID')
   }
   if (range !== undefined) {
     if (type !== 2) throw new UniverError('Range inspection requires a Sheet Unit.', 'INSPECTION_UNIT_TYPE_MISMATCH')
@@ -165,9 +165,15 @@ function inspectionQuery(
     if (address.trim().length === 0) throw new UniverError('Inspection range must not be empty.', 'INSPECTION_RANGE_INVALID')
     return { kind: 'worksheet-range', ranges: [{ range: address, worksheet: selector }] }
   }
-  if (elementId !== undefined) {
+  if (elementIds !== undefined) {
     if (type !== 6) throw new UniverError('Board element inspection requires a Board Unit.', 'INSPECTION_UNIT_TYPE_MISMATCH')
-    return { kind: 'board-element', elements: [{ id: elementId }] }
+    if (elementIds.length === 0 || elementIds.some((id) => id.length === 0)) {
+      throw new UniverError('elementIds must contain at least one non-empty Board element ID.', 'INSPECTION_INPUT_INVALID')
+    }
+    return {
+      kind: 'board-element',
+      elements: [{ id: elementIds[0]! }, ...elementIds.slice(1).map((id) => ({ id }))],
+    }
   }
   if (type === 2) return { kind: 'workbook' }
   if (type === 3) return { kind: 'presentation' }

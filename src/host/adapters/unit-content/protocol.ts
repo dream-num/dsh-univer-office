@@ -18,7 +18,10 @@ export type UnitContentInspectionQuery =
   | { readonly kind: 'document' }
   | { readonly kind: 'base' }
   | { readonly kind: 'board' }
-  | { readonly kind: 'board-element'; readonly elements: readonly [{ readonly id: string }] }
+  | {
+      readonly kind: 'board-element'
+      readonly elements: readonly [{ readonly id: string }, ...Array<{ readonly id: string }>]
+    }
   | {
       readonly kind: 'worksheet-range'
       readonly ranges: readonly [{ readonly range: string; readonly worksheet: { readonly name: string } | { readonly index: number } }]

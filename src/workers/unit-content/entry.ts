@@ -415,12 +415,14 @@ function requiredInspectionQuery(value: unknown): ContentInspectionQuery {
     return { kind: value.kind };
   }
   if (value.kind === "board-element") {
-    if (!Array.isArray(value.elements) || value.elements.length !== 1) {
-      invalidRequest("board-element query must contain exactly one element");
+    if (!Array.isArray(value.elements) || value.elements.length === 0) {
+      invalidRequest("board-element query must contain at least one element");
     }
-    const element = value.elements[0];
-    if (!isRecord(element)) invalidRequest("board element selector is invalid");
-    return { kind: "board-element", elements: [{ id: requiredString(element.id, "query.elements[0].id") }] };
+    const elements = value.elements.map((element, index) => {
+      if (!isRecord(element)) invalidRequest(`query.elements[${index}] must be an object`);
+      return { id: requiredString(element.id, `query.elements[${index}].id`) };
+    });
+    return { kind: "board-element", elements: [elements[0]!, ...elements.slice(1)] };
   }
   if (value.kind !== "worksheet-range" || !Array.isArray(value.ranges) || value.ranges.length !== 1) {
     invalidRequest("worksheet-range query must contain exactly one range");
