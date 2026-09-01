@@ -3,7 +3,7 @@ allowBuilds:
   protobufjs: false
   simple-git-hooks: false
 minimumReleaseAgeExclude:
-  - '@univer/*'
-  - '@univer-pro/*'
+  - '@univerjs/*'
+  - '@univerjs-pro/*'
   - '@univer-cli/*'
   - '@amamo/*'
