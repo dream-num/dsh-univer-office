@@ -97,10 +97,15 @@ if (target === 'all' || target === 'lib') {
   // Telemetry endpoint hardcoded into every build: dev checkouts never invoke
   // a sender (activation only runs inside an installed plugin), while runtime
   // opt-outs (DO_NOT_TRACK, telemetry: false) and the UNIVER_TELEMETRY_ENDPOINT
-  // override still govern every send. The release workflow asserts the value
-  // before publishing, so a drift fails the release instead of going dark.
+  // override still govern every send.
   const telemetryEndpoint = 'https://univer.ai/api/telemetry/cli'
+  // The artifact's audience is fixed at build time: builds made with
+  // NODE_ENV=development (local packs, team test installs) report a `-dev`
+  // suffixed version; release builds run without NODE_ENV and report the bare
+  // package.json version. Reporting sends whatever is baked in here verbatim.
   const manifest = JSON.parse(await readFile('package.json', 'utf8'))
+  const telemetryVersion =
+    process.env.NODE_ENV === 'development' ? `${manifest.version}-dev` : manifest.version
   let commit = ''
   try {
     commit = execFileSync('git', ['rev-parse', 'HEAD'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
@@ -109,7 +114,7 @@ if (target === 'all' || target === 'lib') {
   }
   await writeFile(
     'lib/build-info.json',
-    `${JSON.stringify({ commit, telemetryEndpoint, version: manifest.version }, null, 2)}\n`
+    `${JSON.stringify({ commit, telemetryEndpoint, version: telemetryVersion }, null, 2)}\n`
   )
   console.log('built lib/index.js + lib/client.js + lib/telemetry-entry.js')
 }

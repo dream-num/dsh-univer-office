@@ -372,6 +372,8 @@ Client 必须满足：
 
 发布包包含运行所需的 Gateway、Viewer、Unit Content Worker、Office 转换器、平台依赖、Univer license 与 bundled Skills。Gateway、Worker、Viewer 和 Host 直接使用 manifest 中精确版本的 Univer SDK/API Reference packages；JavaScript SDK 被 bundle，平台原生 package 由包管理器为目标机器安装。发布时只打包从当前源码生成的运行产物。
 
+仓库内 `package.json` 的版本即真实版本；发布版本号由 CI 通过 version 输入或 `v*` tag 指定并注入后构建，发布目标拒绝带 `-dev` 后缀或 `0.0.0`。制品的受众在构建时确定：`NODE_ENV=development` 下构建的产物（本地与内部测试安装包）版本带 `-dev` 后缀，release 构建不带，遥测原样上报构建时写入的版本。
+
 原生公式引擎、Office 转换器与 SQLite 依赖仍具有平台属性。release workflow 必须在目标平台安装 lockfile 所指定的依赖后构建和测试，不能把一个平台的 `node_modules` 复制为通用发布物。
 
 ## 13. 验证策略

@@ -40,6 +40,8 @@ const buildInfo = JSON.parse(
 if (buildInfo.telemetryEndpoint !== 'https://univer.ai/api/telemetry/cli') {
   throw new Error(`unexpected pinned telemetry endpoint: ${buildInfo.telemetryEndpoint}`)
 }
+// build-info tracks package.json verbatim: a `-dev`-suffixed version marks a
+// source build, the release workflow injects the clean published version.
 if (buildInfo.version !== manifest.version) {
   throw new Error(`build-info version must track package.json: ${buildInfo.version}`)
 }
@@ -253,6 +255,27 @@ try {
   if (requests[requests.length - 1].body.event !== 'dsh_plugin_uninstall_hook')
     throw new Error('shim sent the wrong event')
 
+  // The artifact's audience is fixed at build time: a NODE_ENV=development
+  // rebuild reports the -dev-suffixed version, a clean rebuild the bare one.
+  // Runs last because it overwrites lib/, and restores the clean form after.
+  const rebuildLib = async (nodeEnv) =>
+    runProcess(new URL('../scripts/build.mjs', import.meta.url).pathname, ['lib'], {
+      ...process.env,
+      NODE_ENV: nodeEnv
+    })
+  const devBuild = await rebuildLib('development')
+  if (devBuild.status !== 0) throw new Error(`development rebuild must succeed: ${devBuild.status}`)
+  const devInfo = JSON.parse(await readFile(new URL('../lib/build-info.json', import.meta.url), 'utf8'))
+  if (devInfo.version !== `${manifest.version}-dev`) {
+    throw new Error(`development build must suffix the version: ${devInfo.version}`)
+  }
+  const cleanBuild = await rebuildLib('')
+  if (cleanBuild.status !== 0) throw new Error(`clean rebuild must succeed: ${cleanBuild.status}`)
+  const cleanInfo = JSON.parse(await readFile(new URL('../lib/build-info.json', import.meta.url), 'utf8'))
+  if (cleanInfo.version !== manifest.version) {
+    throw new Error(`clean build must report the bare version: ${cleanInfo.version}`)
+  }
+
   console.log('telemetry smoke passed')
 } finally {
   server.close()
@@ -266,10 +289,7 @@ function assertPayloadShape(body) {
   if (keys.join(',') !== EXPECTED_PROPERTIES.join(','))
     throw new Error(`unexpected payload keys: ${keys.join(',')}`)
   if (body.properties.package_name !== 'dsh-univer-office') throw new Error('wrong package name')
-  if (
-    body.properties.package_version !== '9.9.9' &&
-    body.properties.package_version !== manifest.version
-  ) {
+  if (body.properties.package_version !== '9.9.9' && body.properties.package_version !== manifest.version) {
     throw new Error(`wrong package version: ${body.properties.package_version}`)
   }
   if (body.properties.telemetry_state_version !== 1) throw new Error('wrong state version')
