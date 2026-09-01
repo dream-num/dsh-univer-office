@@ -120,10 +120,6 @@ jobs:
 
       - name: Build
         run: pnpm run build
-        env:
-          # Pin the live telemetry proxy into published builds only; local
-          # builds keep an empty endpoint and never send.
-          RELEASE_TELEMETRY_ENDPOINT: https://univer.ai/api/telemetry/cli
 
       - name: Test
         run: pnpm run test

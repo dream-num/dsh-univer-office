@@ -94,10 +94,12 @@ if (target === 'all' || target === 'lib') {
     sourcemap: false,
   })
 
-  // Telemetry endpoint: only the release workflow pins the live proxy address
-  // (RELEASE_TELEMETRY_ENDPOINT); local builds stay fully inert because an
-  // empty endpoint disables every send, including the uninstall hook.
-  const telemetryEndpoint = process.env.RELEASE_TELEMETRY_ENDPOINT ?? ''
+  // Telemetry endpoint hardcoded into every build: dev checkouts never invoke
+  // a sender (activation only runs inside an installed plugin), while runtime
+  // opt-outs (DO_NOT_TRACK, telemetry: false) and the UNIVER_TELEMETRY_ENDPOINT
+  // override still govern every send. The release workflow asserts the value
+  // before publishing, so a drift fails the release instead of going dark.
+  const telemetryEndpoint = 'https://univer.ai/api/telemetry/cli'
   const manifest = JSON.parse(await readFile('package.json', 'utf8'))
   let commit = ''
   try {

@@ -1,6 +1,6 @@
 {
   "name": "dsh-univer-office",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "DSH × Univer integration with a bundled collaboration Gateway and Viewer: inline previews, live floating Worktree windows, and session-end review actions in DeepSeek Harness.",
   "type": "module",
   "main": "./lib/index.js",

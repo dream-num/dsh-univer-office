@@ -404,7 +404,7 @@ Client 必须满足：
 
 产品遥测是 best-effort 的匿名活跃与卸载统计，只用于看趋势，不用于精确计量。发布包不声明 `postinstall`，以兼容 DSH profile 的依赖构建脚本审批策略。遥测绝不影响插件启动或卸载：所有失败静默吞掉，发送有 5 秒超时，无重试、无队列、无锁。
 
-- 事件共三个，统一经 `lib/build-info.json` 中固定的 Univer 代理 endpoint 上报（版本与 commit 也取自该文件），客户端不持有任何分析平台凭证。release workflow 通过 `RELEASE_TELEMETRY_ENDPOINT` 把线上代理地址注入发布构建；本地与开发构建保持为空，即遥测整体静默（`telemetry: false` 的 disabled 标记写入除外，见下）。运行时显式设置 `UNIVER_TELEMETRY_ENDPOINT`（含空值）优先于构建固定值，用作测试重定向与应急开关。服务端 allowlist 必须先于带 endpoint 的构建部署，否则事件会被整包拒绝且因 at-most-once 永久丢失；
+- 事件共三个，统一经 `lib/build-info.json` 中写死的 Univer 代理 endpoint 上报（版本与 commit 也取自该文件），客户端不持有任何分析平台凭证。发送只发生在安装后的插件激活与卸载钩子，开发 checkout 不会触发任何发送；telemetry smoke 断言构建产物中的 endpoint 等于写死地址，防止回归为静默构建。运行时显式设置 `UNIVER_TELEMETRY_ENDPOINT`（含空值）优先于写死值，用作测试重定向与应急开关。服务端 allowlist 必须先于带 endpoint 的构建部署，否则事件会被整包拒绝且因 at-most-once 永久丢失；
 - `dsh_plugin_activated`（Host 激活，每安装身份一次）、`dsh_plugin_daily_active`（Host 激活时检查，每安装身份每本地日一次）、`dsh_plugin_uninstall_hook`（包 uninstall，不去重，因为 state 跨重装存活，一次性标记会掩盖后续卸载）；
 - payload 只允许 `distinctId`（随机 UUID）、事件名与白名单属性（package name/version、build commit、platform、arch、Node major version、event source、state schema version），禁止路径、workspace、session、文件内容与环境变量。服务端代理对未知键整包拒绝；
 - 去重只在本机 state（`$DSH_HOME/telemetry/dsh-univer-office/state.json`，沿用 `config.ts` 的 `DSH_HOME` 约定）中做，先落盘标记再发送（at-most-once：崩溃宁可丢事件不重发，标记写失败时同样放弃发送）；并发启动的毫秒级竞态接受偶发双发；

@@ -35,12 +35,9 @@ if (resolveConfig().telemetry !== true || resolveConfig({ telemetry: false }).te
 const buildInfo = JSON.parse(
   await readFile(new URL('../lib/build-info.json', import.meta.url), 'utf8')
 )
-// Local builds pin an empty endpoint; the release workflow pins the live proxy.
-// Anything else in build-info means the pin drifted from the reviewed target.
-if (
-  buildInfo.telemetryEndpoint !== '' &&
-  buildInfo.telemetryEndpoint !== 'https://univer.ai/api/telemetry/cli'
-) {
+// Every build hardcodes the live proxy address; anything else in build-info
+// means the constant drifted without review and releases would ship silent.
+if (buildInfo.telemetryEndpoint !== 'https://univer.ai/api/telemetry/cli') {
   throw new Error(`unexpected pinned telemetry endpoint: ${buildInfo.telemetryEndpoint}`)
 }
 if (buildInfo.version !== manifest.version) {
@@ -115,7 +112,7 @@ try {
   }
 
   // An explicitly empty endpoint override stays fully inert even when the
-  // build pins the live proxy (release CI builds and incident kill-switch).
+  // build pins the live proxy (incident kill-switch and CI test isolation).
   const inertHome = `${home}-inert`
   await runProcess(entryPath, ['capture', 'dsh_plugin_uninstall_hook'], {
     ...process.env,

@@ -107,9 +107,9 @@ export function resolveTelemetryStatePath(
 
 /**
  * Resolution order: an explicitly set `UNIVER_TELEMETRY_ENDPOINT` (even empty,
- * which disables telemetry) wins over the value pinned into the build by the
- * release workflow, so tests and incident response can always redirect or cut
- * the endpoint. An empty result disables telemetry entirely.
+ * which disables telemetry) wins over the address hardcoded into the build, so
+ * tests and incident response can always redirect or cut the endpoint. An
+ * empty result disables telemetry entirely.
  */
 export function telemetryEndpointFor(input: {
   readonly buildInfo: TelemetryBuildInfo
