@@ -1,4 +1,4 @@
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { FileState } from '../../shared/wire/state.ts'
 import type { EnsureGatewayResult, UniverStatus } from '../../shared/wire/status.ts'
 

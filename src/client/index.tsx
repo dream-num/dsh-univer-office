@@ -1,6 +1,8 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import { UNIVER_SETTINGS_NAMESPACE, type UniverSettings } from '../shared/settings.ts'
@@ -24,8 +26,14 @@ export function apply(ctx: ClientContext): void {
   injectStyles('dsh-univer-office/styles', worktreeStyles)
   injectStyles('dsh-univer-office/settings-styles', settingsStyles)
   const conversationApi = registerConversationDefinition(ctx, univerTurnDefinition)
-  const PreviewCard = conversationApi === 'split' ? SplitSnapshotPreviewCard : CombinedSnapshotPreviewCard
-  const UniverDock = conversationApi === 'split' ? SplitSnapshotUniverDock : CombinedSnapshotUniverDock
+  // The runtime probe selects the legacy prop shape before registration; these
+  // assertions bridge that unavailable historical type into the alpha.4 build.
+  const PreviewCard = conversationApi === 'split'
+    ? SplitSnapshotPreviewCard
+    : CombinedSnapshotPreviewCard as typeof SplitSnapshotPreviewCard
+  const UniverDock = conversationApi === 'split'
+    ? SplitSnapshotUniverDock
+    : CombinedSnapshotUniverDock as typeof SplitSnapshotUniverDock
   ctx.effect(() => ctx.locale.register(UNIVER_LOCALE_NAMESPACE, { zh, en }), 'univer: dictionaries')
   ctx.effect(() => ctx.slots.inject('conversation.chat.turnTail', () => ctx.slots.register({
     name: 'conversation.chat.turnTail',
