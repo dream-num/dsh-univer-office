@@ -14,7 +14,8 @@ import * as UniverPlugin from '../lib/index.js'
 const { createUniverRouter, resolveConfig } = UniverPlugin
 
 const defaultConfig = resolveConfig()
-if (defaultConfig.gatewayPort !== 9080) throw new Error(`default Gateway port must be 9080: ${JSON.stringify(defaultConfig)}`)
+if (defaultConfig.gatewayPort !== 9080)
+  throw new Error(`default Gateway port must be 9080: ${JSON.stringify(defaultConfig)}`)
 if (defaultConfig.screenshotMaxPages !== 30 || defaultConfig.screenshotMaxPixels !== 16_777_216) {
   throw new Error(`default screenshot limits drifted: ${JSON.stringify(defaultConfig)}`)
 }
@@ -23,10 +24,14 @@ if (!defaultConfig.resourceCacheRoot.endsWith(join('cache', 'dsh-univer-office',
 }
 const hostBundle = await readFile(new URL('../lib/index.js', import.meta.url), 'utf8')
 if (!hostBundle.includes('ELECTRON_RUN_AS_NODE')) {
-  throw new Error('Host bundle must set ELECTRON_RUN_AS_NODE so bundled Gateway/Worker entry scripts run as plain Node inside an Electron Desktop host')
+  throw new Error(
+    'Host bundle must set ELECTRON_RUN_AS_NODE so bundled Gateway/Worker entry scripts run as plain Node inside an Electron Desktop host'
+  )
 }
 if (hostBundle.includes('settingsNamespace')) {
-  throw new Error('Host bundle must not import the settingsNamespace export removed in DSH 0.1.2-alpha.2')
+  throw new Error(
+    'Host bundle must not import the settingsNamespace export removed in DSH 0.1.2-alpha.2'
+  )
 }
 try {
   resolveConfig({ gatewayPort: 0 })
@@ -47,21 +52,28 @@ for (const invalid of [{ screenshotMaxPages: 0 }, { resourceCacheRoot: 'relative
 class MemorySettings extends SettingsProvider {
   writable = true
   storedDocument = {}
-  async load() { return this.storedDocument }
-  async persist(namespace, section) { this.storedDocument = { ...this.storedDocument, [namespace]: section } }
+  async load() {
+    return this.storedDocument
+  }
+  async persist(namespace, section) {
+    this.storedDocument = { ...this.storedDocument, [namespace]: section }
+  }
 }
 
 const settingsContext = new Context()
 try {
   await settingsContext.plugin(MemorySettings)
   await settingsContext.plugin(UniverPlugin, { tools: false, skills: false })
-  const descriptor = settingsContext.settings.describe().find((entry) => entry.ns === 'univer-office')
+  const descriptor = settingsContext.settings
+    .describe()
+    .find((entry) => entry.ns === 'univer-office')
   if (descriptor?.value?.autoOpenLivePreview !== true || descriptor.applies !== 'live') {
     throw new Error(`Univer Settings default missing: ${JSON.stringify(descriptor)}`)
   }
   await settingsContext.settings.update('univer-office', { autoOpenLivePreview: false })
   const updated = settingsContext.settings.describe().find((entry) => entry.ns === 'univer-office')
-  if (updated?.value?.autoOpenLivePreview !== false) throw new Error(`Univer Settings update failed: ${JSON.stringify(updated)}`)
+  if (updated?.value?.autoOpenLivePreview !== false)
+    throw new Error(`Univer Settings update failed: ${JSON.stringify(updated)}`)
 } finally {
   await settingsContext.fiber.dispose()
 }
@@ -87,28 +99,42 @@ const state = {
   gateway: 'http://127.0.0.1:9123',
   gatewayRunning: true,
   viewerUrl: 'http://127.0.0.1:9123/?file=KEY',
-  worktrees: [{
-    worktreeId: WORKTREE,
-    name: 'host smoke',
-    status: 'ready',
-    units: [{ unitId: 'unit-1', name: 'Sheet 1', type: 'sheet', kind: 'modified' }],
-    openUrl: 'http://127.0.0.1:9123/?file=KEY&worktree=wt-host-smoke',
-    worktreeUrl: 'http://127.0.0.1:9123/?file=KEY&worktree=wt-host-smoke&scope=worktree',
-    mergeUrl: 'http://127.0.0.1:9123/?file=KEY&worktree=wt-host-smoke&scope=mergePreview',
-  }],
+  worktrees: [
+    {
+      worktreeId: WORKTREE,
+      name: 'host smoke',
+      status: 'ready',
+      units: [{ unitId: 'unit-1', name: 'Sheet 1', type: 'sheet', kind: 'modified' }],
+      openUrl: 'http://127.0.0.1:9123/?file=KEY&worktree=wt-host-smoke',
+      worktreeUrl: 'http://127.0.0.1:9123/?file=KEY&worktree=wt-host-smoke&scope=worktree',
+      mergeUrl: 'http://127.0.0.1:9123/?file=KEY&worktree=wt-host-smoke&scope=mergePreview'
+    }
+  ]
 }
 const service = {
-  async gatewayStatus() { return { phase: 'stopped', gateway: null, owned: false } },
-  async unitContentStatus() { return 'bundled' },
-  async ensureGateway() { calls.push(['ensureGateway']); return { ok: true, gateway: 'http://127.0.0.1:9123', reused: false } },
-  async fileState(request) { calls.push(['fileState', request]); return state },
+  async gatewayStatus() {
+    return { phase: 'stopped', gateway: null, owned: false }
+  },
+  async unitContentStatus() {
+    return 'bundled'
+  },
+  async ensureGateway() {
+    calls.push(['ensureGateway'])
+    return { ok: true, gateway: 'http://127.0.0.1:9123', reused: false }
+  },
+  async fileState(request) {
+    calls.push(['fileState', request])
+    return state
+  },
   async worktreeAction(request) {
     calls.push(['worktreeAction', request])
     return { ok: true, action: request.action, worktreeId: request.worktreeId, state }
-  },
+  }
 }
 const sessions = {
-  get(id) { return id === SESSION ? { header: { cwd: WORKSPACE } } : undefined },
+  get(id) {
+    return id === SESSION ? { header: { cwd: WORKSPACE } } : undefined
+  }
 }
 
 const server = createServer(createUniverRouter(service, sessions))
@@ -117,7 +143,8 @@ await new Promise((resolve, reject) => {
   server.listen(0, '127.0.0.1', resolve)
 })
 const address = server.address()
-if (address === null || typeof address === 'string') throw new Error('host smoke did not receive a TCP port')
+if (address === null || typeof address === 'string')
+  throw new Error('host smoke did not receive a TCP port')
 const origin = `http://127.0.0.1:${address.port}`
 const gatewayBlocker = createServer((_request, response) => {
   response.writeHead(404)
@@ -128,48 +155,85 @@ const toolContext = new Context()
 
 try {
   const status = await json('/univer-api/status')
-  if (status.response.status !== 200 || status.body.gateway?.phase !== 'stopped' || status.body.unitContent !== 'bundled') {
+  if (
+    status.response.status !== 200 ||
+    status.body.gateway?.phase !== 'stopped' ||
+    status.body.unitContent !== 'bundled'
+  ) {
     throw new Error(`status route failed: ${JSON.stringify(status.body)}`)
   }
 
   const start = await json('/univer-api/gateway/start', { method: 'POST' })
-  if (start.response.status !== 200 || start.body.ok !== true || calls[0]?.[0] !== 'ensureGateway') {
+  if (
+    start.response.status !== 200 ||
+    start.body.ok !== true ||
+    calls[0]?.[0] !== 'ensureGateway'
+  ) {
     throw new Error(`Gateway start route failed: ${JSON.stringify(start.body)}`)
   }
 
-  const fileState = await json(`/univer-api/state?file=${encodeURIComponent(FILE)}&sessionId=${SESSION}`)
-  if (fileState.response.status !== 200 || fileState.body.viewerUrl !== state.viewerUrl || fileState.body.worktrees?.[0]?.openUrl !== state.worktrees[0].openUrl) {
+  const fileState = await json(
+    `/univer-api/state?file=${encodeURIComponent(FILE)}&sessionId=${SESSION}`
+  )
+  if (
+    fileState.response.status !== 200 ||
+    fileState.body.viewerUrl !== state.viewerUrl ||
+    fileState.body.worktrees?.[0]?.openUrl !== state.worktrees[0].openUrl
+  ) {
     throw new Error(`state route failed: ${JSON.stringify(fileState.body)}`)
   }
-  if (calls[1]?.[1]?.file !== REAL_FILE) throw new Error('state route did not pass the validated file')
+  if (calls[1]?.[1]?.file !== REAL_FILE)
+    throw new Error('state route did not pass the validated file')
 
   const action = await json('/univer-api/worktree-action', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ action: 'merge', file: FILE, sessionId: SESSION, worktreeId: WORKTREE }),
+    body: JSON.stringify({ action: 'merge', file: FILE, sessionId: SESSION, worktreeId: WORKTREE })
   })
-  if (action.response.status !== 200 || action.body.ok !== true || calls[2]?.[1]?.worktreeId !== WORKTREE) {
+  if (
+    action.response.status !== 200 ||
+    action.body.ok !== true ||
+    calls[2]?.[1]?.worktreeId !== WORKTREE
+  ) {
     throw new Error(`worktree action route failed: ${JSON.stringify(action.body)}`)
   }
 
   const missing = await json('/univer-api/state')
-  if (missing.response.status !== 400 || missing.body.code !== 'INVALID_REQUEST') throw new Error('missing file must return INVALID_REQUEST')
+  if (missing.response.status !== 400 || missing.body.code !== 'INVALID_REQUEST')
+    throw new Error('missing file must return INVALID_REQUEST')
   const relative = await json(`/univer-api/state?file=smoke.univer&sessionId=${SESSION}`)
-  if (relative.response.status !== 200 || calls[3]?.[1]?.file !== REAL_FILE) throw new Error('relative file must resolve inside the session workspace')
+  if (relative.response.status !== 200 || calls[3]?.[1]?.file !== REAL_FILE)
+    throw new Error('relative file must resolve inside the session workspace')
   const missingSession = await json(`/univer-api/state?file=${encodeURIComponent(FILE)}`)
-  if (missingSession.response.status !== 400 || missingSession.body.code !== 'INVALID_REQUEST') throw new Error('missing sessionId must return INVALID_REQUEST')
-  const outside = await json(`/univer-api/state?file=${encodeURIComponent(import.meta.filename)}&sessionId=${SESSION}`)
-  if (outside.response.status !== 403 || outside.body.code !== 'SESSION_SCOPE_DENIED') throw new Error('outside-workspace file must be denied')
+  if (missingSession.response.status !== 400 || missingSession.body.code !== 'INVALID_REQUEST')
+    throw new Error('missing sessionId must return INVALID_REQUEST')
+  const outside = await json(
+    `/univer-api/state?file=${encodeURIComponent(import.meta.filename)}&sessionId=${SESSION}`
+  )
+  if (outside.response.status !== 403 || outside.body.code !== 'SESSION_SCOPE_DENIED')
+    throw new Error('outside-workspace file must be denied')
   if (canEnforcePermissionDenied) {
-    const permissionDenied = await json(`/univer-api/state?file=${encodeURIComponent(LOCKED_FILE)}&sessionId=${SESSION}`)
-    if (permissionDenied.response.status !== 403 || permissionDenied.body.code !== 'FILE_PERMISSION_DENIED') {
-      throw new Error(`permission failure must stay distinct from a missing path: ${JSON.stringify(permissionDenied.body)}`)
+    const permissionDenied = await json(
+      `/univer-api/state?file=${encodeURIComponent(LOCKED_FILE)}&sessionId=${SESSION}`
+    )
+    if (
+      permissionDenied.response.status !== 403 ||
+      permissionDenied.body.code !== 'FILE_PERMISSION_DENIED'
+    ) {
+      throw new Error(
+        `permission failure must stay distinct from a missing path: ${JSON.stringify(permissionDenied.body)}`
+      )
     }
   }
   const invalidAction = await json('/univer-api/worktree-action', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ action: 'destroy', file: FILE, sessionId: SESSION, worktreeId: WORKTREE }),
+    body: JSON.stringify({
+      action: 'destroy',
+      file: FILE,
+      sessionId: SESSION,
+      worktreeId: WORKTREE
+    })
   })
   if (invalidAction.response.status !== 400) throw new Error('invalid action must return 400')
   const unknown = await fetch(`${origin}/univer-api/unknown`)
@@ -181,68 +245,99 @@ try {
     imageLimits: {
       mediaTypes: ['image/png'],
       maxImageBytes: 10_000_000,
-      maxMessageImageBytes: 20_000_000,
+      maxMessageImageBytes: 20_000_000
     },
-    async saveImage() { throw new Error('screenshot must not reach attachment persistence in this test') },
+    async saveImage() {
+      throw new Error('screenshot must not reach attachment persistence in this test')
+    }
   })
   toolContext.provide('llm', {
-    async resolveModelInfo() { return { inputModalities: ['image'] } },
+    async resolveModelInfo() {
+      return { inputModalities: ['image'] }
+    }
   })
   await toolContext.plugin(UniverPlugin, {
     gatewayPort: 65_535,
     gatewayStartupTimeoutMs: 50,
     gatewayRequestTimeoutMs: 50,
-    skills: false,
+    skills: false
   })
   const apiDefinition = toolContext.tools.get('univer_api')
-  if (!apiDefinition?.description.includes('Use find when no relevant class or API label is known') || !apiDefinition.description.includes('show the class itself') || !apiDefinition.description.includes('Each query runs independently') || !apiDefinition.description.includes('find does not interpret intent')) {
-    throw new Error(`univer_api must distinguish unknown-name find from known-name show: ${apiDefinition?.description ?? 'missing'}`)
+  if (
+    !apiDefinition?.description.includes('Use find when no relevant class or API label is known') ||
+    !apiDefinition.description.includes('show the class itself') ||
+    !apiDefinition.description.includes('Each query runs independently') ||
+    !apiDefinition.description.includes('find does not interpret intent')
+  ) {
+    throw new Error(
+      `univer_api must distinguish unknown-name find from known-name show: ${apiDefinition?.description ?? 'missing'}`
+    )
   }
   const inspectDefinition = toolContext.tools.get('univer_inspect')
-  if (!inspectDefinition?.description.includes('Base and Board default to selector-free overviews') || !inspectDefinition.description.includes('elementIds reads one or more Board elements')) {
-    throw new Error(`univer_inspect must expose Base and Board inspection: ${inspectDefinition?.description ?? 'missing'}`)
+  if (
+    !inspectDefinition?.description.includes('Base and Board default to selector-free overviews') ||
+    !inspectDefinition.description.includes('elementIds reads one or more Board elements')
+  ) {
+    throw new Error(
+      `univer_inspect must expose Base and Board inspection: ${inspectDefinition?.description ?? 'missing'}`
+    )
   }
   const executeDefinition = toolContext.tools.get('univer_execute')
-  if (!executeDefinition?.description.includes('Explicitly return readback values') || !executeDefinition.description.includes('bare expressions and console.log do not populate value')) {
-    throw new Error(`univer_execute must document returned values: ${executeDefinition?.description ?? 'missing'}`)
+  if (
+    !executeDefinition?.description.includes('Explicitly return readback values') ||
+    !executeDefinition.description.includes(
+      'bare expressions and console.log do not populate value'
+    )
+  ) {
+    throw new Error(
+      `univer_execute must document returned values: ${executeDefinition?.description ?? 'missing'}`
+    )
   }
   const owner = {
     ctx: toolContext,
     options: { provider: 'host-smoke', model: 'vision' },
     session: {
       header: { cwd: WORKSPACE },
-      requestHeader() { return { config: { provider: 'host-smoke', model: 'vision' } } },
-    },
+      requestHeader() {
+        return { config: { provider: 'host-smoke', model: 'vision' } }
+      }
+    }
   }
   const boardApiResult = await toolContext.tools.execute({
     signal: new AbortController().signal,
     callId: ToolCallId('host-smoke-board-api'),
     name: 'univer_api',
     arguments: { action: 'find', queries: ['insertImage'], unit: 'board', limit: 3 },
-    agent: owner,
+    agent: owner
   })
   if (boardApiResult.isError || !toolText(boardApiResult).includes('FBoard.insertImage')) {
-    throw new Error(`Board API reference must be accepted by the tool schema: ${JSON.stringify(boardApiResult)}`)
+    throw new Error(
+      `Board API reference must be accepted by the tool schema: ${JSON.stringify(boardApiResult)}`
+    )
   }
   const baseApiResult = await toolContext.tools.execute({
     signal: new AbortController().signal,
     callId: ToolCallId('host-smoke-base-api'),
     name: 'univer_api',
     arguments: { action: 'find', queries: ['getSchema'], unit: 'base', limit: 3 },
-    agent: owner,
+    agent: owner
   })
   if (baseApiResult.isError || !toolText(baseApiResult).includes('FBase.getSchema')) {
-    throw new Error(`Base API reference must be accepted by the tool schema: ${JSON.stringify(baseApiResult)}`)
+    throw new Error(
+      `Base API reference must be accepted by the tool schema: ${JSON.stringify(baseApiResult)}`
+    )
   }
   const resourcesResult = await toolContext.tools.execute({
     signal: new AbortController().signal,
     callId: ToolCallId('host-smoke-resources'),
     name: 'univer_resources',
     arguments: { action: 'registries' },
-    agent: owner,
+    agent: owner
   })
   if (resourcesResult.isError || !toolText(resourcesResult).includes('"operation":"resources"')) {
-    throw new Error(`resource registries must be available without Gateway: ${JSON.stringify(resourcesResult)}`)
+    throw new Error(
+      `resource registries must be available without Gateway: ${JSON.stringify(resourcesResult)}`
+    )
   }
 
   const codeFileResult = await toolContext.tools.execute({
@@ -250,7 +345,7 @@ try {
     callId: ToolCallId('host-smoke-execute-code-file'),
     name: 'univer_execute',
     arguments: { file: FILE, codeFile: CODE_FILE, unitId: 'unit-1', worktreeId: WORKTREE },
-    agent: owner,
+    agent: owner
   })
   assertToolError(codeFileResult, 'GATEWAY_UNAVAILABLE')
 
@@ -263,9 +358,9 @@ try {
       code: 'return true',
       codeFile: CODE_FILE,
       unitId: 'unit-1',
-      worktreeId: WORKTREE,
+      worktreeId: WORKTREE
     },
-    agent: owner,
+    agent: owner
   })
   assertToolError(ambiguousCodeResult, 'INVALID_EXECUTION_SOURCE')
 
@@ -274,7 +369,7 @@ try {
     callId: ToolCallId('host-smoke-inspect-ambiguous-selector'),
     name: 'univer_inspect',
     arguments: { file: FILE, unitId: 'unit-1', range: 'A1:B2', elementIds: ['shape-1'] },
-    agent: owner,
+    agent: owner
   })
   assertToolError(ambiguousInspectResult, 'INSPECTION_INPUT_INVALID')
 
@@ -283,7 +378,7 @@ try {
     callId: ToolCallId('host-smoke-inspect-empty-element-ids'),
     name: 'univer_inspect',
     arguments: { file: FILE, unitId: 'unit-1', elementIds: [] },
-    agent: owner,
+    agent: owner
   })
   assertToolError(emptyElementIdsResult, 'INSPECTION_INPUT_INVALID')
 
@@ -292,7 +387,7 @@ try {
     callId: ToolCallId('host-smoke-screenshot'),
     name: 'univer_screenshot',
     arguments: { file: FILE, unitId: 'unit-1', output: 'screenshots', pages: [1] },
-    agent: owner,
+    agent: owner
   })
   assertToolError(screenshotResult, 'GATEWAY_UNAVAILABLE')
 
@@ -301,7 +396,7 @@ try {
     callId: ToolCallId('host-smoke-missing-path'),
     name: 'univer_status',
     arguments: { file: 'missing.univer' },
-    agent: owner,
+    agent: owner
   })
   assertToolError(missingToolResult, 'INVALID_FILE_PATH')
 
@@ -311,7 +406,7 @@ try {
       callId: ToolCallId('host-smoke-permission'),
       name: 'univer_status',
       arguments: { file: LOCKED_FILE },
-      agent: owner,
+      agent: owner
     })
     assertToolError(permissionToolResult, 'FILE_PERMISSION_DENIED')
   }
@@ -321,20 +416,26 @@ try {
     callId: ToolCallId('host-smoke-gateway'),
     name: 'univer_status',
     arguments: { file: FILE },
-    agent: owner,
+    agent: owner
   })
   assertToolError(gatewayToolResult, 'GATEWAY_UNAVAILABLE')
 } finally {
   await toolContext.fiber.dispose()
   if (ownsGatewayBlocker) {
-    await new Promise((resolve, reject) => gatewayBlocker.close((error) => error === undefined ? resolve() : reject(error)))
+    await new Promise((resolve, reject) =>
+      gatewayBlocker.close((error) => (error === undefined ? resolve() : reject(error)))
+    )
   }
-  await new Promise((resolve, reject) => server.close((error) => error === undefined ? resolve() : reject(error)))
+  await new Promise((resolve, reject) =>
+    server.close((error) => (error === undefined ? resolve() : reject(error)))
+  )
   if (canEnforcePermissionDenied) await chmod(LOCKED_DIRECTORY, 0o700)
   await rm(WORKSPACE, { recursive: true, force: true })
 }
 
-console.log('host smoke OK (Gateway errors, structured tool failures, permissions, state, user review action)')
+console.log(
+  'host smoke OK (Gateway errors, structured tool failures, permissions, state, user review action)'
+)
 
 async function json(path, init) {
   const response = await fetch(`${origin}${path}`, init)
@@ -342,17 +443,23 @@ async function json(path, init) {
 }
 
 function assertToolError(result, code) {
-  if (!result.isError || result.error.info?.name !== 'UniverError' || result.error.info.code !== code) {
+  if (
+    !result.isError ||
+    result.error.info?.name !== 'UniverError' ||
+    result.error.info.code !== code
+  ) {
     throw new Error(`tool failure must retain ${code}: ${JSON.stringify(result)}`)
   }
   const content = toolText(result)
   if (!content.startsWith(`Error [${code}]: `)) {
-    throw new Error(`model-facing tool failure must include ${code}: ${JSON.stringify(result.content)}`)
+    throw new Error(
+      `model-facing tool failure must include ${code}: ${JSON.stringify(result.content)}`
+    )
   }
 }
 
 function toolText(result) {
-  return result.content.map(block => block.type === 'text' ? block.text : '').join('')
+  return result.content.map((block) => (block.type === 'text' ? block.text : '')).join('')
 }
 
 async function listenOrAcceptOccupied(server, port) {

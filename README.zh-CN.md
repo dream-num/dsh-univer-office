@@ -20,7 +20,6 @@
 
 [![播放 DSH × Univer Office 演示视频](docs/assets/readme/nike-presentation-demo.png)](https://www.youtube.com/watch?v=k-2zW_CMiew)
 
-
 下面的电子表格由 Agent 根据自然语言要求创建，并在同一个会话中继续添加条件格式和图表。完成后可以直接预览、继续修改、合入当前版本或丢弃。
 
 ![在 DSH 会话中审阅带条件格式和图表的电子表格](docs/assets/readme/chart-and-formatting.png)
@@ -92,13 +91,13 @@ Agent 可以根据主题、受众、页数、内容结构和视觉要求生成�
 
 ## 能力一览
 
-| 内容类型 | 创建与编辑 | 校验与审阅 | 导入 | 导出 |
-| --- | --- | --- | --- | --- |
-| Sheet | 单元格、公式、样式、表格、图表、透视表、筛选、验证、图片等 | 结构化范围检查、公式重算、范围/工作簿截图、实时预览 | `.xlsx` `.csv` `.tsv` | `.xlsx` `.csv` `.tsv` |
-| Doc | 段落、富文本、列表、任务、表格、图片、图表、页眉页脚、分页 | 文档结构回读、逐页截图、实时预览 | `.docx` | `.docx` |
-| Slide | 页面、文字、形状、图片、表格、图表、SVG 布局、转场 | 结构检查、文字越界/溢出/重叠检查、逐页/联系表截图、实时预览 | `.pptx` | `.pptx` |
-| 多维表格（Base） | 表、字段、记录、视图、公式字段、筛选、排序、分组 | 结构化数据检查、工作台截图、实时预览 | — | `.xlsx` `.csv` `.tsv` |
-| Board | 形状、文字、连接线、图片、原生图表、自动布线 | 元素与连接关系分析、全局/区域/元素截图、实时预览 | — | — |
+| 内容类型         | 创建与编辑                                                 | 校验与审阅                                                  | 导入                  | 导出                  |
+| ---------------- | ---------------------------------------------------------- | ----------------------------------------------------------- | --------------------- | --------------------- |
+| Sheet            | 单元格、公式、样式、表格、图表、透视表、筛选、验证、图片等 | 结构化范围检查、公式重算、范围/工作簿截图、实时预览         | `.xlsx` `.csv` `.tsv` | `.xlsx` `.csv` `.tsv` |
+| Doc              | 段落、富文本、列表、任务、表格、图片、图表、页眉页脚、分页 | 文档结构回读、逐页截图、实时预览                            | `.docx`               | `.docx`               |
+| Slide            | 页面、文字、形状、图片、表格、图表、SVG 布局、转场         | 结构检查、文字越界/溢出/重叠检查、逐页/联系表截图、实时预览 | `.pptx`               | `.pptx`               |
+| 多维表格（Base） | 表、字段、记录、视图、公式字段、筛选、排序、分组           | 结构化数据检查、工作台截图、实时预览                        | —                     | `.xlsx` `.csv` `.tsv` |
+| Board            | 形状、文字、连接线、图片、原生图表、自动布线               | 元素与连接关系分析、全局/区域/元素截图、实时预览            | —                     | —                     |
 
 所有类型都支持隔离草稿、审阅、继续修改、确认或放弃。多维表格和 Board 支持结构校验；Board 暂不支持文件导出。
 
@@ -149,21 +148,21 @@ DSH 启动成功后，在已有的 DeepSeek Harness 浏览器页面按 **Cmd+R /
 
 DSH 会自动选择这些工具，日常使用不需要手动调用。
 
-| 工具 | 作用 |
-| --- | --- |
-| `univer_new` | 创建空 `.univer` 文件，不覆盖已有文件 |
-| `univer_status` | 查看文件内容与草稿状态 |
-| `univer_worktree` | 创建、提交、继续修改、确认或放弃隔离草稿 |
-| `univer_unit` | 添加或删除 Sheet、Doc、Slide、多维表格或 Board 内容 |
-| `univer_import` | 把 Office 文件导入 `.univer` 文件 |
-| `univer_inspect` | 读取文档结构或指定 Sheet 范围 |
-| `univer_execute` | 通过 Univer API 读取或编辑内容 |
-| `univer_export` | 导出 Sheet、Doc、Slide 或多维表格内容 |
-| `univer_lint` | 检查 Slide 文字越界、溢出和重叠 |
-| `univer_compile_svg` | 将 SVG 布局按文字度量添加到 Slide |
-| `univer_screenshot` | 把支持的内容渲染为 PNG 图片供审阅 |
-| `univer_api` | 按关键词查找插件内置的 Univer API 符号并查看精确引用 |
-| `univer_resources` | 查找和使用内置图标、Logo、Emoji 与插画 |
+| 工具                 | 作用                                                 |
+| -------------------- | ---------------------------------------------------- |
+| `univer_new`         | 创建空 `.univer` 文件，不覆盖已有文件                |
+| `univer_status`      | 查看文件内容与草稿状态                               |
+| `univer_worktree`    | 创建、提交、继续修改、确认或放弃隔离草稿             |
+| `univer_unit`        | 添加或删除 Sheet、Doc、Slide、多维表格或 Board 内容  |
+| `univer_import`      | 把 Office 文件导入 `.univer` 文件                    |
+| `univer_inspect`     | 读取文档结构或指定 Sheet 范围                        |
+| `univer_execute`     | 通过 Univer API 读取或编辑内容                       |
+| `univer_export`      | 导出 Sheet、Doc、Slide 或多维表格内容                |
+| `univer_lint`        | 检查 Slide 文字越界、溢出和重叠                      |
+| `univer_compile_svg` | 将 SVG 布局按文字度量添加到 Slide                    |
+| `univer_screenshot`  | 把支持的内容渲染为 PNG 图片供审阅                    |
+| `univer_api`         | 按关键词查找插件内置的 Univer API 符号并查看精确引用 |
+| `univer_resources`   | 查找和使用内置图标、Logo、Emoji 与插画               |
 
 ## 预览与审阅体验
 
@@ -186,23 +185,23 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 
 默认配置适合本地使用：服务从端口 `9080` 启动；若该端口被占用，则依次尝试 `9081`、`9082`。如需定制，可设置以下插件选项：
 
-| 字段 | 默认值 | 说明 |
-| --- | --- | --- |
-| `gatewayPort` | `9080` | 本地服务起始端口；被占用时逐次加一 |
-| `autoStartGateway` | `true` | 首次访问时自动启动服务 |
-| `gatewayStartupTimeoutMs` | `10000` | 服务启动超时 |
-| `gatewayRequestTimeoutMs` | `3000` | 状态读取超时 |
-| `gatewayMutationTimeoutMs` | `60000` | 写操作超时 |
-| `unitContentOperationTimeoutMs` | `120000` | 导入、导出、检查和执行超时 |
-| `screenshotOperationTimeoutMs` | `120000` | 一次浏览器截图操作的总超时 |
-| `screenshotMaxPages` | `30` | 一次 Doc 或 Slide 截图最多渲染的页数 |
-| `screenshotMaxPixels` | `16777216` | 每张截图允许的最大像素数 |
-| `resourceCacheRoot` | `$DSH_HOME/cache/dsh-univer-office/resources` | 下载 SVG 资源的持久缓存目录；未设置 `DSH_HOME` 时使用 `~/.dsh` |
-| `resourceDownloadTimeoutMs` | `15000` | 单个 SVG 资源下载超时 |
-| `resourceOperationTimeoutMs` | `120000` | 一次资源库工具操作的总超时 |
-| `tools` | `true` | 启用 Agent 编辑能力 |
-| `skills` | `true` | 启用内置任务指引 |
-| `telemetry` | `true` | 发送匿名产品遥测 |
+| 字段                            | 默认值                                        | 说明                                                           |
+| ------------------------------- | --------------------------------------------- | -------------------------------------------------------------- |
+| `gatewayPort`                   | `9080`                                        | 本地服务起始端口；被占用时逐次加一                             |
+| `autoStartGateway`              | `true`                                        | 首次访问时自动启动服务                                         |
+| `gatewayStartupTimeoutMs`       | `10000`                                       | 服务启动超时                                                   |
+| `gatewayRequestTimeoutMs`       | `3000`                                        | 状态读取超时                                                   |
+| `gatewayMutationTimeoutMs`      | `60000`                                       | 写操作超时                                                     |
+| `unitContentOperationTimeoutMs` | `120000`                                      | 导入、导出、检查和执行超时                                     |
+| `screenshotOperationTimeoutMs`  | `120000`                                      | 一次浏览器截图操作的总超时                                     |
+| `screenshotMaxPages`            | `30`                                          | 一次 Doc 或 Slide 截图最多渲染的页数                           |
+| `screenshotMaxPixels`           | `16777216`                                    | 每张截图允许的最大像素数                                       |
+| `resourceCacheRoot`             | `$DSH_HOME/cache/dsh-univer-office/resources` | 下载 SVG 资源的持久缓存目录；未设置 `DSH_HOME` 时使用 `~/.dsh` |
+| `resourceDownloadTimeoutMs`     | `15000`                                       | 单个 SVG 资源下载超时                                          |
+| `resourceOperationTimeoutMs`    | `120000`                                      | 一次资源库工具操作的总超时                                     |
+| `tools`                         | `true`                                        | 启用 Agent 编辑能力                                            |
+| `skills`                        | `true`                                        | 启用内置任务指引                                               |
+| `telemetry`                     | `true`                                        | 发送匿名产品遥测                                               |
 
 ## 遥测
 

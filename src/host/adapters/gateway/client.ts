@@ -3,7 +3,10 @@ import type { JsonValue } from '../../service/types.ts'
 
 /** Small typed transport over the bundled Gateway HTTP API. */
 export class GatewayClient {
-  constructor(readonly origin: string, private readonly timeoutMs: number) {}
+  constructor(
+    readonly origin: string,
+    private readonly timeoutMs: number
+  ) {}
 
   /** Execute a JSON GET request. */
   async get(path: string): Promise<JsonValue> {
@@ -15,23 +18,33 @@ export class GatewayClient {
     return this.request(path, 'POST', body)
   }
 
-  private async request(path: string, method: 'GET' | 'POST', body?: JsonValue): Promise<JsonValue> {
+  private async request(
+    path: string,
+    method: 'GET' | 'POST',
+    body?: JsonValue
+  ): Promise<JsonValue> {
     let response: Response
     try {
       response = await fetch(`${this.origin}${path}`, {
         method,
-        ...body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
-        signal: AbortSignal.timeout(this.timeoutMs),
+        ...(body === undefined
+          ? {}
+          : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
+        signal: AbortSignal.timeout(this.timeoutMs)
       })
     } catch (error) {
       throw gatewayTransportError(error)
     }
     let value: JsonValue
     try {
-      value = await response.json() as JsonValue
+      value = (await response.json()) as JsonValue
     } catch (error) {
       if (isGatewayTimeout(error)) throw gatewayTransportError(error)
-      throw new UniverError(`Gateway returned invalid JSON for ${method} ${path}`, 'GATEWAY_INVALID_RESPONSE', { cause: error })
+      throw new UniverError(
+        `Gateway returned invalid JSON for ${method} ${path}`,
+        'GATEWAY_INVALID_RESPONSE',
+        { cause: error }
+      )
     }
     if (!response.ok) {
       const message = gatewayErrorMessage(value) ?? `Gateway HTTP ${String(response.status)}`
@@ -62,7 +75,13 @@ function isGatewayTimeout(error: unknown): boolean {
     seen.add(current)
     const name = 'name' in current && typeof current.name === 'string' ? current.name : undefined
     const code = 'code' in current && typeof current.code === 'string' ? current.code : undefined
-    if (name === 'TimeoutError' || name === 'AbortError' || code === 'ETIMEDOUT' || code?.includes('TIMEOUT') === true) return true
+    if (
+      name === 'TimeoutError' ||
+      name === 'AbortError' ||
+      code === 'ETIMEDOUT' ||
+      code?.includes('TIMEOUT') === true
+    )
+      return true
     current = 'cause' in current ? current.cause : undefined
   }
   return false

@@ -2,18 +2,12 @@ import {
   FormulaCacheEligibilityService,
   FormulaLastValuePersistenceService,
   HostExternalReferenceModel,
-  UniverProFormulaEnginePlugin,
-} from "@univerjs-pro/engine-formula";
-import { UniverShapePlugin } from "@univerjs-pro/engine-shape";
-import { UniverLicensePlugin } from "@univerjs-pro/license";
-import { UniverShapeEditorPlugin } from "@univerjs-pro/shape-editor";
-import {
-  DependentOn,
-  Injector,
-  Plugin,
-  UniverInstanceType,
-  setDependencies,
-} from "@univerjs/core";
+  UniverProFormulaEnginePlugin
+} from '@univerjs-pro/engine-formula'
+import { UniverShapePlugin } from '@univerjs-pro/engine-shape'
+import { UniverLicensePlugin } from '@univerjs-pro/license'
+import { UniverShapeEditorPlugin } from '@univerjs-pro/shape-editor'
+import { DependentOn, Injector, Plugin, UniverInstanceType, setDependencies } from '@univerjs/core'
 
 /**
  * The published history loader registers the core formula plugin before its Shape plugins. Because
@@ -21,40 +15,40 @@ import {
  * satisfied without registering HostExternalReferenceModel in the nested history Univer.
  */
 class HistoryShapeFormulaModelPlugin extends Plugin {
-  static override type = UniverInstanceType.UNIVER_UNKNOWN;
-  static override pluginName = "DSH_HISTORY_SHAPE_FORMULA_MODEL_PLUGIN";
-  static override packageName = "dsh-univer-office";
+  static override type = UniverInstanceType.UNIVER_UNKNOWN
+  static override pluginName = 'DSH_HISTORY_SHAPE_FORMULA_MODEL_PLUGIN'
+  static override packageName = 'dsh-univer-office'
 
   constructor(protected override _injector: Injector) {
-    super();
+    super()
   }
 
   override onStarting(): void {
     if (!this._injector.has(HostExternalReferenceModel)) {
-      this._injector.add([HostExternalReferenceModel]);
+      this._injector.add([HostExternalReferenceModel])
     }
     if (!this._injector.has(FormulaCacheEligibilityService)) {
-      this._injector.add([FormulaCacheEligibilityService]);
+      this._injector.add([FormulaCacheEligibilityService])
     }
     if (!this._injector.has(FormulaLastValuePersistenceService)) {
-      this._injector.add([FormulaLastValuePersistenceService]);
+      this._injector.add([FormulaLastValuePersistenceService])
     }
   }
 }
 
-setDependencies(HistoryShapeFormulaModelPlugin, [Injector]);
+setDependencies(HistoryShapeFormulaModelPlugin, [Injector])
 
-let installed = false;
+let installed = false
 
 export function installHistoryShapeFormulaCompatibility(): void {
   if (installed) {
-    return;
+    return
   }
-  installed = true;
+  installed = true
   DependentOn(
     UniverLicensePlugin,
     UniverProFormulaEnginePlugin,
     UniverShapePlugin,
-    HistoryShapeFormulaModelPlugin,
-  )(UniverShapeEditorPlugin);
+    HistoryShapeFormulaModelPlugin
+  )(UniverShapeEditorPlugin)
 }

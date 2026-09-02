@@ -4,14 +4,17 @@ import {
   resolveExistingUniverPath,
   resolveExistingWorkspacePath,
   resolveNewUniverPath,
-  resolveNewWorkspacePath,
+  resolveNewWorkspacePath
 } from '../service/workspace.ts'
 
 /** Resolve the calling agent's workspace or fail closed for detached calls. */
 export function toolWorkspace(exec: ToolRunContext): string {
   const cwd = exec.agent?.session.header.cwd
   if (cwd === undefined || cwd.length === 0) {
-    throw new UniverError('Univer tools require a calling agent with a workspace.', 'SESSION_SCOPE_UNAVAILABLE')
+    throw new UniverError(
+      'Univer tools require a calling agent with a workspace.',
+      'SESSION_SCOPE_UNAVAILABLE'
+    )
   }
   return cwd
 }

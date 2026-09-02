@@ -11,13 +11,27 @@ export const operationOutput = {
       operation: {
         type: 'string' as const,
         required: true,
-        enum: ['new', 'status', 'inspect', 'execute', 'import', 'export', 'lint', 'screenshot', 'compile-svg', 'unit', 'worktree'] as const,
+        enum: [
+          'new',
+          'status',
+          'inspect',
+          'execute',
+          'import',
+          'export',
+          'lint',
+          'screenshot',
+          'compile-svg',
+          'unit',
+          'worktree'
+        ] as const
       },
       file: { type: 'string' as const, required: true },
-      result: { type: 'json' as const, required: true },
-    },
+      result: { type: 'json' as const, required: true }
+    }
   },
-  render: (_args: unknown, value: UniverOperationResult) => [{ type: 'text' as const, text: renderOperationResult(value) }],
+  render: (_args: unknown, value: UniverOperationResult) => [
+    { type: 'text' as const, text: renderOperationResult(value) }
+  ]
 } as const
 
 /** Output schema for version-matched Facade reference reads. */
@@ -28,10 +42,12 @@ export const apiOutput = {
     properties: {
       ok: { type: 'boolean' as const, required: true, const: true },
       operation: { type: 'string' as const, required: true, const: 'api' },
-      result: { type: 'json' as const, required: true },
-    },
+      result: { type: 'json' as const, required: true }
+    }
   },
-  render: (_args: unknown, value: UniverApiResult) => [{ type: 'text' as const, text: JSON.stringify(value) }],
+  render: (_args: unknown, value: UniverApiResult) => [
+    { type: 'text' as const, text: JSON.stringify(value) }
+  ]
 } as const
 
 /** Pure text projection of a structured Univer operation result. */
@@ -51,9 +67,11 @@ export function withUniverErrorContent(definition: ToolDefinition): ToolDefiniti
     ...definition,
     finalizeContent(exec, result) {
       if (result.isError && result.error.info?.name === 'UniverError') {
-        return [{ type: 'text', text: `Error [${result.error.info.code}]: ${result.error.message}` }]
+        return [
+          { type: 'text', text: `Error [${result.error.info.code}]: ${result.error.message}` }
+        ]
       }
       return finalizeContent?.(exec, result)
-    },
+    }
   }
 }

@@ -1,6 +1,4 @@
-import {
-  mountUniverRenderPage,
-} from '@univer-cli/univer-render-page'
+import { mountUniverRenderPage } from '@univer-cli/univer-render-page'
 import '@univer/render-preset/styles'
 import '@univer/render-preset/facades'
 import { LocaleType, Univer } from '@univerjs/core'
@@ -17,14 +15,14 @@ await mountUniverRenderPage({
   createUniver: ({ license }) => {
     const univer = new Univer({
       locale: LocaleType.EN_US,
-      locales: { [LocaleType.EN_US]: CONTENT_EN_US },
+      locales: { [LocaleType.EN_US]: CONTENT_EN_US }
     })
     registerViewRendering(univer, {
       container: 'app',
       assetIoOwner: ViewAssetIoOwner.Local,
       license: license ?? TEST_LICENSE,
-      workbenchChrome: 'visible',
+      workbenchChrome: 'visible'
     })
     return univer
-  },
+  }
 })

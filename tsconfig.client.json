@@ -3,10 +3,6 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": [
-    "src/client/**/*.ts",
-    "src/client/**/*.tsx",
-    "src/shared/**/*.ts"
-  ],
+  "include": ["src/client/**/*.ts", "src/client/**/*.tsx", "src/shared/**/*.ts"],
   "exclude": []
 }

@@ -24,12 +24,14 @@ export function workspacePath(value: string): WorkspacePath {
 
 /** Brand an already-validated non-empty worktree id. */
 export function worktreeId(value: string): WorktreeId {
-  if (value.trim().length === 0) throw new UniverError('worktreeId must be non-empty.', 'INVALID_REQUEST')
+  if (value.trim().length === 0)
+    throw new UniverError('worktreeId must be non-empty.', 'INVALID_REQUEST')
   return value as WorktreeId
 }
 
 /** Brand an already-validated non-empty unit id. */
 export function unitId(value: string): UnitId {
-  if (value.trim().length === 0) throw new UniverError('unitId must be non-empty.', 'INVALID_REQUEST')
+  if (value.trim().length === 0)
+    throw new UniverError('unitId must be non-empty.', 'INVALID_REQUEST')
   return value as UnitId
 }

@@ -1,10 +1,19 @@
 import * as React from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { FileState } from '../../shared/wire/state.ts'
-import { getFileState, getUniverStatus, isMissingUniverFile, startGateway } from '../api/univer-api.ts'
+import {
+  getFileState,
+  getUniverStatus,
+  isMissingUniverFile,
+  startGateway
+} from '../api/univer-api.ts'
 
 /** Poll collaboration state for a stable list of files. */
-export function useUniverStates(files: readonly string[], sessionId: SessionId, intervalMs = 900): {
+export function useUniverStates(
+  files: readonly string[],
+  sessionId: SessionId,
+  intervalMs = 900
+): {
   readonly states: Readonly<Record<string, FileState>>
   readonly missingFiles: ReadonlySet<string>
   readonly applyState: (state: FileState) => void
@@ -43,7 +52,9 @@ export function useUniverStates(files: readonly string[], sessionId: SessionId, 
               delete next[file]
               return next
             })
-            setMissing((previous) => previous[file] === true ? previous : { ...previous, [file]: true })
+            setMissing((previous) =>
+              previous[file] === true ? previous : { ...previous, [file]: true }
+            )
           }
         }
       }
@@ -71,7 +82,7 @@ export function useUniverStates(files: readonly string[], sessionId: SessionId, 
         delete next[state.file]
         return next
       })
-    }, []),
+    }, [])
   }
 }
 
@@ -80,15 +91,21 @@ export function useGatewayStatus(): {
   readonly phase: 'checking' | 'stopped' | 'starting' | 'running' | 'failed'
   readonly start: () => Promise<void>
 } {
-  const [phase, setPhase] = React.useState<'checking' | 'stopped' | 'starting' | 'running' | 'failed'>('checking')
+  const [phase, setPhase] = React.useState<
+    'checking' | 'stopped' | 'starting' | 'running' | 'failed'
+  >('checking')
   React.useEffect(() => {
     let active = true
-    void getUniverStatus().then((status) => {
-      if (active) setPhase(status.gateway.phase)
-    }).catch(() => {
-      if (active) setPhase('failed')
-    })
-    return () => { active = false }
+    void getUniverStatus()
+      .then((status) => {
+        if (active) setPhase(status.gateway.phase)
+      })
+      .catch(() => {
+        if (active) setPhase('failed')
+      })
+    return () => {
+      active = false
+    }
   }, [])
   const start = React.useCallback(async () => {
     setPhase('starting')

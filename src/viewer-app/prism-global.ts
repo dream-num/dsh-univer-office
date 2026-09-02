@@ -1,9 +1,9 @@
-import Prism from "prismjs";
+import Prism from 'prismjs'
 
 declare global {
   interface Window {
-    Prism?: typeof Prism;
+    Prism?: typeof Prism
   }
 }
 
-window.Prism = Prism;
+window.Prism = Prism

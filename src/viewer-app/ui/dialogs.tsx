@@ -1,32 +1,32 @@
-import { CircleCheck, GitMerge, Info, Pencil, Trash2, TriangleAlert } from "lucide-react";
-import type { ComponentType, ReactElement } from "react";
-import { flushSync } from "react-dom";
-import { createRoot } from "react-dom/client";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { AlertDialog, AlertDialogBody, AlertDialogTitle } from "../components/ui/dialog";
-import { t } from "../i18n";
-import { cn } from "../lib/utils";
+import { CircleCheck, GitMerge, Info, Pencil, Trash2, TriangleAlert } from 'lucide-react'
+import type { ComponentType, ReactElement } from 'react'
+import { flushSync } from 'react-dom'
+import { createRoot } from 'react-dom/client'
+import { Badge } from '../components/ui/badge'
+import { Button } from '../components/ui/button'
+import { AlertDialog, AlertDialogBody, AlertDialogTitle } from '../components/ui/dialog'
+import { t } from '../i18n'
+import { cn } from '../lib/utils'
 
-export type DialogTone = "neutral" | "info" | "warn" | "danger";
-export type DialogIcon = "merge" | "trash" | "pencil" | "check" | "alert" | "info";
+export type DialogTone = 'neutral' | 'info' | 'warn' | 'danger'
+export type DialogIcon = 'merge' | 'trash' | 'pencil' | 'check' | 'alert' | 'info'
 
 export interface DialogChip {
-  id: string;
-  label: string;
+  id: string
+  label: string
 }
 
 export interface ConfirmOptions {
-  title: string;
+  title: string
   /** Trusted i18n HTML (may contain <strong> / <br> / span.muted). */
-  body: string;
-  chips?: readonly DialogChip[];
-  confirmLabel: string;
-  danger?: boolean;
-  icon?: DialogIcon;
-  tone?: DialogTone;
+  body: string
+  chips?: readonly DialogChip[]
+  confirmLabel: string
+  danger?: boolean
+  icon?: DialogIcon
+  tone?: DialogTone
   /** Conflict notice style: a single acknowledgement button instead of cancel+confirm. */
-  singleAction?: boolean;
+  singleAction?: boolean
 }
 
 const ICONS: Record<DialogIcon, ComponentType> = {
@@ -36,37 +36,37 @@ const ICONS: Record<DialogIcon, ComponentType> = {
   check: CircleCheck,
   alert: TriangleAlert,
   info: Info
-};
+}
 
 const TONE_CLASS: Record<DialogTone, string> = {
-  neutral: "bg-muted text-muted-foreground",
-  info: "bg-blue-50 text-blue-600",
-  warn: "bg-amber-50 text-amber-600",
-  danger: "bg-red-50 text-red-600"
-};
+  neutral: 'bg-muted text-muted-foreground',
+  info: 'bg-blue-50 text-blue-600',
+  warn: 'bg-amber-50 text-amber-600',
+  danger: 'bg-red-50 text-red-600'
+}
 
 function ConfirmDialog({
   opts,
   onDone
 }: {
-  opts: ConfirmOptions;
-  onDone: (confirmed: boolean) => void;
+  opts: ConfirmOptions
+  onDone: (confirmed: boolean) => void
 }): ReactElement {
-  const tone = opts.tone ?? (opts.danger ? "danger" : "info");
-  const Icon = ICONS[opts.icon ?? (opts.danger ? "trash" : "check")];
+  const tone = opts.tone ?? (opts.danger ? 'danger' : 'info')
+  const Icon = ICONS[opts.icon ?? (opts.danger ? 'trash' : 'check')]
   return (
     <AlertDialog
       open
       onOpenChange={(open) => {
         if (!open) {
-          onDone(false);
+          onDone(false)
         }
       }}
     >
       <div className="flex items-start gap-3.5">
         <span
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full [&_svg]:size-4.5",
+            'flex size-9 shrink-0 items-center justify-center rounded-full [&_svg]:size-4.5',
             TONE_CLASS[tone]
           )}
         >
@@ -97,7 +97,7 @@ function ConfirmDialog({
           </Button>
         )}
         <Button
-          variant={opts.danger ? "destructive" : "default"}
+          variant={opts.danger ? 'destructive' : 'default'}
           size="sm"
           onClick={() => onDone(true)}
         >
@@ -105,53 +105,53 @@ function ConfirmDialog({
         </Button>
       </div>
     </AlertDialog>
-  );
+  )
 }
 
 /** Mount a one-shot modal outside the React shell; resolves on confirm/cancel/dismiss. */
 function openConfirmDialog(opts: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
-    const host = document.createElement("div");
-    document.body.append(host);
-    const root = createRoot(host);
-    let settled = false;
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    let settled = false
     const finish = (confirmed: boolean): void => {
       if (settled) {
-        return;
+        return
       }
-      settled = true;
-      resolve(confirmed);
+      settled = true
+      resolve(confirmed)
       setTimeout(() => {
-        root.unmount();
-        host.remove();
-      }, 0);
-    };
+        root.unmount()
+        host.remove()
+      }, 0)
+    }
     flushSync(() => {
-      root.render(<ConfirmDialog opts={opts} onDone={finish} />);
-    });
-  });
+      root.render(<ConfirmDialog opts={opts} onDone={finish} />)
+    })
+  })
 }
 
 /** Modal confirm (merge = neutral, discard = danger). Resolves true on confirm. */
 export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
-  return openConfirmDialog(opts);
+  return openConfirmDialog(opts)
 }
 
 /** Merge-conflict notice in plain language; the modification stays "awaiting confirmation". */
 export function conflictDialog(failedUnit: string): Promise<void> {
   return openConfirmDialog({
-    icon: "alert",
-    tone: "danger",
+    icon: 'alert',
+    tone: 'danger',
     title: t().modal.conflictTitle,
     body: t().modal.conflictBody(escapeHtml(failedUnit)),
     confirmLabel: t().modal.gotIt,
     singleAction: true
-  }).then(() => undefined);
+  }).then(() => undefined)
 }
 
 export function escapeHtml(s: string): string {
   return s.replace(
     /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!
-  );
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!
+  )
 }

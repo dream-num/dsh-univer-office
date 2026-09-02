@@ -29,7 +29,7 @@ export class GatewayFileApi {
   createUnit(file: string, kind: UniverUnitKind, name: string): Promise<JsonValue> {
     return this.client.post(
       `/uf/${fileKeyOf(file)}/universer-api/snapshot/${String(unitType(kind))}/unit/-/create`,
-      { name },
+      { name }
     )
   }
 }

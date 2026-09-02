@@ -21,8 +21,8 @@ export function createEmbedUiMenuSchemaAliases(root) {
       '@univerjs/sheets-numfmt-ui',
       '@univerjs/sheets-sort-ui',
       '@univerjs/sheets-table-ui',
-      '@univerjs/sheets-thread-comment-ui',
-    ].map((packageName) => [`${packageName}/menu/schema.ts`, emptyMenuSchemaShim]),
+      '@univerjs/sheets-thread-comment-ui'
+    ].map((packageName) => [`${packageName}/menu/schema.ts`, emptyMenuSchemaShim])
   )
 }
 
@@ -35,8 +35,8 @@ export function createPrismComponentEsmPlugin() {
       if (!/[\\/]prismjs[\\/]components[\\/]prism-[^\\/]+\.js(?:\?.*)?$/u.test(id)) return null
       return {
         code: `import Prism from "prismjs";\n${code}\nexport default Prism;\n`,
-        map: null,
+        map: null
       }
-    },
+    }
   }
 }

@@ -15,17 +15,24 @@ export class GatewaySupervisor {
   /** Return current Gateway availability without starting it. */
   async status(): Promise<GatewayStatus> {
     if (this.starting !== null) return { phase: 'starting', gateway: null, owned: false }
-    if (this.ownedGateway !== null && await gatewayIsHealthy(this.ownedGateway, this.config.gatewayRequestTimeoutMs)) {
+    if (
+      this.ownedGateway !== null &&
+      (await gatewayIsHealthy(this.ownedGateway, this.config.gatewayRequestTimeoutMs))
+    ) {
       return { phase: 'running', gateway: this.ownedGateway, owned: true }
     }
     this.ownedGateway = null
-    if (this.lastFailure !== undefined) return { phase: 'failed', gateway: null, owned: false, reason: this.lastFailure }
+    if (this.lastFailure !== undefined)
+      return { phase: 'failed', gateway: null, owned: false, reason: this.lastFailure }
     return { phase: 'stopped', gateway: null, owned: false }
   }
 
   /** Reuse this supervisor's healthy Gateway or start the bundled one once for concurrent callers. */
   async ensure(): Promise<EnsureGatewayResult> {
-    if (this.ownedGateway !== null && await gatewayIsHealthy(this.ownedGateway, this.config.gatewayRequestTimeoutMs)) {
+    if (
+      this.ownedGateway !== null &&
+      (await gatewayIsHealthy(this.ownedGateway, this.config.gatewayRequestTimeoutMs))
+    ) {
       return { ok: true, gateway: this.ownedGateway, reused: true }
     }
     this.ownedGateway = null
@@ -41,7 +48,11 @@ export class GatewaySupervisor {
   private async start(): Promise<EnsureGatewayResult> {
     let failure = 'bundled Gateway did not start'
     for (let port = this.config.gatewayPort; port <= 65_535; port += 1) {
-      const result = await this.process.start(port, this.config.gatewayStartupTimeoutMs, this.config.gatewayRequestTimeoutMs)
+      const result = await this.process.start(
+        port,
+        this.config.gatewayStartupTimeoutMs,
+        this.config.gatewayRequestTimeoutMs
+      )
       if (result.ok) {
         this.ownedGateway = result.gateway
         this.lastFailure = undefined

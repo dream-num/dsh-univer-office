@@ -6,23 +6,23 @@ import {
   type MergePreviewUnitResponse,
   type Worktree,
   type WorktreeLifecycleEvent,
-  type UnitSummary,
-} from "@univer/collab-gateway-contract";
-import type { LocaleType } from "@univerjs/core";
-import { flushSync } from "react-dom";
-import { createRoot, type Root } from "react-dom/client";
+  type UnitSummary
+} from '@univer/collab-gateway-contract'
+import type { LocaleType } from '@univerjs/core'
+import { flushSync } from 'react-dom'
+import { createRoot, type Root } from 'react-dom/client'
 import {
   applyDocumentAppearance,
   currentAppearance,
   persistAppearance,
   setAppearance,
-  type Appearance,
-} from "../appearance";
-import type { AppConfig, AppContentScope, AppMode, WriteLocationOptions } from "../core/config";
-import { gatewayFileEndpointFromKey, ufPrefix, writeLocation } from "../core/config";
-import { type EventChannel, openEventChannel } from "../core/events";
-import { loadViewerLocale } from "../core/locales/generated/load";
-import { createPreviewViewer, createViewer, type ViewerHandle } from "../core/viewer";
+  type Appearance
+} from '../appearance'
+import type { AppConfig, AppContentScope, AppMode, WriteLocationOptions } from '../core/config'
+import { gatewayFileEndpointFromKey, ufPrefix, writeLocation } from '../core/config'
+import { type EventChannel, openEventChannel } from '../core/events'
+import { loadViewerLocale } from '../core/locales/generated/load'
+import { createPreviewViewer, createViewer, type ViewerHandle } from '../core/viewer'
 import {
   activateLang,
   applyDocumentLang,
@@ -31,63 +31,63 @@ import {
   persistLang,
   sdkLocaleOf,
   t,
-  type Lang,
-} from "../i18n";
-import type { Messages } from "../i18n/locales/en-US";
-import { persistSidebarCollapsed, resolveSidebarCollapsed } from "../sidebar-preference";
-import { AppView } from "./app-view";
-import { el } from "./dom";
-import { changeBadgeInfo, previewBadgeInfo, type ChangeTagVariant } from "./format";
-import { confirmDialog, conflictDialog, escapeHtml, toast, type DialogChip } from "./modals";
+  type Lang
+} from '../i18n'
+import type { Messages } from '../i18n/locales/en-US'
+import { persistSidebarCollapsed, resolveSidebarCollapsed } from '../sidebar-preference'
+import { AppView } from './app-view'
+import { el } from './dom'
+import { changeBadgeInfo, previewBadgeInfo, type ChangeTagVariant } from './format'
+import { confirmDialog, conflictDialog, escapeHtml, toast, type DialogChip } from './modals'
 
-type View = { kind: "trunk" } | { kind: "worktree"; worktreeId: string };
-type ViewableWorktreeStatus = Extract<Worktree["status"], "draft" | "ready">;
+type View = { kind: 'trunk' } | { kind: 'worktree'; worktreeId: string }
+type ViewableWorktreeStatus = Extract<Worktree['status'], 'draft' | 'ready'>
 
-function isViewableWorktreeStatus(status: Worktree["status"]): status is ViewableWorktreeStatus {
+function isViewableWorktreeStatus(status: Worktree['status']): status is ViewableWorktreeStatus {
   switch (status) {
-    case "draft":
-    case "ready":
-      return true;
+    case 'draft':
+    case 'ready':
+      return true
     default:
-      return false;
+      return false
   }
 }
 
 /** What the content-pane viewer is currently showing: a live (collab) unit or a read-only preview. */
 type ViewerJob =
-  | { mode: "live"; view: View; unit: UnitSummary; editable: boolean }
-  | { mode: "preview"; unit: UnitSummary; data: MergePreviewUnitResponse };
+  | { mode: 'live'; view: View; unit: UnitSummary; editable: boolean }
+  | { mode: 'preview'; unit: UnitSummary; data: MergePreviewUnitResponse }
 
 /** Immutable snapshot of everything the React shell renders; rebuilt on every state change. */
 export interface AppSnapshot {
-  view: View;
-  selectedUnitId: string | undefined;
-  trunkUnits: UnitSummary[];
-  worktreeUnits: UnitSummary[];
-  worktrees: Worktree[];
-  previews: Map<string, MergePreview>;
-  previewErrors: Map<string, string>;
-  viewPreview: boolean;
-  trunkEditingOptIn: boolean;
-  flashWorktreeId: string | undefined;
-  busy: boolean;
-  lang: Lang;
-  languageLoading: Lang | undefined;
-  languageError: boolean;
-  appearance: Appearance;
-  sidebarCollapsed: boolean;
+  view: View
+  selectedUnitId: string | undefined
+  trunkUnits: UnitSummary[]
+  worktreeUnits: UnitSummary[]
+  worktrees: Worktree[]
+  previews: Map<string, MergePreview>
+  previewErrors: Map<string, string>
+  viewPreview: boolean
+  trunkEditingOptIn: boolean
+  flashWorktreeId: string | undefined
+  busy: boolean
+  lang: Lang
+  languageLoading: Lang | undefined
+  languageError: boolean
+  appearance: Appearance
+  sidebarCollapsed: boolean
 }
 
 /** Manages the read-only Univer instance in the content pane; rebuilds only on context/unit change. */
 class ViewerController {
-  private handle: ViewerHandle | undefined = undefined;
-  private content: HTMLElement | undefined = undefined;
-  private host: HTMLElement | undefined = undefined;
-  private key = "";
-  private last: ViewerJob | undefined = undefined;
-  private generation = 0;
-  private pendingKey = "";
-  private pending: Promise<void> | undefined = undefined;
+  private handle: ViewerHandle | undefined = undefined
+  private content: HTMLElement | undefined = undefined
+  private host: HTMLElement | undefined = undefined
+  private key = ''
+  private last: ViewerJob | undefined = undefined
+  private generation = 0
+  private pendingKey = ''
+  private pending: Promise<void> | undefined = undefined
 
   public constructor(
     private readonly cfg: AppConfig,
@@ -95,34 +95,34 @@ class ViewerController {
     /** Read fresh on every rebuild — never stored on a job, so `reload()` picks up a
      * language the user changed after the job was created. */
     private readonly getLocale: () => LocaleType,
-    private readonly getDarkMode: () => boolean,
+    private readonly getDarkMode: () => boolean
   ) {}
 
   public setDarkMode(isDarkMode: boolean): void {
-    this.handle?.setDarkMode(isDarkMode);
+    this.handle?.setDarkMode(isDarkMode)
   }
 
   public prepareLocale(locale: LocaleType): Promise<unknown> {
-    return loadViewerLocale(locale);
+    return loadViewerLocale(locale)
   }
 
   public async setLocale(locale: LocaleType, messages: Messages = t()): Promise<void> {
-    await this.handle?.setLocale(locale, this.readOnlyCopy(this.last, messages));
+    await this.handle?.setLocale(locale, this.readOnlyCopy(this.last, messages))
   }
 
   /** The React content pane hands its host element to the viewer once mounted. */
   public bind(content: HTMLElement): void {
-    this.content = content;
+    this.content = content
   }
 
   public async show(view: View, unit: UnitSummary, editable: boolean): Promise<void> {
-    const key = `live::${view.kind === "worktree" ? view.worktreeId : "trunk"}::${unit.unitId}::${editable}`;
+    const key = `live::${view.kind === 'worktree' ? view.worktreeId : 'trunk'}::${unit.unitId}::${editable}`
     if (key === this.key && this.handle) {
-      return;
+      return
     }
-    this.key = key;
-    this.last = { mode: "live", view, unit, editable };
-    await this.rebuild();
+    this.key = key
+    this.last = { mode: 'live', view, unit, editable }
+    await this.rebuild()
   }
 
   /**
@@ -132,11 +132,11 @@ class ViewerController {
   public async showPreview(
     worktreeId: string,
     unit: UnitSummary,
-    data: MergePreviewUnitResponse,
+    data: MergePreviewUnitResponse
   ): Promise<void> {
-    this.key = `preview::${worktreeId}::${unit.unitId}::${Date.now()}`;
-    this.last = { mode: "preview", unit, data };
-    await this.rebuild();
+    this.key = `preview::${worktreeId}::${unit.unitId}::${Date.now()}`
+    this.last = { mode: 'preview', unit, data }
+    await this.rebuild()
   }
 
   /**
@@ -146,73 +146,73 @@ class ViewerController {
    */
   public async reload(): Promise<void> {
     if (this.last) {
-      await this.rebuild(true);
+      await this.rebuild(true)
     }
   }
 
   public clearView(): void {
-    this.key = "";
-    this.last = undefined;
-    this.teardown();
+    this.key = ''
+    this.last = undefined
+    this.teardown()
   }
 
   /** Replace the content pane with a plain message (e.g. a unit that won't render in preview). */
   public showMessage(text: string): void {
     if (this.content === undefined) {
-      return;
+      return
     }
-    this.key = "";
-    this.last = undefined;
-    this.teardown();
-    const note = el("div", {
+    this.key = ''
+    this.last = undefined
+    this.teardown()
+    const note = el('div', {
       class:
-        "flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground",
-      text,
-    });
-    this.content.append(note);
-    this.host = note;
+        'flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground',
+      text
+    })
+    this.content.append(note)
+    this.host = note
   }
 
   private async rebuild(force = false): Promise<void> {
-    const job = this.last;
+    const job = this.last
     if (!job) {
-      return;
+      return
     }
     if (this.pending && this.pendingKey === this.key) {
-      await this.pending;
+      await this.pending
       if (!force) {
-        return;
+        return
       }
     }
 
-    const pending = this.performRebuild(job);
-    this.pendingKey = this.key;
-    this.pending = pending;
+    const pending = this.performRebuild(job)
+    this.pendingKey = this.key
+    this.pending = pending
     try {
-      await pending;
+      await pending
     } finally {
       if (this.pending === pending) {
-        this.pending = undefined;
-        this.pendingKey = "";
+        this.pending = undefined
+        this.pendingKey = ''
       }
     }
   }
 
   private async performRebuild(job: ViewerJob): Promise<void> {
-    const content = this.content;
+    const content = this.content
     if (content === undefined) {
-      return;
+      return
     }
-    this.setBusy(true);
-    this.teardown();
-    const generation = this.generation;
-    const id = `univer-host-${Math.random().toString(36).slice(2)}`;
-    const host = el("div", { class: "absolute inset-0", attrs: { id } });
-    content.append(host);
-    this.host = host;
+    this.setBusy(true)
+    this.teardown()
+    const generation = this.generation
+    const id = `univer-host-${Math.random().toString(36).slice(2)}`
+    const host = el('div', { class: 'absolute inset-0', attrs: { id } })
+    content.append(host)
+    this.host = host
     try {
-      let handle: ViewerHandle;
-      if (job.mode === "preview") {
+      let handle: ViewerHandle
+      if (job.mode === 'preview') {
         handle = await createPreviewViewer({
           container: id,
           unitType: job.unit.type,
@@ -221,8 +221,8 @@ class ViewerController {
           changesets: job.data.changesets,
           locale: this.getLocale(),
           darkMode: this.getDarkMode(),
-          readOnlyCopy: this.readOnlyCopy(job),
-        });
+          readOnlyCopy: this.readOnlyCopy(job)
+        })
       } else {
         handle = await createViewer({
           container: id,
@@ -231,58 +231,58 @@ class ViewerController {
           ...(this.cfg.gatewayFileKey === undefined
             ? {}
             : { gatewayFileKey: this.cfg.gatewayFileKey }),
-          ...(job.view.kind === "worktree" ? { worktreeId: job.view.worktreeId } : {}),
+          ...(job.view.kind === 'worktree' ? { worktreeId: job.view.worktreeId } : {}),
           unitId: job.unit.unitId,
           unitType: job.unit.type,
           // Only trunk views can be editable; worktree views are always read-only.
-          editable: job.view.kind === "trunk" && job.editable,
+          editable: job.view.kind === 'trunk' && job.editable,
           locale: this.getLocale(),
           darkMode: this.getDarkMode(),
-          readOnlyCopy: this.readOnlyCopy(job),
-        });
+          readOnlyCopy: this.readOnlyCopy(job)
+        })
       }
       if (generation !== this.generation) {
-        handle.dispose();
-        host.remove();
-        return;
+        handle.dispose()
+        host.remove()
+        return
       }
-      this.handle = handle;
+      this.handle = handle
       // Preferences may have changed while this async viewer was being created.
-      handle.setDarkMode(this.getDarkMode());
-      await handle.setLocale(this.getLocale(), this.readOnlyCopy(job));
+      handle.setDarkMode(this.getDarkMode())
+      await handle.setLocale(this.getLocale(), this.readOnlyCopy(job))
     } catch (error) {
       if (generation === this.generation) {
         host.append(
-          el("div", {
-            class: "m-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700",
-            text: t().viewer.loadFailed(String(error)),
-          }),
-        );
+          el('div', {
+            class: 'm-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700',
+            text: t().viewer.loadFailed(String(error))
+          })
+        )
       }
     } finally {
       if (generation === this.generation) {
-        this.setBusy(false);
+        this.setBusy(false)
       }
     }
   }
 
   private readOnlyCopy(job: ViewerJob | undefined, messages: Messages = t()) {
     const message =
-      job?.mode === "preview"
+      job?.mode === 'preview'
         ? messages.viewer.mergePreviewReadOnly
-        : job?.view.kind === "worktree"
+        : job?.view.kind === 'worktree'
           ? messages.viewer.worktreeReadOnly
-          : messages.viewer.currentVersionReadOnly;
-    return { title: messages.topbar.readOnlyPreview, message };
+          : messages.viewer.currentVersionReadOnly
+    return { title: messages.topbar.readOnlyPreview, message }
   }
 
   private teardown(): void {
-    this.generation += 1;
-    this.handle?.dispose();
-    this.handle = undefined;
+    this.generation += 1
+    this.handle?.dispose()
+    this.handle = undefined
     if (this.host) {
-      this.host.remove();
-      this.host = undefined;
+      this.host.remove()
+      this.host = undefined
     }
   }
 }
@@ -293,46 +293,46 @@ class ViewerController {
  * the view never mutates state directly.
  */
 export class App {
-  private readonly control: WorktreeControlClient;
-  private worktrees = new Map<string, Worktree>();
+  private readonly control: WorktreeControlClient
+  private worktrees = new Map<string, Worktree>()
   /** Monotonic WebSocket generation used to reject older HTTP lifecycle snapshots. */
-  private readonly worktreeEventVersions = new Map<string, number>();
-  private trunkUnits: UnitSummary[] = [];
-  private worktreeUnits: UnitSummary[] = [];
-  private view: View = { kind: "trunk" };
-  private selectedUnitId: string | undefined = undefined;
+  private readonly worktreeEventVersions = new Map<string, number>()
+  private trunkUnits: UnitSummary[] = []
+  private worktreeUnits: UnitSummary[] = []
+  private view: View = { kind: 'trunk' }
+  private selectedUnitId: string | undefined = undefined
   /** User opted in to editing the current version while modifications are still pending. */
-  private trunkEditingOptIn = false;
+  private trunkEditingOptIn = false
   /** Worktree whose sidebar row should flash once — set when it just turned ready. */
-  private flashWorktreeId: string | undefined = undefined;
+  private flashWorktreeId: string | undefined = undefined
   /** Per-worktree merge-preview summary (status badges + diverged/mergeable), fetched on enter. */
-  private previews = new Map<string, MergePreview>();
+  private previews = new Map<string, MergePreview>()
   /** Why a worktree's merge preview is unavailable (business error / fetch failure), by worktreeId. */
-  private previewErrors = new Map<string, string>();
+  private previewErrors = new Map<string, string>()
   /** Within a diverged worktree: showing the merge preview (true) vs the original edits (false). */
-  private viewPreview = false;
+  private viewPreview = false
   /** Keep `?lang=` in the address bar once it arrived there (deep link) or the user toggled it. */
-  private langInUrl = new URLSearchParams(location.search).has("lang");
+  private langInUrl = new URLSearchParams(location.search).has('lang')
   /** Local shell preference; independent from file/worktree state. */
-  private sidebarCollapsed = resolveSidebarCollapsed();
-  private busy = false;
-  private languageLoading: Lang | undefined = undefined;
-  private languageError = false;
-  private languageGeneration = 0;
+  private sidebarCollapsed = resolveSidebarCollapsed()
+  private busy = false
+  private languageLoading: Lang | undefined = undefined
+  private languageError = false
+  private languageGeneration = 0
 
-  private univerfileEvents?: EventChannel;
-  private worktreeEvents: EventChannel | undefined = undefined;
+  private univerfileEvents?: EventChannel
+  private worktreeEvents: EventChannel | undefined = undefined
 
-  private readonly listeners = new Set<() => void>();
-  private snapshot: AppSnapshot;
-  private reactRoot: Root | undefined = undefined;
+  private readonly listeners = new Set<() => void>()
+  private snapshot: AppSnapshot
+  private reactRoot: Root | undefined = undefined
 
-  private readonly viewer: ViewerController;
-  private readonly cfg: AppConfig;
-  private readonly initWorktreeId: string | null;
-  private readonly initUnitId: string | null;
-  private readonly initScope: AppContentScope;
-  private readonly initEditable: boolean | null;
+  private readonly viewer: ViewerController
+  private readonly cfg: AppConfig
+  private readonly initWorktreeId: string | null
+  private readonly initUnitId: string | null
+  private readonly initScope: AppContentScope
+  private readonly initEditable: boolean | null
 
   public constructor(
     private readonly root: HTMLElement,
@@ -343,29 +343,29 @@ export class App {
     initScope: AppContentScope,
     initEditable: boolean | null,
     public readonly mode: AppMode,
-    gatewayFileKey?: string,
+    gatewayFileKey?: string
   ) {
     this.cfg = {
       origin,
       univerfile,
-      ...(gatewayFileKey === undefined ? {} : { gatewayFileKey }),
-    };
-    document.title = this.univerfileName;
-    this.initWorktreeId = initWorktreeId;
-    this.initUnitId = initUnitId;
-    this.initScope = initScope;
-    this.initEditable = initEditable;
+      ...(gatewayFileKey === undefined ? {} : { gatewayFileKey })
+    }
+    document.title = this.univerfileName
+    this.initWorktreeId = initWorktreeId
+    this.initUnitId = initUnitId
+    this.initScope = initScope
+    this.initEditable = initEditable
     this.control =
       gatewayFileKey === undefined
         ? new WorktreeControlClient({ origin, univerfile })
-        : new WorktreeControlClient({ origin, gatewayFileKey });
+        : new WorktreeControlClient({ origin, gatewayFileKey })
     this.viewer = new ViewerController(
       this.cfg,
       (on) => this.setBusy(on),
       () => sdkLocaleOf(currentLang()),
-      () => currentAppearance() === "dark",
-    );
-    this.snapshot = this.collectSnapshot();
+      () => currentAppearance() === 'dark'
+    )
+    this.snapshot = this.collectSnapshot()
   }
 
   public static sameOriginGateway(
@@ -375,7 +375,7 @@ export class App {
     initUnitId: string | null,
     initScope: AppContentScope,
     initEditable: boolean | null,
-    mode: AppMode,
+    mode: AppMode
   ): App {
     return new App(
       root,
@@ -386,27 +386,27 @@ export class App {
       initScope,
       initEditable,
       mode,
-      gatewayFileKey,
-    );
+      gatewayFileKey
+    )
   }
 
   // ---- store bridge (React reads the shell through this) ----
 
   public readonly subscribe = (listener: () => void): (() => void) => {
-    this.listeners.add(listener);
+    this.listeners.add(listener)
     return () => {
-      this.listeners.delete(listener);
-    };
-  };
+      this.listeners.delete(listener)
+    }
+  }
 
-  public readonly getSnapshot = (): AppSnapshot => this.snapshot;
+  public readonly getSnapshot = (): AppSnapshot => this.snapshot
 
   /** Unmount the React shell (tests dispose between cases; the page itself never does). */
   public dispose(): void {
-    this.univerfileEvents?.close();
-    this.worktreeEvents?.close();
-    this.reactRoot?.unmount();
-    this.reactRoot = undefined;
+    this.univerfileEvents?.close()
+    this.worktreeEvents?.close()
+    this.reactRoot?.unmount()
+    this.reactRoot = undefined
   }
 
   /** Display label for the sidebar header (file name without the .univer suffix). */
@@ -415,28 +415,28 @@ export class App {
       this.cfg.univerfile
         .split(/[\\/]/u)
         .pop()
-        ?.replace(/\.univer$/iu, "") ?? "univerfile"
-    );
+        ?.replace(/\.univer$/iu, '') ?? 'univerfile'
+    )
   }
 
   public get univerfilePath(): string {
-    return this.cfg.univerfile;
+    return this.cfg.univerfile
   }
 
   /** The React content pane binds its host element here; the viewer renders inside it. */
   public bindContent(node: HTMLElement | null): void {
     if (node) {
-      this.viewer.bind(node);
+      this.viewer.bind(node)
     }
   }
 
   /** Publish the current state to React and mirror it into the address bar. */
   private emit(): void {
-    this.snapshot = this.collectSnapshot();
+    this.snapshot = this.collectSnapshot()
     for (const listener of this.listeners) {
-      listener();
+      listener()
     }
-    this.syncUrl();
+    this.syncUrl()
   }
 
   private collectSnapshot(): AppSnapshot {
@@ -456,42 +456,42 @@ export class App {
       languageLoading: this.languageLoading,
       languageError: this.languageError,
       appearance: currentAppearance(),
-      sidebarCollapsed: this.sidebarCollapsed,
-    };
+      sidebarCollapsed: this.sidebarCollapsed
+    }
   }
 
   public async start(): Promise<void> {
     if (this.cfg.gatewayFileKey !== undefined) {
       await fetchGatewayDescriptor({
         endpoint: gatewayFileEndpointFromKey(this.cfg.origin, this.cfg.gatewayFileKey),
-        requiredCapability: GATEWAY_CAPABILITY_UNIVERFILE_VIEWER,
-      });
+        requiredCapability: GATEWAY_CAPABILITY_UNIVERFILE_VIEWER
+      })
     }
     // Mount the React shell up-front so every state change below lands on screen.
-    this.reactRoot = createRoot(this.root);
+    this.reactRoot = createRoot(this.root)
     flushSync(() => {
-      this.reactRoot?.render(<AppView app={this} />);
-    });
+      this.reactRoot?.render(<AppView app={this} />)
+    })
 
-    await this.reloadAll();
-    this.subscribeUniverfile();
+    await this.reloadAll()
+    this.subscribeUniverfile()
 
-    if (this.mode === "embedded") {
-      await this.restoreEmbeddedView();
-      return;
+    if (this.mode === 'embedded') {
+      await this.restoreEmbeddedView()
+      return
     }
 
     // Restore the view the address bar asked for (deep-link / refresh-stable).
     const initWorktree =
-      this.initWorktreeId !== null ? this.worktrees.get(this.initWorktreeId) : undefined;
+      this.initWorktreeId !== null ? this.worktrees.get(this.initWorktreeId) : undefined
     if (initWorktree && isViewableWorktreeStatus(initWorktree.status)) {
-      await this.enterWorktree(initWorktree.worktreeId, this.initUnitId ?? undefined);
+      await this.enterWorktree(initWorktree.worktreeId, this.initUnitId ?? undefined)
     } else {
       if (this.initWorktreeId !== null && !initWorktree) {
-        toast(t().toast.worktreeGone);
+        toast(t().toast.worktreeGone)
       }
-      this.emit();
-      this.autoSelectFirstTrunk(this.initUnitId ?? undefined);
+      this.emit()
+      this.autoSelectFirstTrunk(this.initUnitId ?? undefined)
     }
   }
 
@@ -500,22 +500,22 @@ export class App {
     const loc: WriteLocationOptions = {
       univerfile: this.cfg.univerfile,
       ...(this.cfg.gatewayFileKey === undefined ? {} : { gatewayFileKey: this.cfg.gatewayFileKey }),
-      mode: this.mode,
-    };
-    if (this.view.kind === "worktree") {
-      loc.worktreeId = this.view.worktreeId;
+      mode: this.mode
+    }
+    if (this.view.kind === 'worktree') {
+      loc.worktreeId = this.view.worktreeId
     }
     if (this.selectedUnitId !== undefined) {
-      loc.unitId = this.selectedUnitId;
+      loc.unitId = this.selectedUnitId
     }
-    if (this.mode === "embedded") {
-      loc.scope = this.contentScope();
-      loc.editable = this.trunkEditableNow();
+    if (this.mode === 'embedded') {
+      loc.scope = this.contentScope()
+      loc.editable = this.trunkEditableNow()
     }
     if (this.langInUrl) {
-      loc.lang = currentLang();
+      loc.lang = currentLang()
     }
-    writeLocation(loc);
+    writeLocation(loc)
   }
 
   // ---- data ----
@@ -523,14 +523,14 @@ export class App {
   private async reloadAll(): Promise<void> {
     const [units, worktrees] = await Promise.all([
       this.control.listUnits(),
-      this.control.listWorktrees(),
-    ]);
-    this.trunkUnits = units;
-    this.worktrees = new Map(worktrees.map((f) => [f.worktreeId, f]));
+      this.control.listWorktrees()
+    ])
+    this.trunkUnits = units
+    this.worktrees = new Map(worktrees.map((f) => [f.worktreeId, f]))
   }
 
   private async loadWorktreeUnits(worktreeId: string): Promise<void> {
-    this.worktreeUnits = await this.control.listUnits(worktreeId);
+    this.worktreeUnits = await this.control.listUnits(worktreeId)
   }
 
   /**
@@ -540,20 +540,20 @@ export class App {
    */
   private async refreshPreview(worktreeId: string): Promise<void> {
     try {
-      const res = await this.control.previewMerge(worktreeId);
+      const res = await this.control.previewMerge(worktreeId)
       if (res.error.code !== 1) {
-        throw new Error(res.error.message || t().viewer.previewComputeFailed);
+        throw new Error(res.error.message || t().viewer.previewComputeFailed)
       }
-      this.previews.set(worktreeId, res);
-      this.previewErrors.delete(worktreeId);
+      this.previews.set(worktreeId, res)
+      this.previewErrors.delete(worktreeId)
     } catch (error) {
-      this.previews.delete(worktreeId);
-      this.previewErrors.set(worktreeId, error instanceof Error ? error.message : String(error));
+      this.previews.delete(worktreeId)
+      this.previewErrors.set(worktreeId, error instanceof Error ? error.message : String(error))
     }
   }
 
   private currentUnits(): UnitSummary[] {
-    return this.view.kind === "worktree" ? this.worktreeUnits : this.trunkUnits;
+    return this.view.kind === 'worktree' ? this.worktreeUnits : this.trunkUnits
   }
 
   // ---- worktree unit change status (vs the worktree's baseline) ----
@@ -561,47 +561,47 @@ export class App {
   /** A worktree unit's change vs trunk at worktree time: added (created in-worktree), modified, or unchanged. */
   private worktreeUnitChange(
     worktree: Worktree,
-    u: UnitSummary,
-  ): "added" | "modified" | "unchanged" {
+    u: UnitSummary
+  ): 'added' | 'modified' | 'unchanged' {
     if (!Object.prototype.hasOwnProperty.call(worktree.baseline, u.unitId)) {
-      return "added";
+      return 'added'
     }
-    return u.headRev > worktree.baseline[u.unitId]! ? "modified" : "unchanged";
+    return u.headRev > worktree.baseline[u.unitId]! ? 'modified' : 'unchanged'
   }
 
   /** Baseline units no longer present in the worktree = deleted; name/type recovered from trunk. */
   public worktreeDeletedUnits(
-    worktree: Worktree,
+    worktree: Worktree
   ): Array<{ unitId: string; name: string; type: number }> {
-    const present = new Set(this.worktreeUnits.map((u) => u.unitId));
-    const out: Array<{ unitId: string; name: string; type: number }> = [];
+    const present = new Set(this.worktreeUnits.map((u) => u.unitId))
+    const out: Array<{ unitId: string; name: string; type: number }> = []
     for (const unitId of Object.keys(worktree.baseline)) {
       if (present.has(unitId)) {
-        continue;
+        continue
       }
-      const trunk = this.trunkUnits.find((u) => u.unitId === unitId);
-      out.push({ unitId, name: trunk?.name || unitId, type: trunk?.type ?? 2 });
+      const trunk = this.trunkUnits.find((u) => u.unitId === unitId)
+      out.push({ unitId, name: trunk?.name || unitId, type: trunk?.type ?? 2 })
     }
-    return out;
+    return out
   }
 
   /** Counts for the worktree's one-line overview (modified / added / deleted). */
   public worktreeChangeSummary(worktree: Worktree): {
-    modified: number;
-    added: number;
-    deleted: number;
+    modified: number
+    added: number
+    deleted: number
   } {
-    let modified = 0;
-    let added = 0;
+    let modified = 0
+    let added = 0
     for (const u of this.worktreeUnits) {
-      const c = this.worktreeUnitChange(worktree, u);
-      if (c === "added") {
-        added++;
-      } else if (c === "modified") {
-        modified++;
+      const c = this.worktreeUnitChange(worktree, u)
+      if (c === 'added') {
+        added++
+      } else if (c === 'modified') {
+        modified++
       }
     }
-    return { modified, added, deleted: this.worktreeDeletedUnits(worktree).length };
+    return { modified, added, deleted: this.worktreeDeletedUnits(worktree).length }
   }
 
   /**
@@ -610,30 +610,30 @@ export class App {
    */
   public unitBadgeInfo(
     worktree: Worktree,
-    u: UnitSummary,
+    u: UnitSummary
   ): { variant: ChangeTagVariant; text: string } | undefined {
-    const p = this.previews.get(worktree.worktreeId)?.units?.find((x) => x.unitId === u.unitId);
+    const p = this.previews.get(worktree.worktreeId)?.units?.find((x) => x.unitId === u.unitId)
     if (p) {
-      return previewBadgeInfo(p);
+      return previewBadgeInfo(p)
     }
-    return changeBadgeInfo(this.worktreeUnitChange(worktree, u));
+    return changeBadgeInfo(this.worktreeUnitChange(worktree, u))
   }
 
   // ---- trunk editing gate (univerfile-level) ----
 
   /** Number of modifications still in progress (draft) or awaiting confirmation (ready). */
   public pendingWorktreeCount(): number {
-    let n = 0;
+    let n = 0
     for (const f of this.worktrees.values()) {
-      if (f.status === "draft" || f.status === "ready") {
-        n++;
+      if (f.status === 'draft' || f.status === 'ready') {
+        n++
       }
     }
-    return n;
+    return n
   }
 
   private hasPendingWorktrees(): boolean {
-    return this.pendingWorktreeCount() > 0;
+    return this.pendingWorktreeCount() > 0
   }
 
   /**
@@ -641,10 +641,10 @@ export class App {
    * pending; when modifications are pending the user must opt in first (and is warned).
    */
   private trunkEditableNow(): boolean {
-    if (this.mode === "embedded" && this.initEditable !== null) {
-      return this.initEditable;
+    if (this.mode === 'embedded' && this.initEditable !== null) {
+      return this.initEditable
     }
-    return !this.hasPendingWorktrees() || this.trunkEditingOptIn;
+    return !this.hasPendingWorktrees() || this.trunkEditingOptIn
   }
 
   /**
@@ -653,13 +653,13 @@ export class App {
    */
   private refreshTrunkGate(): void {
     if (!this.hasPendingWorktrees()) {
-      this.trunkEditingOptIn = false;
+      this.trunkEditingOptIn = false
     }
-    this.emit();
-    if (this.view.kind === "trunk" && this.selectedUnitId !== undefined) {
-      const unit = this.trunkUnits.find((u) => u.unitId === this.selectedUnitId);
+    this.emit()
+    if (this.view.kind === 'trunk' && this.selectedUnitId !== undefined) {
+      const unit = this.trunkUnits.find((u) => u.unitId === this.selectedUnitId)
       if (unit) {
-        void this.viewer.show(this.view, unit, this.trunkEditableNow());
+        void this.viewer.show(this.view, unit, this.trunkEditableNow())
       }
     }
   }
@@ -667,8 +667,8 @@ export class App {
   // ---- lifecycle events (WebSocket) ----
 
   private subscribeUniverfile(): void {
-    this.univerfileEvents?.close();
-    const url = `${ufPrefix(this.cfg)}/events`;
+    this.univerfileEvents?.close()
+    const url = `${ufPrefix(this.cfg)}/events`
     this.univerfileEvents = openEventChannel(url, {
       worktree: (e) => this.onWorktreeEvent(e.worktree),
       // Trunk units must stay current regardless of the active view: the sidebar "Files"
@@ -676,102 +676,102 @@ export class App {
       // adds/removes a file and is then merged from its own view).
       unit_added: (e) => {
         if (!this.trunkUnits.some((u) => u.unitId === e.unitId)) {
-          this.trunkUnits.push({ unitId: e.unitId, type: e.unitType, name: e.name, headRev: 0 });
-          this.emit();
+          this.trunkUnits.push({ unitId: e.unitId, type: e.unitType, name: e.name, headRev: 0 })
+          this.emit()
         }
       },
-      unit_updated: (e) => this.onUnitUpdated("trunk", e),
+      unit_updated: (e) => this.onUnitUpdated('trunk', e),
       unit_removed: (e) => {
-        this.trunkUnits = this.trunkUnits.filter((u) => u.unitId !== e.unitId);
-        this.emit();
+        this.trunkUnits = this.trunkUnits.filter((u) => u.unitId !== e.unitId)
+        this.emit()
       },
       open: () => {
-        void this.reloadAll().then(() => this.refreshTrunkGate());
-      },
-    });
+        void this.reloadAll().then(() => this.refreshTrunkGate())
+      }
+    })
   }
 
   private subscribeWorktree(worktreeId: string): void {
-    this.worktreeEvents?.close();
-    const url = `${ufPrefix(this.cfg)}/worktrees/${worktreeId}/events`;
+    this.worktreeEvents?.close()
+    const url = `${ufPrefix(this.cfg)}/worktrees/${worktreeId}/events`
     this.worktreeEvents = openEventChannel(url, {
       reset: () => {
-        toast(t().toast.agentReset);
-        void this.onWorktreeReset(worktreeId);
+        toast(t().toast.agentReset)
+        void this.onWorktreeReset(worktreeId)
       },
       unit_added: (e) => {
         if (!this.worktreeUnits.some((u) => u.unitId === e.unitId)) {
-          this.worktreeUnits.push({ unitId: e.unitId, type: e.unitType, name: e.name, headRev: 0 });
-          this.emit();
+          this.worktreeUnits.push({ unitId: e.unitId, type: e.unitType, name: e.name, headRev: 0 })
+          this.emit()
         }
       },
-      unit_updated: (e) => this.onUnitUpdated("worktree", e),
+      unit_updated: (e) => this.onUnitUpdated('worktree', e),
       unit_removed: (e) => {
-        this.worktreeUnits = this.worktreeUnits.filter((u) => u.unitId !== e.unitId);
-        this.emit();
+        this.worktreeUnits = this.worktreeUnits.filter((u) => u.unitId !== e.unitId)
+        this.emit()
       },
       open: () => {
-        void this.loadWorktreeUnits(worktreeId).then(() => this.emit());
-      },
-    });
+        void this.loadWorktreeUnits(worktreeId).then(() => this.emit())
+      }
+    })
   }
 
   private onUnitUpdated(
-    scope: "trunk" | "worktree",
-    event: Extract<WorktreeLifecycleEvent, { type: "unit_updated" }>,
+    scope: 'trunk' | 'worktree',
+    event: Extract<WorktreeLifecycleEvent, { type: 'unit_updated' }>
   ): void {
-    const units = scope === "trunk" ? this.trunkUnits : this.worktreeUnits;
-    const index = units.findIndex((unit) => unit.unitId === event.unitId);
+    const units = scope === 'trunk' ? this.trunkUnits : this.worktreeUnits
+    const index = units.findIndex((unit) => unit.unitId === event.unitId)
     if (index < 0) {
-      return;
+      return
     }
-    units[index] = { ...units[index]!, name: event.name, headRev: event.headRev };
-    this.emit();
+    units[index] = { ...units[index]!, name: event.name, headRev: event.headRev }
+    this.emit()
   }
 
   /** reset = true version rollback: re-pull the worktree unit list, then full-rebuild the viewer. */
   private async onWorktreeReset(worktreeId: string): Promise<void> {
-    if (this.view.kind !== "worktree" || this.view.worktreeId !== worktreeId) {
-      return;
+    if (this.view.kind !== 'worktree' || this.view.worktreeId !== worktreeId) {
+      return
     }
-    await this.loadWorktreeUnits(worktreeId);
+    await this.loadWorktreeUnits(worktreeId)
     if (!this.worktreeUnits.some((u) => u.unitId === this.selectedUnitId)) {
-      this.emit();
-      const first = this.worktreeUnits[0];
+      this.emit()
+      const first = this.worktreeUnits[0]
       if (first) {
-        void this.selectWorktreeUnit(worktreeId, first.unitId);
+        void this.selectWorktreeUnit(worktreeId, first.unitId)
       } else {
-        this.viewer.clearView();
-        this.syncUrl();
+        this.viewer.clearView()
+        this.syncUrl()
       }
-      return;
+      return
     }
-    this.emit();
-    await this.viewer.reload();
+    this.emit()
+    await this.viewer.reload()
   }
 
   private onWorktreeEvent(worktree: Worktree): void {
     this.worktreeEventVersions.set(
       worktree.worktreeId,
-      (this.worktreeEventVersions.get(worktree.worktreeId) ?? 0) + 1,
-    );
-    this.applyWorktreeSnapshot(worktree);
+      (this.worktreeEventVersions.get(worktree.worktreeId) ?? 0) + 1
+    )
+    this.applyWorktreeSnapshot(worktree)
   }
 
   private applyWorktreeSnapshot(worktree: Worktree): void {
-    const prev = this.worktrees.get(worktree.worktreeId);
-    this.worktrees.set(worktree.worktreeId, worktree);
+    const prev = this.worktrees.get(worktree.worktreeId)
+    this.worktrees.set(worktree.worktreeId, worktree)
     // If the worktree being viewed reached a terminal state, drop back to the current version.
-    if (this.view.kind === "worktree" && this.view.worktreeId === worktree.worktreeId) {
-      if (worktree.status === "merged") {
-        toast(t().toast.mergedElsewhere);
-        this.exitToHome();
-        return;
+    if (this.view.kind === 'worktree' && this.view.worktreeId === worktree.worktreeId) {
+      if (worktree.status === 'merged') {
+        toast(t().toast.mergedElsewhere)
+        this.exitToHome()
+        return
       }
-      if (worktree.status === "discarded") {
-        toast(t().toast.discardedElsewhere);
-        this.exitToHome();
-        return;
+      if (worktree.status === 'discarded') {
+        toast(t().toast.discardedElsewhere)
+        this.exitToHome()
+        return
       }
       if (
         prev !== undefined &&
@@ -781,302 +781,302 @@ export class App {
       ) {
         // draft <-> ready changes the server-side write policy. Replace the collaboration
         // session so an old tab cannot retain an in-flight/local queue against stale permissions.
-        this.viewer.reload();
+        this.viewer.reload()
       }
     }
     // draft -> ready: the agent just finished; nudge the user and flash that row once.
-    if (prev?.status === "draft" && worktree.status === "ready") {
-      toast(t().toast.workDone(worktree.name || worktree.worktreeId));
-      this.flashWorktreeId = worktree.worktreeId;
+    if (prev?.status === 'draft' && worktree.status === 'ready') {
+      toast(t().toast.workDone(worktree.name || worktree.worktreeId))
+      this.flashWorktreeId = worktree.worktreeId
       window.setTimeout(() => {
         if (this.flashWorktreeId === worktree.worktreeId) {
-          this.flashWorktreeId = undefined;
+          this.flashWorktreeId = undefined
         }
-      }, 2500);
+      }, 2500)
     }
     // Another worktree merging means the latest version may have advanced — recompute the preview
     // of the worktree currently being viewed so "what you'll get" stays honest.
     if (
-      worktree.status === "merged" &&
-      this.view.kind === "worktree" &&
+      worktree.status === 'merged' &&
+      this.view.kind === 'worktree' &&
       this.view.worktreeId !== worktree.worktreeId
     ) {
-      this.recomputeOpenPreview(this.view.worktreeId);
+      this.recomputeOpenPreview(this.view.worktreeId)
     }
-    this.refreshTrunkGate();
+    this.refreshTrunkGate()
   }
 
   /** Re-fetch a viewed worktree's preview after the latest version advanced, and re-render it. */
   private recomputeOpenPreview(worktreeId: string): void {
     void this.refreshPreview(worktreeId).then(() => {
-      if (this.view.kind !== "worktree" || this.view.worktreeId !== worktreeId) {
-        return;
+      if (this.view.kind !== 'worktree' || this.view.worktreeId !== worktreeId) {
+        return
       }
-      toast(t().toast.previewRefreshed);
-      this.emit();
-      const unitId = this.selectedUnitId;
+      toast(t().toast.previewRefreshed)
+      this.emit()
+      const unitId = this.selectedUnitId
       const unit =
-        unitId === undefined ? undefined : this.worktreeUnits.find((u) => u.unitId === unitId);
+        unitId === undefined ? undefined : this.worktreeUnits.find((u) => u.unitId === unitId)
       if (this.viewPreview && unit) {
-        void this.showUnitPreview(worktreeId, unit);
+        void this.showUnitPreview(worktreeId, unit)
       }
-    });
+    })
   }
 
   // ---- navigation ----
 
   private async restoreEmbeddedView(): Promise<void> {
-    if (this.initScope === "trunk" || this.initWorktreeId === null) {
-      this.emit();
-      this.autoSelectFirstTrunk(this.initUnitId ?? undefined);
-      return;
+    if (this.initScope === 'trunk' || this.initWorktreeId === null) {
+      this.emit()
+      this.autoSelectFirstTrunk(this.initUnitId ?? undefined)
+      return
     }
 
-    const initWorktree = this.worktrees.get(this.initWorktreeId);
+    const initWorktree = this.worktrees.get(this.initWorktreeId)
     if (initWorktree && isViewableWorktreeStatus(initWorktree.status)) {
       await this.enterWorktree(
         initWorktree.worktreeId,
         this.initUnitId ?? undefined,
-        this.initScope === "mergePreview" && initWorktree.status === "ready",
-      );
-      return;
+        this.initScope === 'mergePreview' && initWorktree.status === 'ready'
+      )
+      return
     }
 
-    toast(t().toast.worktreeGone);
-    this.emit();
-    this.autoSelectFirstTrunk(this.initUnitId ?? undefined);
+    toast(t().toast.worktreeGone)
+    this.emit()
+    this.autoSelectFirstTrunk(this.initUnitId ?? undefined)
   }
 
   private contentScope(): AppContentScope {
-    if (this.view.kind === "trunk") {
-      return "trunk";
+    if (this.view.kind === 'trunk') {
+      return 'trunk'
     }
-    return this.viewPreview ? "mergePreview" : "worktree";
+    return this.viewPreview ? 'mergePreview' : 'worktree'
   }
 
   /** Enter a worktree and show its first unit in the content pane. The sidebar stays put. */
   public async enterWorktree(
     worktreeId: string,
     preferUnitId?: string,
-    forcePreview?: boolean,
+    forcePreview?: boolean
   ): Promise<void> {
-    this.view = { kind: "worktree", worktreeId };
-    this.selectedUnitId = undefined;
-    await this.loadWorktreeUnits(worktreeId);
-    await this.refreshPreview(worktreeId);
+    this.view = { kind: 'worktree', worktreeId }
+    this.selectedUnitId = undefined
+    await this.loadWorktreeUnits(worktreeId)
+    await this.refreshPreview(worktreeId)
     // Default to the merge preview when the worktree has fallen behind the latest version.
-    this.viewPreview = forcePreview ?? this.previews.get(worktreeId)?.diverged ?? false;
-    this.subscribeWorktree(worktreeId);
-    this.emit();
+    this.viewPreview = forcePreview ?? this.previews.get(worktreeId)?.diverged ?? false
+    this.subscribeWorktree(worktreeId)
+    this.emit()
     const pick =
       (preferUnitId !== undefined
         ? this.worktreeUnits.find((u) => u.unitId === preferUnitId)
-        : undefined) ?? this.worktreeUnits[0];
+        : undefined) ?? this.worktreeUnits[0]
     if (pick) {
-      void this.selectWorktreeUnit(worktreeId, pick.unitId);
+      void this.selectWorktreeUnit(worktreeId, pick.unitId)
     } else {
-      this.viewer.clearView();
-      this.syncUrl();
+      this.viewer.clearView()
+      this.syncUrl()
     }
   }
 
   /** Back to the current version (trunk) — used after merge/discard. */
   private exitToHome(): void {
-    this.view = { kind: "trunk" };
-    this.selectedUnitId = undefined;
-    this.viewPreview = false;
-    this.worktreeEvents?.close();
-    this.worktreeEvents = undefined;
-    this.emit();
-    this.autoSelectFirstTrunk();
+    this.view = { kind: 'trunk' }
+    this.selectedUnitId = undefined
+    this.viewPreview = false
+    this.worktreeEvents?.close()
+    this.worktreeEvents = undefined
+    this.emit()
+    this.autoSelectFirstTrunk()
   }
 
   private autoSelectFirstTrunk(preferUnitId?: string): void {
     const pick =
       (preferUnitId !== undefined
         ? this.trunkUnits.find((u) => u.unitId === preferUnitId)
-        : undefined) ?? this.trunkUnits[0];
+        : undefined) ?? this.trunkUnits[0]
     if (pick) {
-      void this.selectTrunkUnit(pick.unitId);
+      void this.selectTrunkUnit(pick.unitId)
     } else {
-      this.viewer.clearView();
-      this.syncUrl();
+      this.viewer.clearView()
+      this.syncUrl()
     }
   }
 
   /** Show a trunk (current-version) unit, leaving any worktree view. */
   public async selectTrunkUnit(unitId: string): Promise<void> {
-    if (this.view.kind === "worktree") {
-      this.worktreeEvents?.close();
-      this.worktreeEvents = undefined;
-      this.view = { kind: "trunk" };
+    if (this.view.kind === 'worktree') {
+      this.worktreeEvents?.close()
+      this.worktreeEvents = undefined
+      this.view = { kind: 'trunk' }
     }
-    const unit = this.trunkUnits.find((u) => u.unitId === unitId);
+    const unit = this.trunkUnits.find((u) => u.unitId === unitId)
     if (!unit) {
-      return;
+      return
     }
-    this.selectedUnitId = unitId;
-    this.emit();
-    await this.viewer.show(this.view, unit, this.trunkEditableNow());
+    this.selectedUnitId = unitId
+    this.emit()
+    await this.viewer.show(this.view, unit, this.trunkEditableNow())
   }
 
   /** Show a unit of the given worktree in the content pane (merge preview or original edits). */
   public async selectWorktreeUnit(worktreeId: string, unitId: string): Promise<void> {
-    const unit = this.worktreeUnits.find((u) => u.unitId === unitId);
+    const unit = this.worktreeUnits.find((u) => u.unitId === unitId)
     if (!unit) {
-      return;
+      return
     }
-    this.view = { kind: "worktree", worktreeId };
-    this.selectedUnitId = unitId;
-    this.emit();
+    this.view = { kind: 'worktree', worktreeId }
+    this.selectedUnitId = unitId
+    this.emit()
     if (this.viewPreview) {
-      await this.showUnitPreview(worktreeId, unit);
+      await this.showUnitPreview(worktreeId, unit)
     } else {
-      await this.viewer.show(this.view, unit, false);
+      await this.viewer.show(this.view, unit, false)
     }
   }
 
   /** Render one unit's read-only merge preview; a deleted/errored unit shows a message instead. */
   private async showUnitPreview(worktreeId: string, unit: UnitSummary): Promise<void> {
     try {
-      const data = await this.control.getMergePreviewUnit(worktreeId, unit.unitId);
+      const data = await this.control.getMergePreviewUnit(worktreeId, unit.unitId)
       if (data.error.code !== 1 || data.snapshot === undefined) {
-        this.viewer.showMessage(data.error.message || t().viewer.previewUnitUnrenderable);
-        return;
+        this.viewer.showMessage(data.error.message || t().viewer.previewUnitUnrenderable)
+        return
       }
-      await this.viewer.showPreview(worktreeId, unit, data);
+      await this.viewer.showPreview(worktreeId, unit, data)
     } catch (error) {
-      this.viewer.showMessage(t().viewer.previewLoadFailed(String(error)));
+      this.viewer.showMessage(t().viewer.previewLoadFailed(String(error)))
     }
   }
 
   /** Toggle the current worktree between merge preview and original edits, then re-render the unit. */
   public setViewPreview(preview: boolean): void {
-    if (this.viewPreview === preview || this.view.kind !== "worktree") {
-      return;
+    if (this.viewPreview === preview || this.view.kind !== 'worktree') {
+      return
     }
-    this.viewPreview = preview;
-    const worktreeId = this.view.worktreeId;
-    const unitId = this.selectedUnitId;
-    this.emit();
+    this.viewPreview = preview
+    const worktreeId = this.view.worktreeId
+    const unitId = this.selectedUnitId
+    this.emit()
     if (unitId !== undefined) {
-      void this.selectWorktreeUnit(worktreeId, unitId);
+      void this.selectWorktreeUnit(worktreeId, unitId)
     }
   }
 
   // ---- actions ----
 
   private actionUnitChips(worktreeId: string): DialogChip[] {
-    if (this.view.kind !== "worktree" || this.view.worktreeId !== worktreeId) {
-      return [];
+    if (this.view.kind !== 'worktree' || this.view.worktreeId !== worktreeId) {
+      return []
     }
-    const worktree = this.worktrees.get(worktreeId);
+    const worktree = this.worktrees.get(worktreeId)
     if (worktree === undefined) {
-      return [];
+      return []
     }
     const changed = this.worktreeUnits
-      .filter((unit) => this.worktreeUnitChange(worktree, unit) !== "unchanged")
-      .map((unit) => ({ id: `unit:${unit.unitId}`, label: unit.name }));
+      .filter((unit) => this.worktreeUnitChange(worktree, unit) !== 'unchanged')
+      .map((unit) => ({ id: `unit:${unit.unitId}`, label: unit.name }))
     const deleted = this.worktreeDeletedUnits(worktree).map((unit) => ({
       id: `deleted:${unit.unitId}`,
-      label: unit.name,
-    }));
-    return [...changed, ...deleted];
+      label: unit.name
+    }))
+    return [...changed, ...deleted]
   }
 
   public async doReady(worktreeId: string): Promise<void> {
-    const worktree = this.worktrees.get(worktreeId);
+    const worktree = this.worktrees.get(worktreeId)
     const ok = await confirmDialog({
       title: t().modal.readyTitle,
       body: t().modal.readyBody(escapeHtml(worktree?.name ?? worktreeId)),
       chips: this.actionUnitChips(worktreeId),
       confirmLabel: t().modal.readyConfirm,
-      icon: "check",
-      tone: "info",
-    });
+      icon: 'check',
+      tone: 'info'
+    })
     if (!ok) {
-      return;
+      return
     }
-    const eventVersion = this.worktreeEventVersions.get(worktreeId) ?? 0;
-    this.setBusy(true);
+    const eventVersion = this.worktreeEventVersions.get(worktreeId) ?? 0
+    this.setBusy(true)
     try {
-      const res = await this.control.ready(worktreeId);
+      const res = await this.control.ready(worktreeId)
       if (!res.ok || res.error.code !== 1) {
-        throw new Error(res.error.message || "Unknown gateway error");
+        throw new Error(res.error.message || 'Unknown gateway error')
       }
       // The gateway emits the lifecycle event before completing this request, but transports are
       // unordered. Never let this response replace a newer reopen/merge/discard WebSocket event.
       if ((this.worktreeEventVersions.get(worktreeId) ?? 0) === eventVersion) {
-        this.applyWorktreeSnapshot(res.worktree);
+        this.applyWorktreeSnapshot(res.worktree)
       }
     } catch (error) {
-      toast(t().toast.readyFailed(String(error)));
+      toast(t().toast.readyFailed(String(error)))
     } finally {
-      this.setBusy(false);
+      this.setBusy(false)
     }
   }
 
   public async doMerge(worktreeId: string): Promise<void> {
-    const worktree = this.worktrees.get(worktreeId);
+    const worktree = this.worktrees.get(worktreeId)
     const ok = await confirmDialog({
       title: t().modal.mergeTitle,
       body: t().modal.mergeBody(escapeHtml(worktree?.name ?? worktreeId)),
       chips: this.actionUnitChips(worktreeId),
       confirmLabel: t().modal.mergeConfirm,
-      icon: "merge",
-      tone: "info",
-    });
+      icon: 'merge',
+      tone: 'info'
+    })
     if (!ok) {
-      return;
+      return
     }
-    this.setBusy(true);
+    this.setBusy(true)
     try {
-      const res = await this.control.merge(worktreeId);
+      const res = await this.control.merge(worktreeId)
       if (res.error.code !== 1) {
-        throw new Error(res.error.message || "Unknown gateway error");
+        throw new Error(res.error.message || 'Unknown gateway error')
       }
       if (res.ok) {
-        toast(t().toast.merged);
+        toast(t().toast.merged)
         // Refresh trunk units (and worktree statuses) before returning home so the file list
         // reflects the merge even if the Univerfile WebSocket event has not arrived yet.
-        await this.reloadAll();
-        this.exitToHome();
+        await this.reloadAll()
+        this.exitToHome()
       } else {
-        await conflictDialog(res.failedUnit);
+        await conflictDialog(res.failedUnit)
       }
     } catch (error) {
-      toast(t().toast.mergeFailed(String(error)));
+      toast(t().toast.mergeFailed(String(error)))
     } finally {
-      this.setBusy(false);
+      this.setBusy(false)
     }
   }
 
   public async doDiscard(worktreeId: string): Promise<void> {
-    const worktree = this.worktrees.get(worktreeId);
+    const worktree = this.worktrees.get(worktreeId)
     const ok = await confirmDialog({
       title: t().modal.discardTitle,
       body: t().modal.discardBody(escapeHtml(worktree?.name ?? worktreeId)),
       chips: [
-        { id: "discard-summary", label: t().modal.discardChip },
-        ...this.actionUnitChips(worktreeId),
+        { id: 'discard-summary', label: t().modal.discardChip },
+        ...this.actionUnitChips(worktreeId)
       ],
       confirmLabel: t().modal.discardConfirm,
-      danger: true,
-    });
+      danger: true
+    })
     if (!ok) {
-      return;
+      return
     }
-    this.setBusy(true);
+    this.setBusy(true)
     try {
-      const res = await this.control.discard(worktreeId);
+      const res = await this.control.discard(worktreeId)
       if (res.error.code !== 1) {
-        throw new Error(res.error.message || "Unknown gateway error");
+        throw new Error(res.error.message || 'Unknown gateway error')
       }
       // The server emits a `worktree` (discarded) over the univerfile channel; onWorktreeEvent handles exit.
     } catch (error) {
-      toast(t().toast.discardFailed(String(error)));
+      toast(t().toast.discardFailed(String(error)))
     } finally {
-      this.setBusy(false);
+      this.setBusy(false)
     }
   }
 
@@ -1084,97 +1084,97 @@ export class App {
 
   public async chooseLang(lang: Lang): Promise<void> {
     if (lang === currentLang() && this.languageLoading === undefined) {
-      return;
+      return
     }
-    const generation = ++this.languageGeneration;
-    const locale = sdkLocaleOf(lang);
-    this.languageLoading = lang;
-    this.languageError = false;
-    this.emit();
+    const generation = ++this.languageGeneration
+    const locale = sdkLocaleOf(lang)
+    this.languageLoading = lang
+    this.languageError = false
+    this.emit()
     try {
-      const [messages] = await Promise.all([loadMessages(lang), this.viewer.prepareLocale(locale)]);
+      const [messages] = await Promise.all([loadMessages(lang), this.viewer.prepareLocale(locale)])
       if (generation !== this.languageGeneration) {
-        return;
+        return
       }
-      await this.viewer.setLocale(locale, messages);
+      await this.viewer.setLocale(locale, messages)
       if (generation !== this.languageGeneration) {
-        return;
+        return
       }
-      activateLang(lang, messages);
-      persistLang(lang);
-      this.langInUrl = true;
-      applyDocumentLang();
-      this.languageLoading = undefined;
-      this.languageError = false;
-      this.emit();
+      activateLang(lang, messages)
+      persistLang(lang)
+      this.langInUrl = true
+      applyDocumentLang()
+      this.languageLoading = undefined
+      this.languageError = false
+      this.emit()
     } catch {
       if (generation !== this.languageGeneration) {
-        return;
+        return
       }
-      this.languageLoading = undefined;
-      this.languageError = true;
-      this.emit();
+      this.languageLoading = undefined
+      this.languageError = true
+      this.emit()
     }
   }
 
   public chooseAppearance(appearance: Appearance): void {
     if (appearance === currentAppearance()) {
-      return;
+      return
     }
-    setAppearance(appearance);
-    persistAppearance(appearance);
-    applyDocumentAppearance();
-    this.viewer.setDarkMode(appearance === "dark");
-    this.emit();
+    setAppearance(appearance)
+    persistAppearance(appearance)
+    applyDocumentAppearance()
+    this.viewer.setDarkMode(appearance === 'dark')
+    this.emit()
   }
 
   public setSidebarCollapsed(collapsed: boolean): void {
     if (collapsed === this.sidebarCollapsed) {
-      return;
+      return
     }
-    this.sidebarCollapsed = collapsed;
-    persistSidebarCollapsed(collapsed);
-    this.emit();
+    this.sidebarCollapsed = collapsed
+    persistSidebarCollapsed(collapsed)
+    this.emit()
   }
 
   // ---- trunk editing gate actions ----
 
   /** Warn about pending modifications, then let the user edit the current version anyway. */
   public async startTrunkEdit(): Promise<void> {
-    const n = this.pendingWorktreeCount();
+    const n = this.pendingWorktreeCount()
     const ok = await confirmDialog({
       title: t().modal.trunkEditTitle,
       body: t().modal.trunkEditBody(n),
-      chips: [{ id: "trunk-edit-warning", label: t().modal.trunkEditChip }],
+      chips: [{ id: 'trunk-edit-warning', label: t().modal.trunkEditChip }],
       confirmLabel: t().modal.trunkEditConfirm,
-      icon: "pencil",
-      tone: "warn",
-    });
+      icon: 'pencil',
+      tone: 'warn'
+    })
     if (!ok) {
-      return;
+      return
     }
-    this.trunkEditingOptIn = true;
-    this.refreshTrunkGate();
+    this.trunkEditingOptIn = true
+    this.refreshTrunkGate()
   }
 
   /** Stop editing the current version; back to view-only (modifications still pending). */
   public stopTrunkEdit(): void {
-    this.trunkEditingOptIn = false;
-    this.refreshTrunkGate();
+    this.trunkEditingOptIn = false
+    this.refreshTrunkGate()
   }
 
   // ---- busy overlay ----
 
   private setBusy(on: boolean): void {
     if (this.busy === on) {
-      return;
+      return
     }
-    this.busy = on;
-    this.emit();
+    this.busy = on
+    this.emit()
   }
 
   /** Units the topbar should resolve names against for the current view. */
   public topbarUnits(): UnitSummary[] {
-    return this.currentUnits();
+    return this.currentUnits()
   }
 }

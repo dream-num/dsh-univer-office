@@ -11,26 +11,45 @@ export function exportTool(ctx: Context, timeoutMs: number) {
     description: 'Export a .univer document or unit to a user-facing file format.',
     timeoutMs,
     parameters: {
-      file: { type: 'string', required: true, description: 'Workspace-relative or absolute .univer path.' },
-      output: { type: 'string', required: true, description: 'Workspace-relative or absolute output file path.' },
-      unitId: { type: 'string', required: true, description: 'Explicit Unit id from univer_status.' },
-      worktreeId: { type: 'string', description: 'Optional worktree scope; omit to export trunk.' },
+      file: {
+        type: 'string',
+        required: true,
+        description: 'Workspace-relative or absolute .univer path.'
+      },
+      output: {
+        type: 'string',
+        required: true,
+        description: 'Workspace-relative or absolute output file path.'
+      },
+      unitId: {
+        type: 'string',
+        required: true,
+        description: 'Explicit Unit id from univer_status.'
+      },
+      worktreeId: { type: 'string', description: 'Optional worktree scope; omit to export trunk.' }
     },
     output: operationOutput,
     async execute(args, exec) {
       const [target, output] = await Promise.all([
         existingToolFile(exec, args.file),
-        newToolPath(exec, args.output),
+        newToolPath(exec, args.output)
       ])
-      return ctx.univer.exportUnitContent({
-        workspace: target.workspace,
-        file: target.path,
-        outputWorkspace: output.workspace,
-        output: output.path,
-        unitId: unitId(args.unitId),
-        ...args.worktreeId === undefined ? {} : { worktreeId: worktreeId(args.worktreeId) },
-      }, exec.signal)
+      return ctx.univer.exportUnitContent(
+        {
+          workspace: target.workspace,
+          file: target.path,
+          outputWorkspace: output.workspace,
+          output: output.path,
+          unitId: unitId(args.unitId),
+          ...(args.worktreeId === undefined ? {} : { worktreeId: worktreeId(args.worktreeId) })
+        },
+        exec.signal
+      )
     },
-    presentCall: (args) => ({ card: 'generic', title: operationTitle('export', args.file), kind: 'execute' }),
+    presentCall: (args) => ({
+      card: 'generic',
+      title: operationTitle('export', args.file),
+      kind: 'execute'
+    })
   })
 }

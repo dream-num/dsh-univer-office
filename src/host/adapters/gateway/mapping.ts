@@ -23,15 +23,18 @@ export interface GatewayUnit {
 export function mapWorktrees(value: JsonValue): GatewayWorktree[] {
   if (!isRecord(value) || !Array.isArray(value.worktrees)) return []
   return value.worktrees.flatMap((entry) => {
-    if (!isRecord(entry) || typeof entry.worktreeId !== 'string' || !isWorktreeStatus(entry.status)) return []
-    return [{
-      worktreeId: entry.worktreeId,
-      name: typeof entry.name === 'string' ? entry.name : '',
-      status: entry.status,
-      baseline: numberRecord(entry.baseline),
-      ...typeof entry.createdAt === 'string' ? { createdAt: entry.createdAt } : {},
-      ...typeof entry.mergedAt === 'string' ? { mergedAt: entry.mergedAt } : {},
-    }]
+    if (!isRecord(entry) || typeof entry.worktreeId !== 'string' || !isWorktreeStatus(entry.status))
+      return []
+    return [
+      {
+        worktreeId: entry.worktreeId,
+        name: typeof entry.name === 'string' ? entry.name : '',
+        status: entry.status,
+        baseline: numberRecord(entry.baseline),
+        ...(typeof entry.createdAt === 'string' ? { createdAt: entry.createdAt } : {}),
+        ...(typeof entry.mergedAt === 'string' ? { mergedAt: entry.mergedAt } : {})
+      }
+    ]
   })
 }
 
@@ -39,36 +42,47 @@ export function mapWorktrees(value: JsonValue): GatewayWorktree[] {
 export function mapUnits(value: JsonValue): GatewayUnit[] {
   if (!isRecord(value) || !Array.isArray(value.units)) return []
   return value.units.flatMap((entry) => {
-    if (!isRecord(entry) || typeof entry.unitId !== 'string' || typeof entry.type !== 'number') return []
-    return [{
-      unitId: entry.unitId,
-      name: typeof entry.name === 'string' ? entry.name : '',
-      type: entry.type,
-      headRev: typeof entry.headRev === 'number' && Number.isSafeInteger(entry.headRev) ? entry.headRev : 0,
-    }]
+    if (!isRecord(entry) || typeof entry.unitId !== 'string' || typeof entry.type !== 'number')
+      return []
+    return [
+      {
+        unitId: entry.unitId,
+        name: typeof entry.name === 'string' ? entry.name : '',
+        type: entry.type,
+        headRev:
+          typeof entry.headRev === 'number' && Number.isSafeInteger(entry.headRev)
+            ? entry.headRev
+            : 0
+      }
+    ]
   })
 }
 
 function numberRecord(value: JsonValue | undefined): Readonly<Record<string, number>> {
   if (!isRecord(value)) return {}
-  return Object.fromEntries(Object.entries(value).flatMap(([key, entry]) => (
-    typeof entry === 'number' && Number.isSafeInteger(entry) ? [[key, entry]] : []
-  )))
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, entry]) =>
+      typeof entry === 'number' && Number.isSafeInteger(entry) ? [[key, entry]] : []
+    )
+  )
 }
 
 /** Validate and map changed units from a Gateway merge preview. */
 export function mapChangedUnits(value: JsonValue): ChangedUnit[] {
   if (!isRecord(value) || !Array.isArray(value.units)) return []
   return value.units.flatMap((entry) => {
-    if (!isRecord(entry) || typeof entry.unitId !== 'string' || entry.status === 'unchanged') return []
+    if (!isRecord(entry) || typeof entry.unitId !== 'string' || entry.status === 'unchanged')
+      return []
     const kind = changeKind(entry.status)
     if (kind === null) return []
-    return [{
-      unitId: entry.unitId,
-      name: typeof entry.name === 'string' ? entry.name : '',
-      type: unitKind(entry.type),
-      kind,
-    }]
+    return [
+      {
+        unitId: entry.unitId,
+        name: typeof entry.name === 'string' ? entry.name : '',
+        type: unitKind(entry.type),
+        kind
+      }
+    ]
   })
 }
 

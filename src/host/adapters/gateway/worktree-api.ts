@@ -9,20 +9,24 @@ export class GatewayWorktreeApi {
 
   /** Return merge-preview metadata for one worktree. */
   preview(file: string, worktreeId: string): Promise<JsonValue> {
-    return this.client.get(`/uf/${fileKeyOf(file)}/worktrees/${encodeURIComponent(worktreeId)}/preview`)
+    return this.client.get(
+      `/uf/${fileKeyOf(file)}/worktrees/${encodeURIComponent(worktreeId)}/preview`
+    )
   }
 
   /** Create an isolated worktree for agent edits. */
   create(file: string, name: string | undefined): Promise<JsonValue> {
     return this.client.post(`/uf/${fileKeyOf(file)}/worktrees`, {
       agentId: 'dsh-agent',
-      name: name ?? 'DSH agent worktree',
+      name: name ?? 'DSH agent worktree'
     })
   }
 
   /** Return Units visible inside one worktree. */
   listUnits(file: string, worktreeId: string): Promise<JsonValue> {
-    return this.client.get(`/uf/${fileKeyOf(file)}/worktrees/${encodeURIComponent(worktreeId)}/units`)
+    return this.client.get(
+      `/uf/${fileKeyOf(file)}/worktrees/${encodeURIComponent(worktreeId)}/units`
+    )
   }
 
   /** Create a Unit inside a draft worktree. */
@@ -31,11 +35,11 @@ export class GatewayWorktreeApi {
     worktreeId: string,
     kind: UniverUnitKind,
     name: string,
-    snapshot?: JsonValue,
+    snapshot?: JsonValue
   ): Promise<JsonValue> {
     return this.client.post(
       `/uf/${fileKeyOf(file)}/worktrees/${encodeURIComponent(worktreeId)}/units`,
-      { type: unitType(kind), name, ...(snapshot === undefined ? {} : { snapshot }) },
+      { type: unitType(kind), name, ...(snapshot === undefined ? {} : { snapshot }) }
     )
   }
 
@@ -43,13 +47,15 @@ export class GatewayWorktreeApi {
   removeUnit(file: string, worktreeId: string, unitId: string): Promise<JsonValue> {
     return this.client.post(
       `/uf/${fileKeyOf(file)}/worktrees/${encodeURIComponent(worktreeId)}/units/${encodeURIComponent(unitId)}/remove`,
-      {},
+      {}
     )
   }
 
   /** Apply one worktree lifecycle transition. */
   action(file: string, worktreeId: string, action: WorktreeReviewAction): Promise<JsonValue> {
-    return this.client.post(`/uf/${fileKeyOf(file)}/worktrees/${encodeURIComponent(worktreeId)}/${action}`)
+    return this.client.post(
+      `/uf/${fileKeyOf(file)}/worktrees/${encodeURIComponent(worktreeId)}/${action}`
+    )
   }
 }
 

@@ -1,1 +1,1 @@
-export const menuSchema = [];
+export const menuSchema = []

@@ -130,11 +130,14 @@ Font size is in points while positions and boxes use pixels. Convert design pixe
 Do not rely on text-box defaults. Explicitly set wrapping, auto-fit, and padding. For measured single-line text:
 
 ```js
-shape.getText().setText("...").setTextBoxOptions({
-  textWrap: univerAPI.Enum.ShapeTextWrapType.None,
-  autoFitType: univerAPI.Enum.ShapeTextAutoFitType.NoAutoFit,
-  padding: { left: 0, top: 0, right: 0, bottom: 0 },
-});
+shape
+  .getText()
+  .setText('...')
+  .setTextBoxOptions({
+    textWrap: univerAPI.Enum.ShapeTextWrapType.None,
+    autoFitType: univerAPI.Enum.ShapeTextAutoFitType.NoAutoFit,
+    padding: { left: 0, top: 0, right: 0, bottom: 0 }
+  })
 ```
 
 For wrapped text, use `Square`, explicit padding, and enough height. A starting estimate is `lines × fontSizePx × 1.4`. `univer_compile_svg` emits the measured single-line contract automatically.
@@ -148,19 +151,19 @@ Styled text is a flat stream plus `[st, ed)` text runs. Each paragraph ends in `
 Copy rich text immediately, including for reads:
 
 ```js
-shape.getText().getRichText()?.copy()?.toPlainText();
+shape.getText().getRichText()?.copy()?.toPlainText()
 ```
 
 Without `copy()`, `getTextRuns()` can silently return an empty array. Edit the copy and persist it with `setRichText`:
 
 ```js
-const rt = shape.getText().getRichText().copy();
+const rt = shape.getText().getRichText().copy()
 for (const paragraph of rt.getParagraphs()) {
   for (const run of paragraph.getTextRuns()) {
-    if (run.getText() === "48%") run.setText("52%");
+    if (run.getText() === '48%') run.setText('52%')
   }
 }
-shape.getText().setRichText(rt);
+shape.getText().setRichText(rt)
 ```
 
 `run.setText()` keeps style and shifts later runs. Emptying a run invalidates its handle. After any insert/delete, reacquire run handles. Insert unstyled text first and then apply style; always pass both offsets to deletion. Prove each write with a fresh read-only execution.
@@ -202,14 +205,14 @@ Create detached chart information directly from the slide, call `.build()`, then
 `slide.insertChart(info)` to obtain a live `FSlideChart`:
 
 ```js
-const slide = presentation.getSlideByIndex(0);
+const slide = presentation.getSlideByIndex(0)
 const info = slide
   .newChart(univerAPI.Enum.ChartTypeString.Donut)
-  .setTitle({ text: "Design Elements" })
+  .setTitle({ text: 'Design Elements' })
   .setSource([
-    ["Design element", "Share"],
-    ["Color", 30],
-    ["Composition", 22],
+    ['Design element', 'Share'],
+    ['Color', 30],
+    ['Composition', 22]
   ])
   .setCategoryField(0)
   .setValueFields([1])
@@ -217,9 +220,9 @@ const info = slide
   .setLegend(true)
   .setAbsolutePosition(390, 160)
   .setSize(260, 220)
-  .build();
-const inserted = await slide.insertChart(info);
-return { chartId: inserted.getId(), info: inserted.getInfo(), resource: inserted.getChartData() };
+  .build()
+const inserted = await slide.insertChart(info)
+return { chartId: inserted.getId(), info: inserted.getInfo(), resource: inserted.getChartData() }
 ```
 
 `slide.getCharts()` and `slide.getChart(id)` return live charts. Await
@@ -235,13 +238,13 @@ element.
 A transition belongs to the destination slide. Query transition APIs before use and verify only through `getTransition()`; inspection and lint do not prove playback.
 
 ```js
-const slide = presentation.getSlideByIndex(2);
+const slide = presentation.getSlideByIndex(2)
 slide.setTransition({
   type: univerAPI.Enum.SlideTransitionTypeEnum.Push,
   duration: 1000,
-  direction: univerAPI.Enum.SlideTransitionDirectionEnum.Right,
-});
-return slide.getTransition();
+  direction: univerAPI.Enum.SlideTransitionDirectionEnum.Right
+})
+return slide.getTransition()
 ```
 
 Direction applies only to directional transition types and can otherwise be dropped. Auto-advance and sound fields are stored but not played; do not claim support.

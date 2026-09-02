@@ -14,11 +14,11 @@ Resolve exact methods with `univer_api`, especially `FBoard.insertShape`, `FBoar
 ```js
 const shape = board.insertShape({
   shapeType: api.Enum.ShapeTypeEnum.RoundRect,
-  transform: { left: 80, top: 80, width: 180, height: 100 },
-});
-if (!shape) throw new Error("Cannot insert Board shape");
-shape.getText().setText("Review");
-return { shapeId: shape.getId(), elements: board.describeElements() };
+  transform: { left: 80, top: 80, width: 180, height: 100 }
+})
+if (!shape) throw new Error('Cannot insert Board shape')
+shape.getText().setText('Review')
+return { shapeId: shape.getId(), elements: board.describeElements() }
 ```
 
 `insertShape` accepts `IShapeCreateInput`: geometry belongs in `transform`, visual data belongs in `shapeData`, and text is edited through the returned live handle. It does not accept top-level `id`, `left`, `top`, `width`, `height`, or `text`. Retain generated IDs immediately.
@@ -39,35 +39,35 @@ Branch endpoints need deliberate port separation. On one source side, order norm
 const shapes = board.insertShapes([
   {
     shapeType: api.Enum.ShapeTypeEnum.RoundRect,
-    transform: { left: 80, top: 80, width: 180, height: 100 },
+    transform: { left: 80, top: 80, width: 180, height: 100 }
   },
   {
     shapeType: api.Enum.ShapeTypeEnum.RoundRect,
-    transform: { left: 400, top: 80, width: 180, height: 100 },
-  },
-]);
-if (!shapes) throw new Error("Cannot insert Board shapes");
-const source = shapes[0];
-const target = shapes[1];
-if (!source || !target) throw new Error("Expected two Board shapes");
+    transform: { left: 400, top: 80, width: 180, height: 100 }
+  }
+])
+if (!shapes) throw new Error('Cannot insert Board shapes')
+const source = shapes[0]
+const target = shapes[1]
+if (!source || !target) throw new Error('Expected two Board shapes')
 if (
   !board.arrangeElementsInLayers([[source.getId()], [target.getId()]], {
-    direction: "horizontal",
-    start: { x: 80, y: 80 },
+    direction: 'horizontal',
+    start: { x: 80, y: 80 }
   })
 )
-  throw new Error("Cannot arrange Board shapes");
+  throw new Error('Cannot arrange Board shapes')
 const connectors = board.insertConnectors([
   {
     start: { elementId: source.getId() },
     end: { elementId: target.getId() },
-    style: { endMarker: { type: "filledTriangle", size: "md" } },
-  },
-]);
-if (!connectors) throw new Error("Cannot insert Board connectors");
-const analysis = board.analyzeModelLayout(48);
-if (!analysis) throw new Error("Cannot analyze Board layout");
-return { connectorIds: connectors.map((item) => item.id), analysis };
+    style: { endMarker: { type: 'filledTriangle', size: 'md' } }
+  }
+])
+if (!connectors) throw new Error('Cannot insert Board connectors')
+const analysis = board.analyzeModelLayout(48)
+if (!analysis) throw new Error('Cannot analyze Board layout')
+return { connectorIds: connectors.map((item) => item.id), analysis }
 ```
 
 Treat `element-overlap`, `connector-through-element`, `connector-collinear-overlap`, and `connector-terminal-direction-reversed` as blocking. Treat `connector-crossing` and `connector-excessive-detour` as warnings that still need local review. A reversed terminal means the rendered line approaches a bound endpoint against its outward normal; an excessive detour means an orthogonal route is over three times the direct distance with material extra length. Fix endpoint sides, spacing, or the outer lane instead of accepting either result. Model analysis deliberately reports an auto connector without persisted route points as unresolved. Do not infer that it is clear: browser rendering owns its final route.
@@ -89,30 +89,30 @@ Connector animation is off by default. When a diagram has a small number of impo
 Use `style.animation.mode` to choose the visual: `dash` moves a dash pattern, `particle` moves one dot, `pulse` highlights the full path, `gradient` moves a fading highlight, `particles` renders a repeated dot sequence, and `arrows` renders repeated directional arrowheads. `direction` is `forward` from connector start to end or `reverse`; it does not depend on marker placement and is ignored by `pulse`. `speed` is a positive multiplier; use `0.5`, `1`, or `2` for the floating menu's slow, normal, and fast presets. Use `board.setConnectorStyle(id, { animation: null })` to disable animation; omitting `animation` preserves its current value.
 
 ```js
-const modes = ["dash", "particle", "pulse", "gradient", "particles", "arrows"];
+const modes = ['dash', 'particle', 'pulse', 'gradient', 'particles', 'arrows']
 const connectors = board.insertConnectors(
   modes.map((mode, index) => ({
-    start: { kind: "free", x: 120, y: 100 + index * 80 },
-    end: { kind: "free", x: 620, y: 100 + index * 80 },
-    routing: "straight",
+    start: { kind: 'free', x: 120, y: 100 + index * 80 },
+    end: { kind: 'free', x: 620, y: 100 + index * 80 },
+    routing: 'straight',
     style: {
-      stroke: index % 2 === 0 ? "#0f766e" : "#b45309",
+      stroke: index % 2 === 0 ? '#0f766e' : '#b45309',
       strokeWidth: 3,
-      endMarker: { type: "filledTriangle", size: "md" },
+      endMarker: { type: 'filledTriangle', size: 'md' },
       animation: {
         mode,
-        direction: index % 2 === 0 ? "forward" : "reverse",
-        speed: index < 2 ? 0.5 : index < 4 ? 1 : 2,
-      },
+        direction: index % 2 === 0 ? 'forward' : 'reverse',
+        speed: index < 2 ? 0.5 : index < 4 ? 1 : 2
+      }
     },
-    labelText: mode,
-  })),
-);
-if (!connectors) throw new Error("Cannot insert animated connectors");
+    labelText: mode
+  }))
+)
+if (!connectors) throw new Error('Cannot insert animated connectors')
 return connectors.map((connector) => ({
   id: connector.id,
-  animation: board.getConnectorStyle(connector.id)?.animation,
-}));
+  animation: board.getConnectorStyle(connector.id)?.animation
+}))
 ```
 
 A still screenshot verifies geometry, labels, and persisted styles but cannot prove motion direction or speed. After model and rendered layout checks pass, review the DSH live Board preview for at least one full animation cycle. Confirm that markers remain static, moving effects follow rounded/curved paths, labels interrupt animated paint cleanly, and reverse arrows point along their actual travel direction.
@@ -131,20 +131,20 @@ insertion to obtain a live `FBoardChart`:
 ```js
 const info = board
   .newChart(univerAPI.Enum.ChartTypeString.Column)
-  .setTitle({ text: "Quarterly Revenue" })
+  .setTitle({ text: 'Quarterly Revenue' })
   .setSource([
-    ["Quarter", "Revenue"],
-    ["Q1", 12],
-    ["Q2", 18],
-    ["Q3", 15],
+    ['Quarter', 'Revenue'],
+    ['Q1', 12],
+    ['Q2', 18],
+    ['Q3', 15]
   ])
   .setCategoryField(0)
   .setValueFields([1])
   .setAbsolutePosition(80, 80)
   .setSize(640, 360)
-  .build();
-const inserted = await board.insertChart(info);
-return { chartId: inserted.getId(), info: inserted.getInfo(), data: inserted.getDataSource() };
+  .build()
+const inserted = await board.insertChart(info)
+return { chartId: inserted.getId(), info: inserted.getInfo(), data: inserted.getDataSource() }
 ```
 
 `board.getCharts()` and `board.getChart(id)` return live charts. Common setters update the live

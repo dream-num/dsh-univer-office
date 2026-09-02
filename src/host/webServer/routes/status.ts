@@ -5,7 +5,7 @@ import type { UniverStatus } from '../../../shared/wire/status.ts'
 export async function statusRoute(service: UniverService): Promise<UniverStatus> {
   const [gateway, unitContent] = await Promise.all([
     service.gatewayStatus(),
-    service.unitContentStatus(),
+    service.unitContentStatus()
   ])
   return { gateway, unitContent }
 }

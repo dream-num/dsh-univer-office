@@ -16,8 +16,5 @@
       "@univer/importrange-formula": ["./src/viewer-support/importrange-formula/index.ts"]
     }
   },
-  "include": [
-    "src/render-machine/**/*.ts",
-    "src/viewer-support/**/*.ts"
-  ]
+  "include": ["src/render-machine/**/*.ts", "src/viewer-support/**/*.ts"]
 }

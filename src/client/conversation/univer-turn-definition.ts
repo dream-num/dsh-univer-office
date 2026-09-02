@@ -1,10 +1,22 @@
 import type {
-  ConversationNodeDefinition, ConversationTimelineSnapshot,
+  ConversationNodeDefinition,
+  ConversationTimelineSnapshot
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 
-export type UniverOperationName = 'new' | 'status' | 'worktree' | 'unit' | 'import' | 'inspect' | 'execute' | 'export' | 'lint' | 'screenshot' | 'compile-svg'
+export type UniverOperationName =
+  | 'new'
+  | 'status'
+  | 'worktree'
+  | 'unit'
+  | 'import'
+  | 'inspect'
+  | 'execute'
+  | 'export'
+  | 'lint'
+  | 'screenshot'
+  | 'compile-svg'
 export type UniverOperationPhase = 'pending' | 'succeeded' | 'failed'
 export type UniverTurnLifecycle = 'trunk' | 'draft' | 'ready' | 'merged' | 'discarded' | 'unchanged'
 
@@ -57,11 +69,13 @@ export const univerTurnDefinition = {
   kind: 'univerTurn',
   match(event: SessionEvent) {
     if (event.type === 'turn/start') return { id: String(event.data.turn), role: 'start' }
-    if (event.type === 'tool/call' || event.type === 'tool/result') return { id: String(event.data.turn), role: 'update' }
+    if (event.type === 'tool/call' || event.type === 'tool/result')
+      return { id: String(event.data.turn), role: 'update' }
     return null
   },
   start(_context, match): UniverTurnState {
-    if (match.event.type !== 'turn/start') throw new Error('univerTurn start match must be turn/start')
+    if (match.event.type !== 'turn/start')
+      throw new Error('univerTurn start match must be turn/start')
     return { turn: match.event.data.turn, files: [] }
   },
   update(context, match): UniverTurnState {
@@ -71,8 +85,13 @@ export const univerTurnDefinition = {
   },
   buildLocationData(context, scope) {
     if (scope !== 'turn' || context.state === undefined) return null
-    return { kind: 'turn', turn: context.state.turn, key: 'univerTurn', value: { files: context.state.files } }
-  },
+    return {
+      kind: 'turn',
+      turn: context.state.turn,
+      key: 'univerTurn',
+      value: { files: context.state.files }
+    }
+  }
 } satisfies ConversationNodeDefinition<UniverTurnState>
 
 /** Select a Turn-tail surface only when that Turn contains file-scoped Univer operations. */
@@ -90,7 +109,10 @@ export function resolveTurnFiles(files: readonly UniverTurnFile[], cwd?: string)
     const previous = unique.get(file)
     unique.set(file, {
       file,
-      operations: [...previous?.operations ?? [], ...target.operations.map((operation) => ({ ...operation, file }))],
+      operations: [
+        ...(previous?.operations ?? []),
+        ...target.operations.map((operation) => ({ ...operation, file }))
+      ]
     })
   }
   return [...unique.values()]
@@ -135,13 +157,17 @@ export function outcomeOfTurnFile(target: UniverTurnFile): UniverTurnOutcome {
       }
       continue
     }
-    if (primaryWorktreeId === null && operation.worktreeId !== null) primaryWorktreeId = operation.worktreeId
+    if (primaryWorktreeId === null && operation.worktreeId !== null)
+      primaryWorktreeId = operation.worktreeId
   }
   return { primaryWorktreeId, lifecycle, preferredUnitId, changedContent }
 }
 
 /** Targets referenced anywhere in a timeline, used to restore deliberate floating-window intent. */
-export function turnFilesOfTimeline(timeline: ConversationTimelineSnapshot | undefined, cwd?: string): UniverTurnFile[] {
+export function turnFilesOfTimeline(
+  timeline: ConversationTimelineSnapshot | undefined,
+  cwd?: string
+): UniverTurnFile[] {
   if (timeline === undefined) return []
   const files: UniverTurnFile[] = []
   for (const turn of timeline.turns.values()) {
@@ -155,7 +181,9 @@ export function turnFilesOfTimeline(timeline: ConversationTimelineSnapshot | und
 export function opensFloatingWindow(operation: UniverTurnOperation): boolean {
   if (operation.name === 'new') return true
   if (operation.name === 'worktree') {
-    return operation.action === 'create' || operation.action === 'reopen' || operation.action === 'ready'
+    return (
+      operation.action === 'create' || operation.action === 'reopen' || operation.action === 'ready'
+    )
   }
   return isWrite(operation)
 }
@@ -172,12 +200,15 @@ function addCall(state: UniverTurnState, data: SessionEvent<'tool/call'>['data']
     file: args.file,
     worktreeId: typeof args.worktreeId === 'string' ? args.worktreeId : null,
     unitId: typeof args.unitId === 'string' ? args.unitId : null,
-    phase: 'pending',
+    phase: 'pending'
   }
   return { ...state, files: appendOperation(state.files, operation) }
 }
 
-function applyResult(state: UniverTurnState, data: SessionEvent<'tool/result'>['data']): UniverTurnState {
+function applyResult(
+  state: UniverTurnState,
+  data: SessionEvent<'tool/result'>['data']
+): UniverTurnState {
   const callId = data.message.content[0].toolCallId
   const structured = structuredResult(data)
   let matched: UniverTurnOperation | undefined
@@ -187,17 +218,25 @@ function applyResult(state: UniverTurnState, data: SessionEvent<'tool/result'>['
   }
   if (matched === undefined && structured === null) return state
   const result = structured === null || !isRecord(structured.result) ? null : structured.result
-  const name = matched?.name ?? operationName(typeof structured?.operation === 'string' ? `univer_${structured.operation.replace('-', '_')}` : '')
+  const name =
+    matched?.name ??
+    operationName(
+      typeof structured?.operation === 'string'
+        ? `univer_${structured.operation.replace('-', '_')}`
+        : ''
+    )
   const file = typeof structured?.file === 'string' ? structured.file : matched?.file
   if (name === null || name === undefined || file === undefined) return state
   const operation: UniverTurnOperation = {
     callId,
     name,
-    action: typeof result?.action === 'string' ? result.action : matched?.action ?? null,
+    action: typeof result?.action === 'string' ? result.action : (matched?.action ?? null),
     file,
-    worktreeId: typeof result?.worktreeId === 'string' ? result.worktreeId : matched?.worktreeId ?? null,
-    unitId: typeof result?.unitId === 'string' ? result.unitId : matched?.unitId ?? null,
-    phase: data.error === undefined && data.message.content[0].isError !== true ? 'succeeded' : 'failed',
+    worktreeId:
+      typeof result?.worktreeId === 'string' ? result.worktreeId : (matched?.worktreeId ?? null),
+    unitId: typeof result?.unitId === 'string' ? result.unitId : (matched?.unitId ?? null),
+    phase:
+      data.error === undefined && data.message.content[0].isError !== true ? 'succeeded' : 'failed'
   }
   const withoutCall = state.files.flatMap((entry) => {
     const operations = entry.operations.filter((candidate) => candidate.callId !== callId)
@@ -206,19 +245,27 @@ function applyResult(state: UniverTurnState, data: SessionEvent<'tool/result'>['
   return { ...state, files: appendOperation(withoutCall, operation) }
 }
 
-function appendOperation(files: readonly UniverTurnFile[], operation: UniverTurnOperation): UniverTurnFile[] {
+function appendOperation(
+  files: readonly UniverTurnFile[],
+  operation: UniverTurnOperation
+): UniverTurnFile[] {
   const next = [...files]
   const index = next.findIndex((entry) => entry.file === operation.file)
   if (index === -1) next.push({ file: operation.file, operations: [operation] })
   else {
     const previous = next[index]
-    if (previous !== undefined) next[index] = { ...previous, operations: [...previous.operations, operation] }
+    if (previous !== undefined)
+      next[index] = { ...previous, operations: [...previous.operations, operation] }
   }
   return next
 }
 
-function structuredResult(data: SessionEvent<'tool/result'>['data']): Record<string, unknown> | null {
-  const text = data.message.content[0].content.flatMap((block) => block.type === 'text' ? [block.text] : []).join('\n')
+function structuredResult(
+  data: SessionEvent<'tool/result'>['data']
+): Record<string, unknown> | null {
+  const text = data.message.content[0].content
+    .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+    .join('\n')
   const firstBrace = text.indexOf('{')
   return firstBrace === -1 ? null : parseRecord(text.slice(firstBrace))
 }
@@ -226,12 +273,30 @@ function structuredResult(data: SessionEvent<'tool/result'>['data']): Record<str
 function operationName(name: string): UniverOperationName | null {
   if (!name.startsWith('univer_')) return null
   const operation = name.slice('univer_'.length).replaceAll('_', '-')
-  if (operation === 'new' || operation === 'status' || operation === 'worktree' || operation === 'unit' || operation === 'import' || operation === 'inspect' || operation === 'execute' || operation === 'export' || operation === 'lint' || operation === 'screenshot' || operation === 'compile-svg') return operation
+  if (
+    operation === 'new' ||
+    operation === 'status' ||
+    operation === 'worktree' ||
+    operation === 'unit' ||
+    operation === 'import' ||
+    operation === 'inspect' ||
+    operation === 'execute' ||
+    operation === 'export' ||
+    operation === 'lint' ||
+    operation === 'screenshot' ||
+    operation === 'compile-svg'
+  )
+    return operation
   return null
 }
 
 function isWrite(operation: UniverTurnOperation): boolean {
-  return operation.name === 'execute' || operation.name === 'import' || operation.name === 'unit' || operation.name === 'compile-svg'
+  return (
+    operation.name === 'execute' ||
+    operation.name === 'import' ||
+    operation.name === 'unit' ||
+    operation.name === 'compile-svg'
+  )
 }
 
 function parseRecord(text: string): Record<string, unknown> | null {

@@ -13,15 +13,15 @@ Obtain a worksheet with `workbook.getActiveSheet()` or `workbook.getSheetByName(
 
 A cell is structured data: `{ v, t, f?, s? }`.
 
-| Field | Meaning |
-| --- | --- |
-| `v` | Stored value used for calculation, comparison, and writeback. |
-| `t` | Type: `1` text, `2` number, `3` boolean, `4` forced text. |
-| `f` | Formula source; its cached result is stored separately in `v`. |
-| `s.n.pattern` | Number format; changes display only, never `v`. |
-| `p` | Rich text; when present it overrides the displayed form of `v`. |
-| `si` | Shared-formula id; preserve only when deep-copying an existing formula cell. |
-| `displayValue` | Visible text rendered from `v`, `t`, and number format. |
+| Field          | Meaning                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| `v`            | Stored value used for calculation, comparison, and writeback.                |
+| `t`            | Type: `1` text, `2` number, `3` boolean, `4` forced text.                    |
+| `f`            | Formula source; its cached result is stored separately in `v`.               |
+| `s.n.pattern`  | Number format; changes display only, never `v`.                              |
+| `p`            | Rich text; when present it overrides the displayed form of `v`.              |
+| `si`           | Shared-formula id; preserve only when deep-copying an existing formula cell. |
+| `displayValue` | Visible text rendered from `v`, `t`, and number format.                      |
 
 Always write explicit `ICellData`. Bare values are inferred and can corrupt identifiers, scores, leading zeros, and date-like strings:
 
@@ -60,7 +60,7 @@ Never write display text back as the stored value.
 Create an image with `sheet.newOverGridImage()`, set source, explicit size and position, await `buildAsync()`, then pass the built data to `sheet.insertImages()`:
 
 ```js
-const sheet = workbook.getActiveSheet();
+const sheet = workbook.getActiveSheet()
 const image = await sheet
   .newOverGridImage()
   .setSource(imageDataUri, api.Enum.ImageSourceType.BASE64)
@@ -68,8 +68,8 @@ const image = await sheet
   .setRow(1)
   .setWidth(640)
   .setHeight(360)
-  .buildAsync();
-sheet.insertImages([image]);
+  .buildAsync()
+sheet.insertImages([image])
 ```
 
 Verify with `sheet.getImages()[0].toBuilder().getSource()` and `getSourceType()`.
@@ -81,10 +81,10 @@ Formula source and cached result are separate. Writing a formula schedules calcu
 Register `onCalculationResultApplied()` before triggering calculation, then await it:
 
 ```js
-const calculated = api.getFormula().onCalculationResultApplied();
-api.getFormula().executeCalculation();
-await calculated;
-return workbook.getActiveSheet().getRange("A3").getValue();
+const calculated = api.getFormula().onCalculationResultApplied()
+api.getFormula().executeCalculation()
+await calculated
+return workbook.getActiveSheet().getRange('A3').getValue()
 ```
 
 For a newly written formula, register the promise before `setFormula` and await it afterward. Recalculate before exporting because xlsx stores cached values with formulas. If only a final value is required and cache freshness cannot be guaranteed, write the stored value directly.
@@ -106,10 +106,10 @@ Copy the exact table name from workbook metadata; do not use table id, Sheet tab
 Rich text lives in `cell.p`, not `cell.v`. Build it with `api.newRichText()`; never construct the internal body by hand.
 
 ```js
-const rich = api.newRichText();
-rich.insertText("Hello World");
-rich.setStyle(0, 5, { bl: 1, cl: { rgb: "#FF0000" } });
-workbook.getActiveSheet().getRange("A1").setRichTextValueForCell(rich);
+const rich = api.newRichText()
+rich.insertText('Hello World')
+rich.setStyle(0, 5, { bl: 1, cl: { rgb: '#FF0000' } })
+workbook.getActiveSheet().getRange('A1').setRichTextValueForCell(rich)
 ```
 
 `setStyle(start, end, style)` uses a half-open range. Derive offsets from inserted JavaScript strings. Common style fields are `bl`, `it`, `cl`, and `bg`. Verify `getCellData().p`, text-run ranges, and styles.

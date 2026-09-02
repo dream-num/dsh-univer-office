@@ -14,5 +14,12 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["src/client/**", "src/workers/unit-content/**", "src/gateway-app/**", "src/render-machine/**", "src/viewer-app/**", "src/viewer-support/**"]
+  "exclude": [
+    "src/client/**",
+    "src/workers/unit-content/**",
+    "src/gateway-app/**",
+    "src/render-machine/**",
+    "src/viewer-app/**",
+    "src/viewer-support/**"
+  ]
 }

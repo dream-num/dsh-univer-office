@@ -1,5 +1,5 @@
-@import "tailwindcss" source("..");
-@import "tw-animate-css";
+@import 'tailwindcss' source("..");
+@import 'tw-animate-css';
 
 /*
  * shadcn/ui design tokens (neutral, light) expressed as Tailwind v4 theme keys.
@@ -7,8 +7,8 @@
  */
 @theme {
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-    "Segoe UI", sans-serif;
+    ui-sans-serif, system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Segoe UI', sans-serif;
 
   --color-background: #ffffff;
   --color-foreground: #0a0a0a;

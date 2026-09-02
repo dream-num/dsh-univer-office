@@ -17,12 +17,12 @@ export {
   captureTelemetry,
   parseTelemetryState,
   resolveTelemetryStatePath,
-  runHostTelemetry,
+  runHostTelemetry
 } from './telemetry/product-telemetry.ts'
 export type {
   TelemetryCapture,
   TelemetryState,
-  TelemetryStateIo,
+  TelemetryStateIo
 } from './telemetry/product-telemetry.ts'
 export * from '../shared/wire/actions.ts'
 export * from '../shared/wire/state.ts'

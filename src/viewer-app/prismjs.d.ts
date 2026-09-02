@@ -1,10 +1,10 @@
-declare module "prismjs" {
+declare module 'prismjs' {
   const Prism: {
-    languages: Record<string, unknown>;
-    highlight: (text: string, grammar: unknown, language: string) => string;
-  };
+    languages: Record<string, unknown>
+    highlight: (text: string, grammar: unknown, language: string) => string
+  }
 
-  export default Prism;
+  export default Prism
 }
 
-declare module "prismjs/components/*";
+declare module 'prismjs/components/*'

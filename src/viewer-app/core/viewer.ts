@@ -1,6 +1,6 @@
-import { FUniver } from "@univerjs/core/facade";
-import "@univerjs-pro/collaboration-client/facade";
-import "@univer/render-preset/facades";
+import { FUniver } from '@univerjs/core/facade'
+import '@univerjs-pro/collaboration-client/facade'
+import '@univer/render-preset/facades'
 
 import {
   IAuthzIoService,
@@ -10,44 +10,44 @@ import {
   IUndoRedoService,
   type LocaleType,
   Univer,
-  UniverInstanceType,
-} from "@univerjs/core";
-import type { IBoardData } from "@univerjs-pro/boards";
+  UniverInstanceType
+} from '@univerjs/core'
+import type { IBoardData } from '@univerjs-pro/boards'
 import type {
   IBaseSnapshot,
   ICellData,
   IObjectMatrixPrimitiveType,
-  ITableSnapshot,
-} from "@univerjs/core";
-import type { IDeserializedSheetBlock, ISheetBlock, ISnapshot } from "@univerjs/protocol";
+  ITableSnapshot
+} from '@univerjs/core'
+import type { IDeserializedSheetBlock, ISheetBlock, ISnapshot } from '@univerjs/protocol'
 import {
   transformSnapshotToDocumentData,
   transformSnapshotToSlideData,
   transformSnapshotToWorkbookData,
-  UniverCollaborationPlugin,
-} from "@univerjs-pro/collaboration";
-import { UniverCollaborationClientPlugin } from "@univerjs-pro/collaboration-client";
-import { UniverCollaborationEmbedPlugin } from "@univerjs-pro/collaboration-embed";
-import { UniverBasesHistoryUIPlugin } from "@univerjs-pro/bases-history-ui";
-import { UniverBoardsHistoryUIPlugin } from "@univerjs-pro/boards-history-ui";
-import { UniverDocsHistoryUIPlugin } from "@univerjs-pro/docs-history-ui";
-import { UniverSheetsHistoryUIPlugin } from "@univerjs-pro/sheets-history-ui";
-import { UniverSlidesHistoryUIPlugin } from "@univerjs-pro/slides-history-ui";
+  UniverCollaborationPlugin
+} from '@univerjs-pro/collaboration'
+import { UniverCollaborationClientPlugin } from '@univerjs-pro/collaboration-client'
+import { UniverCollaborationEmbedPlugin } from '@univerjs-pro/collaboration-embed'
+import { UniverBasesHistoryUIPlugin } from '@univerjs-pro/bases-history-ui'
+import { UniverBoardsHistoryUIPlugin } from '@univerjs-pro/boards-history-ui'
+import { UniverDocsHistoryUIPlugin } from '@univerjs-pro/docs-history-ui'
+import { UniverSheetsHistoryUIPlugin } from '@univerjs-pro/sheets-history-ui'
+import { UniverSlidesHistoryUIPlugin } from '@univerjs-pro/slides-history-ui'
 import {
   BrowserCollaborationSocketService,
-  UniverCollaborationClientUIPlugin,
-} from "@univerjs-pro/collaboration-client-ui";
+  UniverCollaborationClientUIPlugin
+} from '@univerjs-pro/collaboration-client-ui'
 import {
   EmbedModelService,
   EmbedReferencedUnitMaterializeService,
-  IReferencedUnitManagerService,
-} from "@univerjs-pro/embed";
+  IReferencedUnitManagerService
+} from '@univerjs-pro/embed'
 import {
   FormulaCalculationSessionService,
-  SetTriggerFormulaCalculationStartMutation,
-} from "@univerjs/engine-formula";
-import { WorkbookEditablePermission } from "@univerjs/sheets";
-import { TEST_LICENSE, ViewAssetIoOwner, registerViewRendering } from "@univer/render-preset";
+  SetTriggerFormulaCalculationStartMutation
+} from '@univerjs/engine-formula'
+import { WorkbookEditablePermission } from '@univerjs/sheets'
+import { TEST_LICENSE, ViewAssetIoOwner, registerViewRendering } from '@univer/render-preset'
 import {
   buildRuntimeConfig,
   UNIT_TYPE_BASE,
@@ -55,52 +55,52 @@ import {
   UNIT_TYPE_DOC,
   UNIT_TYPE_SHEET,
   UNIT_TYPE_SLIDE,
-  type UnitType,
-} from "@univer/collab-gateway-contract";
+  type UnitType
+} from '@univer/collab-gateway-contract'
 import {
   blockLocalEditingCommands,
   enforceSheetViewerReadOnlyPermissions,
-  resolveViewerReadOnlyEnforcement,
-} from "./viewer-readonly";
-import { createCollaborationSheetResourceRefDataProvider } from "./collaboration-sheet-resource-ref-data-provider";
-import { installHistoryShapeFormulaCompatibility } from "./history-shape-formula-compatibility";
-import { loadViewerLocale } from "./locales/generated/load";
-import { withReadOnlyPermissionLocale, type ReadOnlyLocaleCopy } from "./locales/read-only";
+  resolveViewerReadOnlyEnforcement
+} from './viewer-readonly'
+import { createCollaborationSheetResourceRefDataProvider } from './collaboration-sheet-resource-ref-data-provider'
+import { installHistoryShapeFormulaCompatibility } from './history-shape-formula-compatibility'
+import { loadViewerLocale } from './locales/generated/load'
+import { withReadOnlyPermissionLocale, type ReadOnlyLocaleCopy } from './locales/read-only'
 
-installHistoryShapeFormulaCompatibility();
+installHistoryShapeFormulaCompatibility()
 
 export interface ViewerOptions {
   /** DOM id of the (already-empty) element UniverUIPlugin mounts into. */
-  container: string;
-  origin: string;
-  univerfile: string;
-  gatewayFileKey?: string;
+  container: string
+  origin: string
+  univerfile: string
+  gatewayFileKey?: string
   /** Given = view that worktree; omitted = view the current version (trunk). */
-  worktreeId?: string;
-  unitId: string;
-  unitType: UnitType;
+  worktreeId?: string
+  unitId: string
+  unitType: UnitType
   /** Allow the user to edit this unit (generate changesets). Default false = read-only viewer. */
-  editable?: boolean;
+  editable?: boolean
   /** Which language the Univer UI initially renders in. */
-  locale: LocaleType;
+  locale: LocaleType
   /** Initial Univer appearance. Later changes use ViewerHandle.setDarkMode without rebuilding. */
-  darkMode: boolean;
+  darkMode: boolean
   /** Viewer-owned wording for native permission feedback when this instance is read-only. */
-  readOnlyCopy: ReadOnlyLocaleCopy;
+  readOnlyCopy: ReadOnlyLocaleCopy
 }
 
 export interface ViewerHandle {
-  setDarkMode(isDarkMode: boolean): void;
-  setLocale(locale: LocaleType, readOnlyCopy: ReadOnlyLocaleCopy): Promise<void>;
-  dispose(): void;
+  setDarkMode(isDarkMode: boolean): void
+  setLocale(locale: LocaleType, readOnlyCopy: ReadOnlyLocaleCopy): Promise<void>
+  dispose(): void
 }
 
-type ViewerDebugAPI = ReturnType<typeof FUniver.newAPI>;
+type ViewerDebugAPI = ReturnType<typeof FUniver.newAPI>
 
 declare global {
   interface Window {
-    univer?: Univer;
-    univerAPI?: ViewerDebugAPI;
+    univer?: Univer
+    univerAPI?: ViewerDebugAPI
   }
 }
 
@@ -111,24 +111,24 @@ declare global {
  * (trunk<->worktree) or handling a `reset` is done by the caller disposing this and creating a fresh one.
  */
 export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
-  const editable = opts.editable === true;
-  const baseLocalePack = await loadViewerLocale(opts.locale);
+  const editable = opts.editable === true
+  const baseLocalePack = await loadViewerLocale(opts.locale)
   const localePack = editable
     ? baseLocalePack
-    : withReadOnlyPermissionLocale(baseLocalePack, opts.readOnlyCopy);
+    : withReadOnlyPermissionLocale(baseLocalePack, opts.readOnlyCopy)
   const urls = buildRuntimeConfig(
     opts.gatewayFileKey === undefined
       ? {
           origin: opts.origin,
           univerfile: opts.univerfile,
-          ...(opts.worktreeId === undefined ? {} : { worktreeId: opts.worktreeId }),
+          ...(opts.worktreeId === undefined ? {} : { worktreeId: opts.worktreeId })
         }
       : {
           origin: opts.origin,
           gatewayFileKey: opts.gatewayFileKey,
-          ...(opts.worktreeId === undefined ? {} : { worktreeId: opts.worktreeId }),
-        },
-  );
+          ...(opts.worktreeId === undefined ? {} : { worktreeId: opts.worktreeId })
+        }
+  )
 
   const univer = new Univer({
     locale: opts.locale,
@@ -138,13 +138,13 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     // null the core ones to avoid a redi "registered more than once" conflict.
     override: [
       [IAuthzIoService, null],
-      [IUndoRedoService, null],
+      [IUndoRedoService, null]
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ] as any,
-  });
+    ] as any
+  })
 
   const sheetResourceRefDataProvider = createCollaborationSheetResourceRefDataProvider(() => {
-    const injector = univer.__getInjector();
+    const injector = univer.__getInjector()
     return {
       referencedUnitManager: injector.get(IReferencedUnitManagerService),
       univerInstanceService: injector.get(IUniverInstanceService),
@@ -156,18 +156,18 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
           .executeCommand(
             SetTriggerFormulaCalculationStartMutation.id,
             { commands: [], forceCalculation: true },
-            { onlyLocal: true },
-          );
-      },
-    };
-  });
+            { onlyLocal: true }
+          )
+      }
+    }
+  })
 
   registerViewRendering(univer, {
     container: opts.container,
     assetIoOwner: ViewAssetIoOwner.CollaborationClient,
     license: TEST_LICENSE,
-    workbenchChrome: opts.unitType === UNIT_TYPE_BOARD ? "hidden" : "visible",
-    ribbonType: "grid",
+    workbenchChrome: opts.unitType === UNIT_TYPE_BOARD ? 'hidden' : 'visible',
+    ribbonType: 'grid',
     unitType: toUniverInstanceType(opts.unitType),
     ...(opts.worktreeId === undefined && opts.unitType !== UNIT_TYPE_BOARD
       ? {
@@ -177,144 +177,144 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
             signUrlServerUrl: urls.signUrlServerUrl,
             importServerUrl: urls.importServerUrl,
             exportServerUrl: urls.exportServerUrl,
-            downloadEndpointUrl: urls.downloadEndpointUrl,
-          },
+            downloadEndpointUrl: urls.downloadEndpointUrl
+          }
         }
       : {}),
     resourceRefDataProviderRegistrations: [sheetResourceRefDataProvider.registration],
     // Collaboration must start before Embed core, whose command service consumes collaborative
     // undo/redo. Collaboration Embed itself depends on Embed core and belongs before Embed UI.
     registerBeforeEmbedCore: () => {
-      univer.registerPlugin(UniverCollaborationPlugin);
+      univer.registerPlugin(UniverCollaborationPlugin)
       univer.registerPlugin(UniverCollaborationClientPlugin, {
         socketService: BrowserCollaborationSocketService,
         enableOfflineEditing: false,
         enableAuthServer: true,
         enableSingleActiveInstanceLock: false,
-        loginUrlKey: "/login",
+        loginUrlKey: '/login',
         sendChangesetTimeout: 200,
-        ...urls,
-      });
+        ...urls
+      })
       univer.registerPlugin(
         UniverCollaborationClientUIPlugin,
-        opts.unitType === UNIT_TYPE_BASE ? { enableDocumentCollaborationUI: false } : {},
-      );
+        opts.unitType === UNIT_TYPE_BASE ? { enableDocumentCollaborationUI: false } : {}
+      )
       if (opts.worktreeId === undefined) {
-        const historyServerUrl = urls.snapshotServerUrl.replace(/\/snapshot$/u, "/history");
+        const historyServerUrl = urls.snapshotServerUrl.replace(/\/snapshot$/u, '/history')
         const historyConfig = {
           historyServerUrl,
-          univerContainerId: opts.container,
-        };
+          univerContainerId: opts.container
+        }
         if (opts.unitType === UNIT_TYPE_DOC) {
-          univer.registerPlugin(UniverDocsHistoryUIPlugin, historyConfig);
+          univer.registerPlugin(UniverDocsHistoryUIPlugin, historyConfig)
         } else if (opts.unitType === UNIT_TYPE_SLIDE) {
-          univer.registerPlugin(UniverSlidesHistoryUIPlugin, historyConfig);
+          univer.registerPlugin(UniverSlidesHistoryUIPlugin, historyConfig)
         } else if (opts.unitType === UNIT_TYPE_BASE) {
-          univer.registerPlugin(UniverBasesHistoryUIPlugin, historyConfig);
+          univer.registerPlugin(UniverBasesHistoryUIPlugin, historyConfig)
         } else if (opts.unitType === UNIT_TYPE_BOARD) {
-          univer.registerPlugin(UniverBoardsHistoryUIPlugin, historyConfig);
+          univer.registerPlugin(UniverBoardsHistoryUIPlugin, historyConfig)
         } else if (opts.unitType === UNIT_TYPE_SHEET) {
           univer.registerPlugin(UniverSheetsHistoryUIPlugin, {
             historyListServerUrl: historyServerUrl,
-            univerContainerId: opts.container,
-          });
+            univerContainerId: opts.container
+          })
         }
       }
     },
     registerAfterEmbedCore: () => {
-      univer.registerPlugin(UniverCollaborationEmbedPlugin);
-    },
-  });
+      univer.registerPlugin(UniverCollaborationEmbedPlugin)
+    }
+  })
 
-  const api = FUniver.newAPI(univer);
-  const collaboration = api.getCollaboration();
+  const api = FUniver.newAPI(univer)
+  const collaboration = api.getCollaboration()
   const formulaResultAppliedSubscription = univer
     .__getInjector()
     .get(FormulaCalculationSessionService)
     .resultApplied$.subscribe((result) => {
-      void sheetResourceRefDataProvider.formulaResultApplied(result);
-    });
+      void sheetResourceRefDataProvider.formulaResultApplied(result)
+    })
 
   if (opts.unitType === UNIT_TYPE_DOC) {
-    await collaboration.loadDocAsync(opts.unitId);
+    await collaboration.loadDocAsync(opts.unitId)
   } else if (opts.unitType === UNIT_TYPE_SLIDE) {
-    await collaboration.loadSlideAsync(opts.unitId);
+    await collaboration.loadSlideAsync(opts.unitId)
   } else if (opts.unitType === UNIT_TYPE_BASE) {
-    await collaboration.loadBaseAsync(opts.unitId);
+    await collaboration.loadBaseAsync(opts.unitId)
   } else if (opts.unitType === UNIT_TYPE_BOARD) {
-    await collaboration.loadBoardAsync(opts.unitId);
+    await collaboration.loadBoardAsync(opts.unitId)
   } else if (opts.unitType === UNIT_TYPE_SHEET) {
-    await collaboration.loadSheetAsync(opts.unitId);
+    await collaboration.loadSheetAsync(opts.unitId)
   } else {
-    throw new Error(`Unsupported viewer unit type: ${String(opts.unitType)}`);
+    throw new Error(`Unsupported viewer unit type: ${String(opts.unitType)}`)
   }
 
-  await materializeHostEmbedChildren(univer, opts.unitId);
-  const disposeDebugEndpoint = exposeDebugEndpoint(univer, api);
+  await materializeHostEmbedChildren(univer, opts.unitId)
+  const disposeDebugEndpoint = exposeDebugEndpoint(univer, api)
 
-  const readOnlyEnforcement = resolveViewerReadOnlyEnforcement(opts.unitType, editable);
-  if (readOnlyEnforcement === "sheet-permission") {
+  const readOnlyEnforcement = resolveViewerReadOnlyEnforcement(opts.unitType, editable)
+  if (readOnlyEnforcement === 'sheet-permission') {
     enforceSheetViewerReadOnlyPermissions(
       univer.__getInjector().get(IPermissionService),
-      opts.unitId,
-    );
-  } else if (readOnlyEnforcement === "mutation-gate") {
-    blockLocalEditingCommands(univer.__getInjector().get(ICommandService));
+      opts.unitId
+    )
+  } else if (readOnlyEnforcement === 'mutation-gate') {
+    blockLocalEditingCommands(univer.__getInjector().get(ICommandService))
   }
 
   return {
     setDarkMode: (isDarkMode) => api.toggleDarkMode(isDarkMode),
     setLocale: async (locale, readOnlyCopy) => {
-      const basePack = await loadViewerLocale(locale);
-      const pack = editable ? basePack : withReadOnlyPermissionLocale(basePack, readOnlyCopy);
-      api.loadLocales(locale, pack);
-      api.setLocale(locale);
+      const basePack = await loadViewerLocale(locale)
+      const pack = editable ? basePack : withReadOnlyPermissionLocale(basePack, readOnlyCopy)
+      api.loadLocales(locale, pack)
+      api.setLocale(locale)
     },
     dispose: () => {
-      formulaResultAppliedSubscription.unsubscribe();
-      sheetResourceRefDataProvider.dispose();
-      disposeDebugEndpoint();
-      api.dispose();
-      univer.dispose();
-    },
-  };
+      formulaResultAppliedSubscription.unsubscribe()
+      sheetResourceRefDataProvider.dispose()
+      disposeDebugEndpoint()
+      api.dispose()
+      univer.dispose()
+    }
+  }
 }
 
 async function materializeHostEmbedChildren(univer: Univer, hostUnitId: string): Promise<void> {
-  const injector = univer.__getInjector();
-  const embedModel = injector.get(EmbedModelService);
-  const materializer = injector.get(EmbedReferencedUnitMaterializeService);
-  const descriptors = [...embedModel.getActiveDescriptors(hostUnitId)];
+  const injector = univer.__getInjector()
+  const embedModel = injector.get(EmbedModelService)
+  const materializer = injector.get(EmbedReferencedUnitMaterializeService)
+  const descriptors = [...embedModel.getActiveDescriptors(hostUnitId)]
   for (const descriptor of descriptors) {
-    await materializer.materializeDescriptor({ descriptor });
+    await materializer.materializeDescriptor({ descriptor })
   }
 }
 
 function makeReadonly(univer: Univer, unitId: string): void {
-  const permissionService = univer.__getInjector().get(IPermissionService);
-  const point = new WorkbookEditablePermission(unitId);
+  const permissionService = univer.__getInjector().get(IPermissionService)
+  const point = new WorkbookEditablePermission(unitId)
   if (!permissionService.getPermissionPoint(point.id)) {
-    permissionService.addPermissionPoint(point);
+    permissionService.addPermissionPoint(point)
   }
-  permissionService.updatePermissionPoint(point.id, false);
+  permissionService.updatePermissionPoint(point.id, false)
 }
 
 export interface PreviewViewerOptions {
   /** DOM id of the (already-empty) element UniverUIPlugin mounts into. */
-  container: string;
-  unitType: UnitType;
+  container: string
+  unitType: UnitType
   /** Wire ISnapshot (base64 `originalMeta`) from the gateway merge-preview endpoint. */
-  snapshot: unknown;
+  snapshot: unknown
   /** Deserialized sheet/base blocks; fed to the collaboration snapshot transformers. */
-  sheetBlocks?: unknown[];
+  sheetBlocks?: unknown[]
   /** Protocol changesets ({ mutations: { id, data }[] }) to replay on top of the snapshot. */
-  changesets: unknown[];
+  changesets: unknown[]
   /** Which language the Univer UI renders in; see {@link ViewerOptions.locale}. */
-  locale: LocaleType;
+  locale: LocaleType
   /** Initial Univer appearance. Later changes use ViewerHandle.setDarkMode without rebuilding. */
-  darkMode: boolean;
+  darkMode: boolean
   /** Viewer-owned wording for native permission feedback in this read-only preview. */
-  readOnlyCopy: ReadOnlyLocaleCopy;
+  readOnlyCopy: ReadOnlyLocaleCopy
 }
 
 /**
@@ -328,102 +328,102 @@ export interface PreviewViewerOptions {
 export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<ViewerHandle> {
   const localePack = withReadOnlyPermissionLocale(
     await loadViewerLocale(opts.locale),
-    opts.readOnlyCopy,
-  );
+    opts.readOnlyCopy
+  )
   const univer = new Univer({
     locale: opts.locale,
     locales: { [opts.locale]: localePack },
-    darkMode: opts.darkMode,
-  });
+    darkMode: opts.darkMode
+  })
 
   registerViewRendering(univer, {
     container: opts.container,
     assetIoOwner: ViewAssetIoOwner.Local,
     license: TEST_LICENSE,
-    workbenchChrome: opts.unitType === UNIT_TYPE_BOARD ? "hidden" : "visible",
-    ribbonType: "grid",
-    unitType: toUniverInstanceType(opts.unitType),
-  });
+    workbenchChrome: opts.unitType === UNIT_TYPE_BOARD ? 'hidden' : 'visible',
+    ribbonType: 'grid',
+    unitType: toUniverInstanceType(opts.unitType)
+  })
 
-  const snapshot = decodeSnapshotFromWire(opts.snapshot) as ISnapshot;
-  let unitId = "";
+  const snapshot = decodeSnapshotFromWire(opts.snapshot) as ISnapshot
+  let unitId = ''
   if (opts.unitType === UNIT_TYPE_DOC) {
-    const data = transformSnapshotToDocumentData(snapshot);
-    unitId = data.id ?? "";
-    univer.createUnit(UniverInstanceType.UNIVER_DOC, data);
+    const data = transformSnapshotToDocumentData(snapshot)
+    unitId = data.id ?? ''
+    univer.createUnit(UniverInstanceType.UNIVER_DOC, data)
   } else if (opts.unitType === UNIT_TYPE_SLIDE) {
-    const data = transformSnapshotToSlideData(snapshot);
-    unitId = data.id ?? "";
-    univer.createUnit(UniverInstanceType.UNIVER_SLIDE, data);
+    const data = transformSnapshotToSlideData(snapshot)
+    unitId = data.id ?? ''
+    univer.createUnit(UniverInstanceType.UNIVER_SLIDE, data)
   } else if (opts.unitType === UNIT_TYPE_BASE) {
     const data = decodeBaseSnapshotData(
       snapshot,
-      (opts.sheetBlocks ?? []) as Array<IDeserializedSheetBlock | ISheetBlock>,
-    );
-    unitId = data.id ?? "";
-    univer.createUnit(UniverInstanceType.UNIVER_BASE, data);
+      (opts.sheetBlocks ?? []) as Array<IDeserializedSheetBlock | ISheetBlock>
+    )
+    unitId = data.id ?? ''
+    univer.createUnit(UniverInstanceType.UNIVER_BASE, data)
   } else if (opts.unitType === UNIT_TYPE_BOARD) {
-    const data = decodeBoardSnapshotData(snapshot);
-    unitId = data.id;
-    univer.createUnit(UniverInstanceType.UNIVER_BOARD, data);
+    const data = decodeBoardSnapshotData(snapshot)
+    unitId = data.id
+    univer.createUnit(UniverInstanceType.UNIVER_BOARD, data)
   } else if (opts.unitType === UNIT_TYPE_SHEET) {
     const data = await transformSnapshotToWorkbookData(
       snapshot,
-      (opts.sheetBlocks ?? []) as Parameters<typeof transformSnapshotToWorkbookData>[1],
-    );
-    unitId = data.id ?? "";
-    univer.createUnit(UniverInstanceType.UNIVER_SHEET, data);
+      (opts.sheetBlocks ?? []) as Parameters<typeof transformSnapshotToWorkbookData>[1]
+    )
+    unitId = data.id ?? ''
+    univer.createUnit(UniverInstanceType.UNIVER_SHEET, data)
   } else {
-    throw new Error(`Unsupported preview unit type: ${String(opts.unitType)}`);
+    throw new Error(`Unsupported preview unit type: ${String(opts.unitType)}`)
   }
 
   // Replay the merged changesets' mutations onto the freshly-built model — no undo, local only.
-  const commandService = univer.__getInjector().get(ICommandService);
+  const commandService = univer.__getInjector().get(ICommandService)
   for (const cs of opts.changesets as Array<{ mutations?: Array<{ id: string; data: string }> }>) {
     for (const m of cs.mutations ?? []) {
-      const params = (typeof m.data === "string" ? JSON.parse(m.data) : m.data) as object;
-      commandService.syncExecuteCommand(m.id, params, { onlyLocal: true });
+      const params = (typeof m.data === 'string' ? JSON.parse(m.data) : m.data) as object
+      commandService.syncExecuteCommand(m.id, params, { onlyLocal: true })
     }
   }
 
   if (opts.unitType === UNIT_TYPE_SHEET) {
-    if (unitId !== "") {
-      makeReadonly(univer, unitId);
+    if (unitId !== '') {
+      makeReadonly(univer, unitId)
     }
   } else {
     // doc/slide/base have no WorkbookEditablePermission-style point — veto data-changing commands instead.
-    blockLocalEditingCommands(univer.__getInjector().get(ICommandService));
+    blockLocalEditingCommands(univer.__getInjector().get(ICommandService))
   }
 
-  const api = FUniver.newAPI(univer);
-  const disposeDebugEndpoint = exposeDebugEndpoint(univer, api);
+  const api = FUniver.newAPI(univer)
+  const disposeDebugEndpoint = exposeDebugEndpoint(univer, api)
 
   return {
     setDarkMode: (isDarkMode) => api.toggleDarkMode(isDarkMode),
     setLocale: async (locale, readOnlyCopy) => {
-      const pack = withReadOnlyPermissionLocale(await loadViewerLocale(locale), readOnlyCopy);
-      api.loadLocales(locale, pack);
-      api.setLocale(locale);
+      const pack = withReadOnlyPermissionLocale(await loadViewerLocale(locale), readOnlyCopy)
+      api.loadLocales(locale, pack)
+      api.setLocale(locale)
     },
     dispose: () => {
-      disposeDebugEndpoint();
-      api.dispose();
-      univer.dispose();
-    },
-  };
+      disposeDebugEndpoint()
+      api.dispose()
+      univer.dispose()
+    }
+  }
 }
 
 function exposeDebugEndpoint(univer: Univer, univerAPI: ViewerDebugAPI): () => void {
-  window.univer = univer;
-  window.univerAPI = univerAPI;
+  window.univer = univer
+  window.univerAPI = univerAPI
   return () => {
     if (window.univer === univer) {
-      delete window.univer;
+      delete window.univer
     }
     if (window.univerAPI === univerAPI) {
-      delete window.univerAPI;
+      delete window.univerAPI
     }
-  };
+  }
 }
 
 /**
@@ -432,80 +432,80 @@ function exposeDebugEndpoint(univer: Univer, univerAPI: ViewerDebugAPI): () => v
  * expect. Leaves everything else untouched.
  */
 function decodeSnapshotFromWire(snapshot: unknown): unknown {
-  if (!snapshot || typeof snapshot !== "object") {
-    return snapshot;
+  if (!snapshot || typeof snapshot !== 'object') {
+    return snapshot
   }
-  const dec = (meta: unknown): unknown => (typeof meta === "string" ? base64ToBytes(meta) : meta);
+  const dec = (meta: unknown): unknown => (typeof meta === 'string' ? base64ToBytes(meta) : meta)
   const s = snapshot as {
-    doc?: { originalMeta?: unknown };
-    slide?: { originalMeta?: unknown };
-    board?: { originalMeta?: unknown };
-    workbook?: { originalMeta?: unknown; sheets?: Record<string, { originalMeta?: unknown }> };
-  };
-  const out = { ...(snapshot as Record<string, unknown>) };
+    doc?: { originalMeta?: unknown }
+    slide?: { originalMeta?: unknown }
+    board?: { originalMeta?: unknown }
+    workbook?: { originalMeta?: unknown; sheets?: Record<string, { originalMeta?: unknown }> }
+  }
+  const out = { ...(snapshot as Record<string, unknown>) }
   if (s.doc) {
-    out.doc = { ...s.doc, originalMeta: dec(s.doc.originalMeta) };
+    out.doc = { ...s.doc, originalMeta: dec(s.doc.originalMeta) }
   }
   if (s.slide) {
-    out.slide = { ...s.slide, originalMeta: dec(s.slide.originalMeta) };
+    out.slide = { ...s.slide, originalMeta: dec(s.slide.originalMeta) }
   }
   if (s.board) {
-    out.board = { ...s.board, originalMeta: dec(s.board.originalMeta) };
+    out.board = { ...s.board, originalMeta: dec(s.board.originalMeta) }
   }
   if (s.workbook) {
-    const sheets: Record<string, unknown> = {};
+    const sheets: Record<string, unknown> = {}
     for (const [id, sheet] of Object.entries(s.workbook.sheets ?? {})) {
-      sheets[id] = { ...sheet, originalMeta: dec(sheet.originalMeta) };
+      sheets[id] = { ...sheet, originalMeta: dec(sheet.originalMeta) }
     }
-    out.workbook = { ...s.workbook, originalMeta: dec(s.workbook.originalMeta), sheets };
+    out.workbook = { ...s.workbook, originalMeta: dec(s.workbook.originalMeta), sheets }
   }
-  return out;
+  return out
 }
 
 function decodeBoardSnapshotData(snapshot: ISnapshot): IBoardData {
-  const meta = snapshot.board;
+  const meta = snapshot.board
   if (meta === undefined) {
-    throw new Error("decodeBoardSnapshotData: missing board meta");
+    throw new Error('decodeBoardSnapshotData: missing board meta')
   }
   return {
     ...decodeJsonData(meta.originalMeta),
     id: snapshot.unitID || meta.unitID,
     rev: snapshot.rev || meta.rev,
     name: meta.name,
-    resources: meta.resources,
-  } as unknown as IBoardData;
+    resources: meta.resources
+  } as unknown as IBoardData
 }
 
 function decodeBaseSnapshotData(
   snapshot: ISnapshot,
-  blocks: readonly (IDeserializedSheetBlock | ISheetBlock)[],
+  blocks: readonly (IDeserializedSheetBlock | ISheetBlock)[]
 ): IBaseSnapshot {
-  const meta = snapshot.workbook;
+  const meta = snapshot.workbook
   if (meta === undefined) {
-    throw new Error("decodeBaseSnapshotData: missing workbook-shaped base meta");
+    throw new Error('decodeBaseSnapshotData: missing workbook-shaped base meta')
   }
 
-  const blockById = new Map<string, IDeserializedSheetBlock | ISheetBlock>();
+  const blockById = new Map<string, IDeserializedSheetBlock | ISheetBlock>()
   for (const block of blocks) {
-    blockById.set(block.id, block);
+    blockById.set(block.id, block)
   }
 
-  const tables: Record<string, ITableSnapshot> = {};
+  const tables: Record<string, ITableSnapshot> = {}
   for (const [tableId, tableMeta] of Object.entries(meta.sheets)) {
-    const cellData: IObjectMatrixPrimitiveType<ICellData> = {};
+    const cellData: IObjectMatrixPrimitiveType<ICellData> = {}
     for (const blockId of meta.blockMeta?.[tableId]?.blocks ?? []) {
-      const block = blockById.get(blockId);
+      const block = blockById.get(blockId)
       if (block === undefined) {
-        throw new Error(`decodeBaseSnapshotData: missing base block ${blockId}`);
+        throw new Error(`decodeBaseSnapshotData: missing base block ${blockId}`)
       }
-      Object.assign(cellData, decodeJsonData(block.data));
+      Object.assign(cellData, decodeJsonData(block.data))
     }
     tables[tableId] = {
       id: tableMeta.id,
       name: tableMeta.name,
       ...decodeJsonData(tableMeta.originalMeta),
-      cellData,
-    } as unknown as ITableSnapshot;
+      cellData
+    } as unknown as ITableSnapshot
   }
 
   return {
@@ -517,43 +517,43 @@ function decodeBaseSnapshotData(
     createdAt: 0,
     updatedAt: 0,
     ...decodeJsonData(meta.originalMeta),
-    rev: snapshot.rev || meta.rev,
-  } as unknown as IBaseSnapshot;
+    rev: snapshot.rev || meta.rev
+  } as unknown as IBaseSnapshot
 }
 
 function decodeJsonData(data: unknown): Record<string, unknown> {
-  if (data === undefined || data === null || data === "") {
-    return {};
+  if (data === undefined || data === null || data === '') {
+    return {}
   }
-  if (typeof data === "string") {
-    return JSON.parse(new TextDecoder().decode(base64ToBytes(data))) as Record<string, unknown>;
+  if (typeof data === 'string') {
+    return JSON.parse(new TextDecoder().decode(base64ToBytes(data))) as Record<string, unknown>
   }
   if (data instanceof Uint8Array) {
-    return JSON.parse(new TextDecoder().decode(data)) as Record<string, unknown>;
+    return JSON.parse(new TextDecoder().decode(data)) as Record<string, unknown>
   }
-  return data as Record<string, unknown>;
+  return data as Record<string, unknown>
 }
 
 function base64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i += 1) {
-    bytes[i] = bin.charCodeAt(i);
+    bytes[i] = bin.charCodeAt(i)
   }
-  return bytes;
+  return bytes
 }
 
 function toUniverInstanceType(unitType: UnitType): UniverInstanceType {
   switch (unitType) {
     case UNIT_TYPE_DOC:
-      return UniverInstanceType.UNIVER_DOC;
+      return UniverInstanceType.UNIVER_DOC
     case UNIT_TYPE_SHEET:
-      return UniverInstanceType.UNIVER_SHEET;
+      return UniverInstanceType.UNIVER_SHEET
     case UNIT_TYPE_SLIDE:
-      return UniverInstanceType.UNIVER_SLIDE;
+      return UniverInstanceType.UNIVER_SLIDE
     case UNIT_TYPE_BASE:
-      return UniverInstanceType.UNIVER_BASE;
+      return UniverInstanceType.UNIVER_BASE
     case UNIT_TYPE_BOARD:
-      return UniverInstanceType.UNIVER_BOARD;
+      return UniverInstanceType.UNIVER_BOARD
   }
 }

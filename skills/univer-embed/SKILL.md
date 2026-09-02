@@ -16,30 +16,30 @@ Create and verify the child Unit first. Use its exact `unitId` and actual Unit t
 Example: embed a Doc as a Sheet tab through `univer_execute` targeting the host Sheet Unit:
 
 ```js
-const hostUnitId = "<host-unit-id>";
-const childUnitId = "<child-unit-id>";
-const sourceRef = "#unit=" + childUnitId + "&type=doc";
+const hostUnitId = '<host-unit-id>'
+const childUnitId = '<child-unit-id>'
+const sourceRef = '#unit=' + childUnitId + '&type=doc'
 const embed = univerAPI.createEmbed({
-  embedId: "<embed-id>",
+  embedId: '<embed-id>',
   host: {
     unitId: hostUnitId,
-    surface: univerAPI.Enum.FEmbedHostSurface.SheetTab,
+    surface: univerAPI.Enum.FEmbedHostSurface.SheetTab
   },
   content: {
     unitType: univerAPI.Enum.UniverInstanceType.UNIVER_DOC,
-    ref: sourceRef,
+    ref: sourceRef
   },
-  interaction: "interactive",
-});
-const child = await embed.loadAsync();
+  interaction: 'interactive'
+})
+const child = await embed.loadAsync()
 if (!child || child.getId() !== childUnitId) {
-  throw new Error("Embedded child mismatch");
+  throw new Error('Embedded child mismatch')
 }
-const descriptor = embed.getDescriptor();
+const descriptor = embed.getDescriptor()
 if (descriptor.source?.ref !== sourceRef) {
-  throw new Error("Embedded ResourceRef mismatch");
+  throw new Error('Embedded ResourceRef mismatch')
 }
-return { childUnitId: child.getId(), descriptor };
+return { childUnitId: child.getId(), descriptor }
 ```
 
 For another child type, change both `unitType` and the ResourceRef `type` to the same actual type.

@@ -1,16 +1,16 @@
-import type { UniverfileSQLiteConnection } from "../../connection.js";
-import { runUniverfileSQLiteTransaction } from "../../connection.js";
+import type { UniverfileSQLiteConnection } from '../../connection.js'
+import { runUniverfileSQLiteTransaction } from '../../connection.js'
 
 export function migrateV1CandidateToV2(connection: UniverfileSQLiteConnection): number {
-  const { database } = connection;
+  const { database } = connection
   const normalizedMergingWorktrees = Number(
     (
       database
         .prepare("SELECT COUNT(*) AS count FROM collaboration_worktrees WHERE status = 'merging'")
         .get() as { readonly count: number }
-    ).count,
-  );
-  database.exec("PRAGMA foreign_keys = OFF;");
+    ).count
+  )
+  database.exec('PRAGMA foreign_keys = OFF;')
   try {
     runUniverfileSQLiteTransaction(database, () => {
       database.exec(`
@@ -37,14 +37,14 @@ export function migrateV1CandidateToV2(connection: UniverfileSQLiteConnection): 
         UPDATE collaboration_schema_versions
         SET version = 2
         WHERE component = 'worktree' AND version = 1;
-      `);
-    });
+      `)
+    })
   } finally {
-    database.exec("PRAGMA foreign_keys = ON;");
+    database.exec('PRAGMA foreign_keys = ON;')
   }
-  const violation = database.prepare("PRAGMA foreign_key_check").get();
+  const violation = database.prepare('PRAGMA foreign_key_check').get()
   if (violation !== undefined) {
-    throw new Error("worktree v1 to v2 migration produced a foreign-key violation");
+    throw new Error('worktree v1 to v2 migration produced a foreign-key violation')
   }
-  return normalizedMergingWorktrees;
+  return normalizedMergingWorktrees
 }

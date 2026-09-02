@@ -14,7 +14,11 @@ export interface WorktreeActionBody {
 }
 
 /** Validate and execute one browser-owned worktree review action. */
-export async function worktreeActionRoute(service: UniverService, sessions: SessionStore, body: unknown) {
+export async function worktreeActionRoute(
+  service: UniverService,
+  sessions: SessionStore,
+  body: unknown
+) {
   if (!isObject(body)) throw new UniverError('JSON object body is required', 'INVALID_REQUEST')
   const action = body.action
   if (action !== 'ready' && action !== 'reopen' && action !== 'discard' && action !== 'merge') {
@@ -28,7 +32,7 @@ export async function worktreeActionRoute(service: UniverService, sessions: Sess
     action,
     workspace: authorized.workspace,
     file: authorized.path,
-    worktreeId: worktreeId(body.worktreeId),
+    worktreeId: worktreeId(body.worktreeId)
   })
 }
 

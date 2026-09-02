@@ -29,12 +29,12 @@ The body is one `dataStream` string. Paragraphs are separated by `\r`, and the d
 Pass paragraph properties and `textStyle` together to `paragraph.setStyle` when the entire paragraph shares one style. Query `IParagraphStyle` rather than guessing enum values.
 
 ```js
-const paragraph = doc.appendParagraph("Section Title");
+const paragraph = doc.appendParagraph('Section Title')
 const changed = paragraph.setStyle({
-  namedStyleType: api.Enum.NamedStyleType?.HEADING_1 ?? "HEADING_1",
-  textStyle: { bl: api.Enum.BooleanNumber.TRUE },
-});
-if (!changed) throw new Error("paragraph style update failed");
+  namedStyleType: api.Enum.NamedStyleType?.HEADING_1 ?? 'HEADING_1',
+  textStyle: { bl: api.Enum.BooleanNumber.TRUE }
+})
+if (!changed) throw new Error('paragraph style update failed')
 ```
 
 Important paragraph fields include `horizontalAlign`, `namedStyleType`, `headingId`, `indentStart`, and `indentFirstLine`. Text style uses compact fields such as `bl`, `it`, `cl: { rgb }`, and `bg: { rgb }`. Later style writes can replace earlier fields, so merge base font family, size, spacing, and color with local overlays deliberately.
@@ -44,9 +44,9 @@ Important paragraph fields include `horizontalAlign`, `namedStyleType`, `heading
 Use a stable Base64 data URI for local reproducible authoring. In the headless authoring runtime, always provide both width and height. Set wrapping explicitly and use a body range rather than a transient selection.
 
 ```js
-const anchor = doc.getParagraphs()[0];
-if (!anchor) throw new Error("image anchor missing");
-const range = anchor.getRange();
+const anchor = doc.getParagraphs()[0]
+if (!anchor) throw new Error('image anchor missing')
+const range = anchor.getRange()
 const image = await doc.insertImage({
   source: imageDataUri,
   imageSourceType: api.Enum.ImageSourceType.BASE64,
@@ -57,10 +57,10 @@ const image = await doc.insertImage({
     startOffset: range.startOffset,
     endOffset: range.startOffset,
     collapsed: true,
-    segmentId: anchor.getSegmentId(),
-  },
-});
-if (!image) throw new Error("image insert failed");
+    segmentId: anchor.getSegmentId()
+  }
+})
+if (!image) throw new Error('image insert failed')
 ```
 
 Use `INLINE` for normal content, `WRAP_SQUARE` or `WRAP_TOP_AND_BOTTOM` when text should reflow, and reserve `BEHIND_TEXT` / `IN_FRONT_OF_TEXT` for intentional overlays. Never persist temporary signed URLs, install global image polyfills, or write drawing storage directly. Verify `doc.getImages()` and docx export when requested.
@@ -72,13 +72,13 @@ Check `doc.getDocumentFlavor()` or `doc.isTraditional()` before page-specific wo
 For a Traditional Doc, insert a hard page boundary with one atomic section command:
 
 ```js
-if (!doc.isTraditional()) throw new Error("Traditional Doc required for physical pagination");
-const chapter = doc.findParagraphByText("Chapter 2");
-if (!chapter) throw new Error("chapter heading missing");
+if (!doc.isTraditional()) throw new Error('Traditional Doc required for physical pagination')
+const chapter = doc.findParagraphByText('Chapter 2')
+if (!chapter) throw new Error('chapter heading missing')
 const section = doc.insertSectionBreak(chapter.getInfo().startOffset, {
-  nextSectionType: api.Enum.SectionType.NEXT_PAGE,
-});
-if (!section) throw new Error("section break insert failed");
+  nextSectionType: api.Enum.SectionType.NEXT_PAGE
+})
+if (!section) throw new Error('section break insert failed')
 ```
 
 Use `section.getEffectivePageSetup()` for resolved geometry. `keepNext`, `keepLines`, and `widowControl` improve natural pagination but do not create hard breaks.
@@ -89,17 +89,21 @@ For fixed columns in a Traditional Doc, prefer a borderless layout table. Real d
 
 ```js
 const table = doc.insertTableFromData(
-  [["Group", ""], ["Name", "Description"], ["A", "Long description"]],
+  [
+    ['Group', ''],
+    ['Name', 'Description'],
+    ['A', 'Long description']
+  ],
   { width: 602, columnWidths: [200.667, 401.333], headerRowCount: 2 }
-);
-if (!table) throw new Error("table insert failed");
-table.mergeCells({ startRow: 0, endRow: 0, startColumn: 0, endColumn: 1 });
-table.setHeaderRowCount(2);
+)
+if (!table) throw new Error('table insert failed')
+table.mergeCells({ startRow: 0, endRow: 0, startColumn: 0, endColumn: 1 })
+table.setHeaderRowCount(2)
 table.setTableBorder({
   preset: api.Enum.DocsTableBorderPreset.None,
-  color: "#FFFFFF",
-  width: 0,
-});
+  color: '#FFFFFF',
+  width: 0
+})
 ```
 
 Constrain cell-local paragraph edits with `table.getCellContentRange(row, column)` and confirm the target text. Do not search duplicate text globally and broadcast a mutation. The public Facade has no verified dynamic current-page field, table-cell padding mutation, or cell vertical-alignment mutation; report these gaps instead of faking them.
@@ -113,21 +117,21 @@ Create detached chart information directly from `doc`, then insert it to obtain 
 ```js
 const info = doc
   .newChart(univerAPI.Enum.ChartTypeString.Column)
-  .setTitle({ text: "Quarterly Revenue" })
+  .setTitle({ text: 'Quarterly Revenue' })
   .setSource([
-    ["Quarter", "Revenue"],
-    ["Q1", 12],
-    ["Q2", 18],
-    ["Q3", 15],
+    ['Quarter', 'Revenue'],
+    ['Q1', 12],
+    ['Q2', 18],
+    ['Q3', 15]
   ])
   .setCategoryField(0)
   .setValueFields([1])
   .setPosition({ kind: univerAPI.Enum.DocsChartInsertAnchorKind.BodyOffset, offset: 0 })
   .setInline()
   .setSize(480, 320)
-  .build();
-const inserted = await doc.insertChart(info);
-return { chartId: inserted.getId(), drawingId: inserted.getDrawingId(), info: inserted.getInfo() };
+  .build()
+const inserted = await doc.insertChart(info)
+return { chartId: inserted.getId(), drawingId: inserted.getDrawingId(), info: inserted.getInfo() }
 ```
 
 `doc.getCharts()` and `doc.getChart(id)` return live charts. Await
