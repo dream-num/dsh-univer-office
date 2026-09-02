@@ -9,22 +9,37 @@ import { UniverError } from '../service/errors.ts'
 export class WorktreeOperations {
   constructor(
     private readonly gatewayTimeoutMs: number,
-    private readonly gatewayMutationTimeoutMs: number,
+    private readonly gatewayMutationTimeoutMs: number
   ) {}
 
   /** Read changed units from the Gateway merge preview. */
   async changedUnits(gateway: string, file: string, worktreeId: string): Promise<ChangedUnit[]> {
     return mapChangedUnits(
-      await new GatewayWorktreeApi(new GatewayClient(gateway, this.gatewayTimeoutMs))
-        .preview(file, worktreeId),
+      await new GatewayWorktreeApi(new GatewayClient(gateway, this.gatewayTimeoutMs)).preview(
+        file,
+        worktreeId
+      )
     )
   }
 
   /** Apply one human review action through Gateway. */
-  async action(gateway: string, file: string, worktreeId: string, action: WorktreeReviewAction): Promise<void> {
-    const value = await new GatewayWorktreeApi(new GatewayClient(gateway, this.gatewayMutationTimeoutMs)).action(file, worktreeId, action)
-    if (isRecord(value) && (value.ok === false || (isRecord(value.error) && value.error.code === 0))) {
-      throw new UniverError(gatewayErrorMessage(value) ?? 'Gateway rejected the worktree action.', 'WORKTREE_ACTION_REJECTED')
+  async action(
+    gateway: string,
+    file: string,
+    worktreeId: string,
+    action: WorktreeReviewAction
+  ): Promise<void> {
+    const value = await new GatewayWorktreeApi(
+      new GatewayClient(gateway, this.gatewayMutationTimeoutMs)
+    ).action(file, worktreeId, action)
+    if (
+      isRecord(value) &&
+      (value.ok === false || (isRecord(value.error) && value.error.code === 0))
+    ) {
+      throw new UniverError(
+        gatewayErrorMessage(value) ?? 'Gateway rejected the worktree action.',
+        'WORKTREE_ACTION_REJECTED'
+      )
     }
   }
 }

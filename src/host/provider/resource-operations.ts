@@ -6,7 +6,7 @@ import {
   HttpsResourceDownloader,
   isResourceLibraryError,
   loadResourceManifestFromPath,
-  type ResourceLibrary,
+  type ResourceLibrary
 } from '@univer-cli/resource-library'
 import { UniverError } from '../service/errors.ts'
 import type { JsonValue, ResourceOperationRequest, UniverResourceResult } from '../service/types.ts'
@@ -22,17 +22,17 @@ export class ResourceOperations {
 
   constructor(
     cacheRoot: string,
-    private readonly downloadTimeoutMs: number,
+    private readonly downloadTimeoutMs: number
   ) {
     this.manifest = loadResourceManifestFromPath(
-      require.resolve('@univerjs-pro/cli-assets/manifest.json'),
+      require.resolve('@univerjs-pro/cli-assets/manifest.json')
     )
     this.cache = new FilesystemResourceCache(cacheRoot)
   }
 
   async execute(
     request: ResourceOperationRequest,
-    signal?: AbortSignal,
+    signal?: AbortSignal
   ): Promise<UniverResourceResult> {
     signal?.throwIfAborted()
     try {
@@ -44,12 +44,12 @@ export class ResourceOperations {
         const found = library.find({
           queries: request.queries,
           ...(request.registries === undefined ? {} : { registries: request.registries }),
-          ...(request.limit === undefined ? {} : { limit: request.limit }),
+          ...(request.limit === undefined ? {} : { limit: request.limit })
         })
         return result(found as unknown as JsonValue)
       }
       if (request.action === 'read') {
-        return result(await library.read({ handle: request.handle }) as unknown as JsonValue)
+        return result((await library.read({ handle: request.handle })) as unknown as JsonValue)
       }
       if (request.action === 'clear-cache') {
         const cleared = await library.clearCache()
@@ -60,12 +60,14 @@ export class ResourceOperations {
       await assertAuthorizedPath(request.outputWorkspace, request.output, false)
       const exported = await library.export({
         handles: request.handles,
-        destination: request.output,
+        destination: request.output
       })
       signal?.throwIfAborted()
-      await Promise.all(exported.exported.map(async (item) => {
-        await assertAuthorizedPath(request.outputWorkspace, item.path, true)
-      }))
+      await Promise.all(
+        exported.exported.map(async (item) => {
+          await assertAuthorizedPath(request.outputWorkspace, item.path, true)
+        })
+      )
       return result(exported as unknown as JsonValue)
     } catch (error) {
       signal?.throwIfAborted()
@@ -83,7 +85,7 @@ export class ResourceOperations {
       const requestSignal = combinedSignal(signal, init?.signal)
       return fetch(input, {
         ...init,
-        ...(requestSignal === undefined ? {} : { signal: requestSignal }),
+        ...(requestSignal === undefined ? {} : { signal: requestSignal })
       })
     }
     return createResourceLibrary({
@@ -92,8 +94,8 @@ export class ResourceOperations {
       output: this.output,
       downloader: new HttpsResourceDownloader({
         fetch: fetchImpl,
-        timeoutMs: this.downloadTimeoutMs,
-      }),
+        timeoutMs: this.downloadTimeoutMs
+      })
     })
   }
 }
@@ -104,7 +106,7 @@ function result(value: JsonValue): UniverResourceResult {
 
 function combinedSignal(
   operation: AbortSignal | undefined,
-  request: AbortSignal | null | undefined,
+  request: AbortSignal | null | undefined
 ): AbortSignal | undefined {
   if (operation === undefined) return request ?? undefined
   if (request === undefined || request === null) return operation

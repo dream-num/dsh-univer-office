@@ -24,13 +24,25 @@ export type UnitContentInspectionQuery =
     }
   | {
       readonly kind: 'worksheet-range'
-      readonly ranges: readonly [{ readonly range: string; readonly worksheet: { readonly name: string } | { readonly index: number } }]
+      readonly ranges: readonly [
+        {
+          readonly range: string
+          readonly worksheet: { readonly name: string } | { readonly index: number }
+        }
+      ]
     }
 
 /** One operation accepted by the package-local worker. */
 export type UnitContentWorkerRequest =
-  | (UnitContentWorkerTarget & { readonly operation: 'inspect'; readonly query: UnitContentInspectionQuery })
-  | (UnitContentWorkerTarget & { readonly operation: 'execute'; readonly code: string; readonly worktreeId: string })
+  | (UnitContentWorkerTarget & {
+      readonly operation: 'inspect'
+      readonly query: UnitContentInspectionQuery
+    })
+  | (UnitContentWorkerTarget & {
+      readonly operation: 'execute'
+      readonly code: string
+      readonly worktreeId: string
+    })
   | (UnitContentWorkerTarget & { readonly operation: 'export'; readonly outputPath: string })
   | (UnitContentWorkerTarget & { readonly operation: 'render-source' })
   | { readonly operation: 'import'; readonly sourcePath: string; readonly unitType: number }

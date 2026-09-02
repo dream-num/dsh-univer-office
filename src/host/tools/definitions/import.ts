@@ -10,13 +10,22 @@ import { existingToolFile, existingToolPath } from '../workspace.ts'
 export function importTool(ctx: Context, timeoutMs: number) {
   return defineTool({
     name: 'univer_import',
-    description: 'Import an xlsx, csv, tsv, docx, or pptx file as a new Unit inside an explicit draft worktree.',
+    description:
+      'Import an xlsx, csv, tsv, docx, or pptx file as a new Unit inside an explicit draft worktree.',
     timeoutMs,
     parameters: {
-      source: { type: 'string', required: true, description: 'Workspace-relative or absolute Office source path.' },
-      file: { type: 'string', required: true, description: 'Workspace-relative or absolute target .univer path.' },
+      source: {
+        type: 'string',
+        required: true,
+        description: 'Workspace-relative or absolute Office source path.'
+      },
+      file: {
+        type: 'string',
+        required: true,
+        description: 'Workspace-relative or absolute target .univer path.'
+      },
       worktreeId: { type: 'string', required: true, description: 'Writable draft worktree id.' },
-      name: { type: 'string', required: true, description: 'Name for the imported Unit.' },
+      name: { type: 'string', required: true, description: 'Name for the imported Unit.' }
     },
     output: operationOutput,
     async execute(args, exec) {
@@ -25,17 +34,26 @@ export function importTool(ctx: Context, timeoutMs: number) {
       }
       const [target, source] = await Promise.all([
         existingToolFile(exec, args.file),
-        existingToolPath(exec, args.source),
+        existingToolPath(exec, args.source)
       ])
-      return stripGatewaySuccessEnvelope(await ctx.univer.importUnitContent({
-        workspace: target.workspace,
-        file: target.path,
-        sourceWorkspace: source.workspace,
-        source: source.path,
-        worktreeId: worktreeId(args.worktreeId),
-        name: args.name,
-      }, exec.signal))
+      return stripGatewaySuccessEnvelope(
+        await ctx.univer.importUnitContent(
+          {
+            workspace: target.workspace,
+            file: target.path,
+            sourceWorkspace: source.workspace,
+            source: source.path,
+            worktreeId: worktreeId(args.worktreeId),
+            name: args.name
+          },
+          exec.signal
+        )
+      )
     },
-    presentCall: (args) => ({ card: 'generic', title: operationTitle('import', args.file), kind: 'execute' }),
+    presentCall: (args) => ({
+      card: 'generic',
+      title: operationTitle('import', args.file),
+      kind: 'execute'
+    })
   })
 }

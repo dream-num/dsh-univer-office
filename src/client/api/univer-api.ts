@@ -3,7 +3,10 @@ import type { FileState } from '../../shared/wire/state.ts'
 import type { EnsureGatewayResult, UniverStatus } from '../../shared/wire/status.ts'
 
 /** Error envelope returned by the Host browser API. */
-interface ApiError { readonly message?: string; readonly code?: string }
+interface ApiError {
+  readonly message?: string
+  readonly code?: string
+}
 
 /** Structured Host failure retained for UI decisions that depend on the error code. */
 export class UniverApiError extends Error {
@@ -20,10 +23,14 @@ export class UniverApiError extends Error {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${window.location.origin}${path}`, init)
-  const body = await response.json() as T | ApiError
+  const body = (await response.json()) as T | ApiError
   if (!response.ok) {
     const error = body as ApiError
-    throw new UniverApiError(error.message ?? `Univer API HTTP ${String(response.status)}`, error.code, response.status)
+    throw new UniverApiError(
+      error.message ?? `Univer API HTTP ${String(response.status)}`,
+      error.code,
+      response.status
+    )
   }
   return body as T
 }
@@ -40,7 +47,9 @@ export function startGateway(): Promise<EnsureGatewayResult> {
 
 /** Read one file's current collaboration state and Viewer targets. */
 export function getFileState(file: string, sessionId: SessionId): Promise<FileState> {
-  return request(`/univer-api/state?file=${encodeURIComponent(file)}&sessionId=${encodeURIComponent(sessionId)}`)
+  return request(
+    `/univer-api/state?file=${encodeURIComponent(file)}&sessionId=${encodeURIComponent(sessionId)}`
+  )
 }
 
 /** A projected file was removed (or never successfully created) in the session workspace. */

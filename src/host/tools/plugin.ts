@@ -48,9 +48,10 @@ export function apply(ctx: Context, config: ResolvedConfig): void {
     if (action !== 'merge' && action !== 'discard') return next()
     return Promise.resolve({
       kind: 'ask',
-      reason: action === 'merge'
-        ? 'Merging publishes the selected Univer worktree into trunk.'
-        : 'Discarding permanently removes the selected Univer worktree changes.',
+      reason:
+        action === 'merge'
+          ? 'Merging publishes the selected Univer worktree into trunk.'
+          : 'Discarding permanently removes the selected Univer worktree changes.'
     })
   })
 }

@@ -45,7 +45,7 @@ const external = [
   '@univerjs-pro/engine-formula-rust-binding',
   '@univerjs-pro/cli-assets',
   '@puppeteer/browsers',
-  'puppeteer-core',
+  'puppeteer-core'
 ]
 
 if (target === 'all' || target === 'lib') {
@@ -62,7 +62,7 @@ if (target === 'all' || target === 'lib') {
     target: 'node22',
     format: 'esm',
     sourcemap: false,
-    legalComments: 'none',
+    legalComments: 'none'
   })
 
   // Browser half: react stays external (the DSH client runtime provides it);
@@ -76,11 +76,14 @@ if (target === 'all' || target === 'lib') {
     platform: 'browser',
     target: 'es2022',
     format: 'cjs',
-    legalComments: 'none',
+    legalComments: 'none'
   })
   const clientCode = client.outputFiles[0]?.text
   if (clientCode === undefined) throw new Error('client build produced no JavaScript')
-  await writeFile('lib/client.js', `window.__ModuleLoader__.load({\n  id: "dsh-univer-office",\n  factory: (require) => {\n    var module = { exports: {} };\n    var exports = module.exports;\n${indent(clientCode, 4)}\n    return module.exports;\n  }\n});\n`)
+  await writeFile(
+    'lib/client.js',
+    `window.__ModuleLoader__.load({\n  id: "dsh-univer-office",\n  factory: (require) => {\n    var module = { exports: {} };\n    var exports = module.exports;\n${indent(clientCode, 4)}\n    return module.exports;\n  }\n});\n`
+  )
 
   // Product telemetry entry for the package uninstall hook.
   await build({
@@ -91,7 +94,7 @@ if (target === 'all' || target === 'lib') {
     target: 'node22',
     format: 'esm',
     legalComments: 'none',
-    sourcemap: false,
+    sourcemap: false
   })
 
   // Telemetry endpoint hardcoded into every build: dev checkouts never invoke
@@ -103,7 +106,9 @@ if (target === 'all' || target === 'lib') {
   const manifest = JSON.parse(await readFile('package.json', 'utf8'))
   let commit = ''
   try {
-    commit = execFileSync('git', ['rev-parse', 'HEAD'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+    commit = execFileSync('git', ['rev-parse', 'HEAD'], { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim()
   } catch {
     // Building outside a git checkout: telemetry payloads simply omit the commit.
   }
@@ -125,7 +130,7 @@ if (target === 'all' || target === 'worker') {
     '@univerjs-pro/cli-assets',
     '@univerjs-pro/engine-formula-rust-binding',
     '@univerjs-pro/exchange-node-binding',
-    'libsql',
+    'libsql'
   ]
   await build({
     entryPoints: ['src/workers/unit-content/entry.ts'],
@@ -137,7 +142,7 @@ if (target === 'all' || target === 'worker') {
     target: 'node22.19',
     format: 'esm',
     legalComments: 'none',
-    sourcemap: false,
+    sourcemap: false
   })
   console.log('built', workerOut)
 }
@@ -152,7 +157,7 @@ if (target === 'all' || target === 'gateway') {
     'libsql',
     '@univerjs-pro/exchange-node-binding',
     '@univerjs-pro/engine-formula-rust-binding',
-    '@univerjs-pro/cli-assets',
+    '@univerjs-pro/cli-assets'
   ]
   await build({
     entryPoints: ['src/gateway-app/gateway-entry.ts'],
@@ -168,7 +173,7 @@ if (target === 'all' || target === 'gateway') {
     target: 'node22',
     format: 'cjs',
     legalComments: 'none',
-    sourcemap: false,
+    sourcemap: false
   })
   console.log('built', gatewayOut)
 }
@@ -184,22 +189,24 @@ if (target === 'all' || target === 'render') {
       target: 'esnext',
       outDir: renderOut,
       emptyOutDir: true,
-      chunkSizeWarningLimit: 20_000,
+      chunkSizeWarningLimit: 20_000
     },
     define: {
-      'process.env': '{}',
+      'process.env': '{}'
     },
     resolve: {
       alias: {
         ...createEmbedUiMenuSchemaAliases(renderRoot),
         '@univer/render-preset/styles': resolve('src/viewer-support/render-preset/styles.ts'),
         '@univer/render-preset/facades': resolve('src/viewer-support/render-preset/facades.ts'),
-        '@univer/render-preset/machine-locale': resolve('src/viewer-support/render-preset/machine-locale.ts'),
+        '@univer/render-preset/machine-locale': resolve(
+          'src/viewer-support/render-preset/machine-locale.ts'
+        ),
         '@univer/render-preset': resolve('src/viewer-support/render-preset/index.ts'),
-        '@univer/importrange-formula': resolve('src/viewer-support/importrange-formula/index.ts'),
-      },
+        '@univer/importrange-formula': resolve('src/viewer-support/importrange-formula/index.ts')
+      }
     },
-    plugins: [createPrismComponentEsmPlugin()],
+    plugins: [createPrismComponentEsmPlugin()]
   })
   console.log('built', renderOut)
 }
@@ -213,10 +220,10 @@ if (target === 'all' || target === 'viewer') {
     build: {
       target: 'esnext',
       outDir: viewerOut,
-      emptyOutDir: true,
+      emptyOutDir: true
     },
     define: {
-      'process.env': '{}',
+      'process.env': '{}'
     },
     resolve: {
       alias: {
@@ -224,12 +231,14 @@ if (target === 'all' || target === 'viewer') {
         '@univer/collab-gateway-contract': resolve('src/gateway-app/contract/index.ts'),
         '@univer/render-preset/styles': resolve('src/viewer-support/render-preset/styles.ts'),
         '@univer/render-preset/facades': resolve('src/viewer-support/render-preset/facades.ts'),
-        '@univer/render-preset/machine-locale': resolve('src/viewer-support/render-preset/machine-locale.ts'),
+        '@univer/render-preset/machine-locale': resolve(
+          'src/viewer-support/render-preset/machine-locale.ts'
+        ),
         '@univer/render-preset': resolve('src/viewer-support/render-preset/index.ts'),
-        '@univer/importrange-formula': resolve('src/viewer-support/importrange-formula/index.ts'),
-      },
+        '@univer/importrange-formula': resolve('src/viewer-support/importrange-formula/index.ts')
+      }
     },
-    plugins: [react(), tailwindcss(), createPrismComponentEsmPlugin()],
+    plugins: [react(), tailwindcss(), createPrismComponentEsmPlugin()]
   })
   await assertViewerRibbonUtilityOrder(viewerOut)
   console.log('built', viewerOut)
@@ -237,11 +246,13 @@ if (target === 'all' || target === 'viewer') {
 
 async function assertViewerRibbonUtilityOrder(viewerOut) {
   const html = await readFile(resolve(viewerOut, 'index.html'), 'utf8')
-  const cssPaths = [...html.matchAll(/href="([^"]+\.css)"/g)].map(match => match[1])
+  const cssPaths = [...html.matchAll(/href="([^"]+\.css)"/g)].map((match) => match[1])
   if (cssPaths.length === 0) throw new Error('viewer build produced no linked CSS')
-  const css = (await Promise.all(cssPaths.map(file =>
-    readFile(resolve(viewerOut, file.replace(/^\/+/, '')), 'utf8')
-  ))).join('\n')
+  const css = (
+    await Promise.all(
+      cssPaths.map((file) => readFile(resolve(viewerOut, file.replace(/^\/+/, '')), 'utf8'))
+    )
+  ).join('\n')
   const fixedHeight = css.lastIndexOf('.univer-h-6{height:1.5rem}')
   const fullHeight = css.lastIndexOf('.univer-h-full{height:100%}')
   if (fixedHeight < 0 || fullHeight < 0 || fullHeight < fixedHeight) {
@@ -251,5 +262,8 @@ async function assertViewerRibbonUtilityOrder(viewerOut) {
 
 function indent(value, spaces) {
   const prefix = ' '.repeat(spaces)
-  return value.split('\n').map(line => line.length === 0 ? '' : prefix + line).join('\n')
+  return value
+    .split('\n')
+    .map((line) => (line.length === 0 ? '' : prefix + line))
+    .join('\n')
 }

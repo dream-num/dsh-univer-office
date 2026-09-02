@@ -1,77 +1,77 @@
-import { existsSync, unlinkSync } from "node:fs";
-import { UniverfileSQLiteConnection } from "./connection.js";
-import { UniverfileSQLiteAssetStore } from "./database-adapters/asset-store.js";
-import { UniverfileSQLiteDatabaseAdapter } from "./database-adapters/collaboration-database-adapter.js";
-import { UniverfileSQLiteHistoryDatabaseAdapter } from "./database-adapters/history-database-adapter.js";
-import { UniverfileSQLiteWorktreeDatabaseAdapter } from "./database-adapters/worktree-database-adapter.js";
-import { UniverfileSQLiteError } from "./errors.js";
+import { existsSync, unlinkSync } from 'node:fs'
+import { UniverfileSQLiteConnection } from './connection.js'
+import { UniverfileSQLiteAssetStore } from './database-adapters/asset-store.js'
+import { UniverfileSQLiteDatabaseAdapter } from './database-adapters/collaboration-database-adapter.js'
+import { UniverfileSQLiteHistoryDatabaseAdapter } from './database-adapters/history-database-adapter.js'
+import { UniverfileSQLiteWorktreeDatabaseAdapter } from './database-adapters/worktree-database-adapter.js'
+import { UniverfileSQLiteError } from './errors.js'
 import {
   upgradeUniverfileSQLite,
   type UniverfileUpgradeResult,
-  type UpgradeUniverfileSQLiteOptions,
-} from "./migration/upgrade.js";
+  type UpgradeUniverfileSQLiteOptions
+} from './migration/upgrade.js'
 
 export interface OpenUniverfileSQLiteOptions extends UpgradeUniverfileSQLiteOptions {
-  readonly busyTimeoutMs?: number;
+  readonly busyTimeoutMs?: number
 }
 
 export interface UniverfileSQLite {
-  readonly filename: string;
-  readonly connection: UniverfileSQLiteConnection;
-  readonly databaseAdapter: UniverfileSQLiteDatabaseAdapter;
-  readonly worktreeDatabaseAdapter: UniverfileSQLiteWorktreeDatabaseAdapter;
-  readonly historyDatabaseAdapter: UniverfileSQLiteHistoryDatabaseAdapter;
-  readonly assetStore: UniverfileSQLiteAssetStore;
-  readonly upgrade: UniverfileUpgradeResult;
-  dispose(): Promise<void>;
+  readonly filename: string
+  readonly connection: UniverfileSQLiteConnection
+  readonly databaseAdapter: UniverfileSQLiteDatabaseAdapter
+  readonly worktreeDatabaseAdapter: UniverfileSQLiteWorktreeDatabaseAdapter
+  readonly historyDatabaseAdapter: UniverfileSQLiteHistoryDatabaseAdapter
+  readonly assetStore: UniverfileSQLiteAssetStore
+  readonly upgrade: UniverfileUpgradeResult
+  dispose(): Promise<void>
 }
 
 export function openUniverfileSQLite(
   filename: string,
-  options: OpenUniverfileSQLiteOptions = {},
+  options: OpenUniverfileSQLiteOptions = {}
 ): UniverfileSQLite {
   if (!existsSync(filename)) {
-    throw new UniverfileSQLiteError("FILE_NOT_FOUND", `.univer file not found: ${filename}`);
+    throw new UniverfileSQLiteError('FILE_NOT_FOUND', `.univer file not found: ${filename}`)
   }
-  const upgrade = upgradeUniverfileSQLite(filename, options);
-  return openCurrent(filename, upgrade, options.busyTimeoutMs);
+  const upgrade = upgradeUniverfileSQLite(filename, options)
+  return openCurrent(filename, upgrade, options.busyTimeoutMs)
 }
 
 export function createUniverfileSQLite(
   filename: string,
-  options: Pick<OpenUniverfileSQLiteOptions, "busyTimeoutMs"> = {},
+  options: Pick<OpenUniverfileSQLiteOptions, 'busyTimeoutMs'> = {}
 ): UniverfileSQLite {
-  if (filename !== ":memory:" && existsSync(filename)) {
-    throw new UniverfileSQLiteError("FILE_EXISTS", `.univer file already exists: ${filename}`);
+  if (filename !== ':memory:' && existsSync(filename)) {
+    throw new UniverfileSQLiteError('FILE_EXISTS', `.univer file already exists: ${filename}`)
   }
   try {
-    return openCurrent(filename, { status: "unchanged", format: "v2" }, options.busyTimeoutMs);
+    return openCurrent(filename, { status: 'unchanged', format: 'v2' }, options.busyTimeoutMs)
   } catch (error) {
-    if (filename !== ":memory:" && existsSync(filename)) unlinkSync(filename);
-    throw error;
+    if (filename !== ':memory:' && existsSync(filename)) unlinkSync(filename)
+    throw error
   }
 }
 
 function openCurrent(
   filename: string,
   upgrade: UniverfileUpgradeResult,
-  busyTimeoutMs: number | undefined,
+  busyTimeoutMs: number | undefined
 ): UniverfileSQLite {
   const connection = new UniverfileSQLiteConnection({
     filename,
-    ...(busyTimeoutMs === undefined ? {} : { busyTimeoutMs }),
-  });
-  let databaseAdapter: UniverfileSQLiteDatabaseAdapter | undefined;
-  let worktreeDatabaseAdapter: UniverfileSQLiteWorktreeDatabaseAdapter | undefined;
-  let historyDatabaseAdapter: UniverfileSQLiteHistoryDatabaseAdapter | undefined;
+    ...(busyTimeoutMs === undefined ? {} : { busyTimeoutMs })
+  })
+  let databaseAdapter: UniverfileSQLiteDatabaseAdapter | undefined
+  let worktreeDatabaseAdapter: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
+  let historyDatabaseAdapter: UniverfileSQLiteHistoryDatabaseAdapter | undefined
   try {
-    const trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection });
-    databaseAdapter = trunk;
-    const worktree = new UniverfileSQLiteWorktreeDatabaseAdapter({ filename, connection });
-    worktreeDatabaseAdapter = worktree;
-    const history = new UniverfileSQLiteHistoryDatabaseAdapter({ connection });
-    historyDatabaseAdapter = history;
-    const assetStore = new UniverfileSQLiteAssetStore({ connection });
+    const trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection })
+    databaseAdapter = trunk
+    const worktree = new UniverfileSQLiteWorktreeDatabaseAdapter({ filename, connection })
+    worktreeDatabaseAdapter = worktree
+    const history = new UniverfileSQLiteHistoryDatabaseAdapter({ connection })
+    historyDatabaseAdapter = history
+    const assetStore = new UniverfileSQLiteAssetStore({ connection })
     return {
       filename,
       connection,
@@ -81,17 +81,17 @@ function openCurrent(
       assetStore,
       upgrade,
       async dispose(): Promise<void> {
-        await history.dispose();
-        await worktree.dispose();
-        await trunk.dispose();
-        connection.dispose();
-      },
-    };
+        await history.dispose()
+        await worktree.dispose()
+        await trunk.dispose()
+        connection.dispose()
+      }
+    }
   } catch (error) {
-    if (historyDatabaseAdapter !== undefined) void historyDatabaseAdapter.dispose();
-    if (worktreeDatabaseAdapter !== undefined) void worktreeDatabaseAdapter.dispose();
-    if (databaseAdapter !== undefined) void databaseAdapter.dispose();
-    connection.dispose();
-    throw error;
+    if (historyDatabaseAdapter !== undefined) void historyDatabaseAdapter.dispose()
+    if (worktreeDatabaseAdapter !== undefined) void worktreeDatabaseAdapter.dispose()
+    if (databaseAdapter !== undefined) void databaseAdapter.dispose()
+    connection.dispose()
+    throw error
   }
 }

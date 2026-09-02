@@ -5,7 +5,7 @@ run-name: ${{ inputs.latest_version && format('Set npm latest to {0}', inputs.la
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:

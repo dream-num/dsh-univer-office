@@ -5,7 +5,10 @@ import type { ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-ui-co
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
-  outcomeOfTurnFile, resolveTurnFiles, type UniverTurnFile, type UniverTurnMatch,
+  outcomeOfTurnFile,
+  resolveTurnFiles,
+  type UniverTurnFile,
+  type UniverTurnMatch
 } from '../conversation/univer-turn-definition.ts'
 import { useUniverStates } from '../hooks/use-univer-state.ts'
 import type { ViewerLocaleInjected } from '../viewer-locale.ts'
@@ -19,12 +22,16 @@ export type PreviewCardProps = PropsRuntime<'conversation.chat.turnTail'> & Prev
 
 interface LegacyPreviewCardProps extends PreviewCardShared {
   readonly sessionId: SessionId
-  readonly useSession: <Selected>(selector: (snapshot: {
-    readonly chat: { readonly timeline: ConversationTimelineSnapshot }
-  }) => Selected) => Selected
-  readonly useSessions: <Selected>(selector: (snapshot: {
-    readonly byId: Readonly<Record<string, { readonly cwd?: string }>>
-  }) => Selected) => Selected
+  readonly useSession: <Selected>(
+    selector: (snapshot: {
+      readonly chat: { readonly timeline: ConversationTimelineSnapshot }
+    }) => Selected
+  ) => Selected
+  readonly useSessions: <Selected>(
+    selector: (snapshot: {
+      readonly byId: Readonly<Record<string, { readonly cwd?: string }>>
+    }) => Selected
+  ) => Selected
 }
 
 /** DSH 0.1.1-rc.2 adapter: Chat remains nested in the Session snapshot. */
@@ -42,32 +49,46 @@ export function SplitSnapshotPreviewCard(props: PreviewCardProps): React.ReactEl
 }
 
 /** Render one unified Univer card for every file touched during the owning Turn. */
-function PreviewCardContent(props: PreviewCardShared & {
-  readonly sessionId: SessionId
-  readonly timeline: ConversationTimelineSnapshot
-  readonly cwd: string | undefined
-}): React.ReactElement {
-  const files = React.useMemo(() => resolveTurnFiles(props.matched.files, props.cwd), [props.matched.files, props.cwd])
-  const { states, missingFiles } = useUniverStates(files.map((entry) => entry.file), props.sessionId)
+function PreviewCardContent(
+  props: PreviewCardShared & {
+    readonly sessionId: SessionId
+    readonly timeline: ConversationTimelineSnapshot
+    readonly cwd: string | undefined
+  }
+): React.ReactElement {
+  const files = React.useMemo(
+    () => resolveTurnFiles(props.matched.files, props.cwd),
+    [props.matched.files, props.cwd]
+  )
+  const { states, missingFiles } = useUniverStates(
+    files.map((entry) => entry.file),
+    props.sessionId
+  )
   const latestTurns = React.useMemo(() => latestWorktreeTurns(props.timeline), [props.timeline])
-  return <>{files.map((target) => {
-    // Bash or another tool may remove a temporary file after its structured Univer operations.
-    // The Host's current workspace state is authoritative, so no historical shell is rendered.
-    if (missingFiles.has(target.file)) return null
-    const outcome = outcomeOfTurnFile(target)
-    const worktreeId = outcome.primaryWorktreeId ?? pendingWorktree(target)
-    const historical = worktreeId !== null && latestTurns.get(worktreeId) !== props.matched.turn
-    return <ReviewPanel
-      key={target.file}
-      file={target.file}
-      state={states[target.file]}
-      worktreeId={worktreeId}
-      preferredUnitId={outcome.preferredUnitId}
-      historical={historical}
-      t={props.t}
-      viewerLocale={props.getViewerLocale()}
-    />
-  })}</>
+  return (
+    <>
+      {files.map((target) => {
+        // Bash or another tool may remove a temporary file after its structured Univer operations.
+        // The Host's current workspace state is authoritative, so no historical shell is rendered.
+        if (missingFiles.has(target.file)) return null
+        const outcome = outcomeOfTurnFile(target)
+        const worktreeId = outcome.primaryWorktreeId ?? pendingWorktree(target)
+        const historical = worktreeId !== null && latestTurns.get(worktreeId) !== props.matched.turn
+        return (
+          <ReviewPanel
+            key={target.file}
+            file={target.file}
+            state={states[target.file]}
+            worktreeId={worktreeId}
+            preferredUnitId={outcome.preferredUnitId}
+            historical={historical}
+            t={props.t}
+            viewerLocale={props.getViewerLocale()}
+          />
+        )
+      })}
+    </>
+  )
 }
 
 function pendingWorktree(target: UniverTurnFile): string | null {

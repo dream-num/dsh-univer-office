@@ -4,7 +4,13 @@ import type { EnsureGatewayResult, GatewayStatus } from '../../shared/wire/statu
 import type { UniverFilePath, UnitId, WorkspacePath, WorktreeId } from './identifiers.ts'
 
 /** JSON values accepted across the model tool boundary. */
-export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
+export type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | JsonValue[]
+  | { [key: string]: JsonValue }
 
 /** Unit kinds supported by the collaboration Gateway. */
 export type UniverUnitKind = 'sheet' | 'doc' | 'slide' | 'base' | 'board'
@@ -34,25 +40,27 @@ export interface WorktreeActionRequest extends ScopedFileRequest {
 }
 
 /** Agent-facing worktree lifecycle request. */
-export type WorktreeOperationRequest = ScopedFileRequest & (
-  | { readonly action: 'create'; readonly name?: string }
-  | { readonly action: 'ready' | 'reopen' | 'merge' | 'discard'; readonly worktreeId: WorktreeId }
-)
+export type WorktreeOperationRequest = ScopedFileRequest &
+  (
+    | { readonly action: 'create'; readonly name?: string }
+    | { readonly action: 'ready' | 'reopen' | 'merge' | 'discard'; readonly worktreeId: WorktreeId }
+  )
 
 /** Draft-worktree Unit lifecycle request. */
-export type UnitOperationRequest = ScopedFileRequest & (
-  | {
-      readonly action: 'create'
-      readonly worktreeId: WorktreeId
-      readonly kind: UniverUnitKind
-      readonly name: string
-    }
-  | {
-      readonly action: 'remove'
-      readonly worktreeId: WorktreeId
-      readonly unitId: UnitId
-    }
-)
+export type UnitOperationRequest = ScopedFileRequest &
+  (
+    | {
+        readonly action: 'create'
+        readonly worktreeId: WorktreeId
+        readonly kind: UniverUnitKind
+        readonly name: string
+      }
+    | {
+        readonly action: 'remove'
+        readonly worktreeId: WorktreeId
+        readonly unitId: UnitId
+      }
+  )
 
 /** Request for inspecting one Unit. */
 export interface InspectUnitContentRequest extends ScopedFileRequest {
@@ -205,7 +213,18 @@ export type ApiReferenceRequest =
 /** Structured operation result logged in the DSH session. */
 export interface UniverOperationResult {
   readonly ok: true
-  readonly operation: 'new' | 'status' | 'inspect' | 'execute' | 'import' | 'export' | 'lint' | 'screenshot' | 'compile-svg' | 'unit' | 'worktree'
+  readonly operation:
+    | 'new'
+    | 'status'
+    | 'inspect'
+    | 'execute'
+    | 'import'
+    | 'export'
+    | 'lint'
+    | 'screenshot'
+    | 'compile-svg'
+    | 'unit'
+    | 'worktree'
   readonly file: string
   readonly result: JsonValue
 }
@@ -228,12 +247,30 @@ export interface UniverServiceMethods {
   status(request: FileStatusRequest, signal?: AbortSignal): Promise<UniverOperationResult>
   worktree(request: WorktreeOperationRequest, signal?: AbortSignal): Promise<UniverOperationResult>
   unit(request: UnitOperationRequest, signal?: AbortSignal): Promise<UniverOperationResult>
-  inspectUnitContent(request: InspectUnitContentRequest, signal?: AbortSignal): Promise<UniverOperationResult>
-  executeUnitContent(request: ExecuteUnitContentRequest, signal?: AbortSignal): Promise<UniverOperationResult>
-  importUnitContent(request: ImportUnitContentRequest, signal?: AbortSignal): Promise<UniverOperationResult>
-  exportUnitContent(request: ExportUnitContentRequest, signal?: AbortSignal): Promise<UniverOperationResult>
-  lintUnitLayout(request: LintUnitLayoutRequest, signal?: AbortSignal): Promise<UniverOperationResult>
-  screenshotUnit(request: ScreenshotUnitRequest, signal?: AbortSignal): Promise<ScreenshotServiceResult>
+  inspectUnitContent(
+    request: InspectUnitContentRequest,
+    signal?: AbortSignal
+  ): Promise<UniverOperationResult>
+  executeUnitContent(
+    request: ExecuteUnitContentRequest,
+    signal?: AbortSignal
+  ): Promise<UniverOperationResult>
+  importUnitContent(
+    request: ImportUnitContentRequest,
+    signal?: AbortSignal
+  ): Promise<UniverOperationResult>
+  exportUnitContent(
+    request: ExportUnitContentRequest,
+    signal?: AbortSignal
+  ): Promise<UniverOperationResult>
+  lintUnitLayout(
+    request: LintUnitLayoutRequest,
+    signal?: AbortSignal
+  ): Promise<UniverOperationResult>
+  screenshotUnit(
+    request: ScreenshotUnitRequest,
+    signal?: AbortSignal
+  ): Promise<ScreenshotServiceResult>
   compileSvg(request: CompileSvgRequest, signal?: AbortSignal): Promise<UniverOperationResult>
   apiReference(request: ApiReferenceRequest): Promise<UniverApiResult>
   resources(request: ResourceOperationRequest, signal?: AbortSignal): Promise<UniverResourceResult>

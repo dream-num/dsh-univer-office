@@ -10,9 +10,13 @@ export const name = 'univer-web'
 
 /** Register the browser API as one host webserver prefix route. */
 export function apply(ctx: Context): void {
-  ctx.effect(() => ctx.webServer.register({
-    kind: 'prefix',
-    path: '/univer-api',
-    handler: createUniverRouter(ctx.univer, ctx.sessions),
-  }), 'univer: browser api')
+  ctx.effect(
+    () =>
+      ctx.webServer.register({
+        kind: 'prefix',
+        path: '/univer-api',
+        handler: createUniverRouter(ctx.univer, ctx.sessions)
+      }),
+    'univer: browser api'
+  )
 }

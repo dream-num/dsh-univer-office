@@ -12,7 +12,10 @@ export async function gatewayIsHealthy(origin: string, timeoutMs: number): Promi
 }
 
 /** Return the first healthy Gateway origin from the configured ports. */
-export async function probeGateway(ports: readonly number[], timeoutMs: number): Promise<string | null> {
+export async function probeGateway(
+  ports: readonly number[],
+  timeoutMs: number
+): Promise<string | null> {
   for (const port of ports) {
     const origin = `http://127.0.0.1:${String(port)}`
     if (await gatewayIsHealthy(origin, timeoutMs)) return origin

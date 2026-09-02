@@ -6,7 +6,10 @@ import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import { UNIVER_SETTINGS_NAMESPACE, type UniverSettings } from '../shared/settings.ts'
-import { CombinedSnapshotPreviewCard, SplitSnapshotPreviewCard } from './components/preview-card.tsx'
+import {
+  CombinedSnapshotPreviewCard,
+  SplitSnapshotPreviewCard
+} from './components/preview-card.tsx'
 import { UniverSettingsCard } from './components/settings-card.tsx'
 import { CombinedSnapshotUniverDock, SplitSnapshotUniverDock } from './components/univer-dock.tsx'
 import { selectUniverTurn, univerTurnDefinition } from './conversation/univer-turn-definition.ts'
@@ -28,36 +31,63 @@ export function apply(ctx: ClientContext): void {
   const conversationApi = registerConversationDefinition(ctx, univerTurnDefinition)
   // The runtime probe selects the legacy prop shape before registration; these
   // assertions bridge that unavailable historical type into the alpha.4 build.
-  const PreviewCard = conversationApi === 'split'
-    ? SplitSnapshotPreviewCard
-    : CombinedSnapshotPreviewCard as typeof SplitSnapshotPreviewCard
-  const UniverDock = conversationApi === 'split'
-    ? SplitSnapshotUniverDock
-    : CombinedSnapshotUniverDock as typeof SplitSnapshotUniverDock
+  const PreviewCard =
+    conversationApi === 'split'
+      ? SplitSnapshotPreviewCard
+      : (CombinedSnapshotPreviewCard as typeof SplitSnapshotPreviewCard)
+  const UniverDock =
+    conversationApi === 'split'
+      ? SplitSnapshotUniverDock
+      : (CombinedSnapshotUniverDock as typeof SplitSnapshotUniverDock)
   ctx.effect(() => ctx.locale.register(UNIVER_LOCALE_NAMESPACE, { zh, en }), 'univer: dictionaries')
-  ctx.effect(() => ctx.slots.inject('conversation.chat.turnTail', () => ctx.slots.register({
-    name: 'conversation.chat.turnTail',
-    priority: -10,
-    locale: UNIVER_LOCALE_NAMESPACE,
-    select: selectUniverTurn,
-    inject: () => ({ getViewerLocale }),
-  }, PreviewCard)), 'univer: turn preview')
-  ctx.effect(() => ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
-    name: 'conversation.input.dock',
-    id: 'univer-dock',
-    order: 400,
-    locale: UNIVER_LOCALE_NAMESPACE,
-    inject: () => ({ getViewerLocale, livePreview }),
-  }, UniverDock)), 'univer: worktree dock')
+  ctx.effect(
+    () =>
+      ctx.slots.inject('conversation.chat.turnTail', () =>
+        ctx.slots.register(
+          {
+            name: 'conversation.chat.turnTail',
+            priority: -10,
+            locale: UNIVER_LOCALE_NAMESPACE,
+            select: selectUniverTurn,
+            inject: () => ({ getViewerLocale })
+          },
+          PreviewCard
+        )
+      ),
+    'univer: turn preview'
+  )
+  ctx.effect(
+    () =>
+      ctx.slots.inject('conversation.input.dock', () =>
+        ctx.slots.register(
+          {
+            name: 'conversation.input.dock',
+            id: 'univer-dock',
+            order: 400,
+            locale: UNIVER_LOCALE_NAMESPACE,
+            inject: () => ({ getViewerLocale, livePreview })
+          },
+          UniverDock
+        )
+      ),
+    'univer: worktree dock'
+  )
   ctx.inject(['settingsScope'], (settingsCtx: ClientContext) => {
-    const settings = settingsCtx.settingsScope.bind<UniverSettings>({ namespace: UNIVER_SETTINGS_NAMESPACE })
+    const settings = settingsCtx.settingsScope.bind<UniverSettings>({
+      namespace: UNIVER_SETTINGS_NAMESPACE
+    })
     settingsCtx.effect(() => livePreview.attach(settings), 'univer: live preview preference')
-    settingsCtx.slots.inject('settings.plugin.item', () => settingsCtx.slots.register({
-      name: 'settings.plugin.item',
-      key: UNIVER_SETTINGS_NAMESPACE,
-      locale: UNIVER_LOCALE_NAMESPACE,
-      inject: () => ({ settings }),
-    }, UniverSettingsCard))
+    settingsCtx.slots.inject('settings.plugin.item', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'settings.plugin.item',
+          key: UNIVER_SETTINGS_NAMESPACE,
+          locale: UNIVER_LOCALE_NAMESPACE,
+          inject: () => ({ settings })
+        },
+        UniverSettingsCard
+      )
+    )
   })
 }
 

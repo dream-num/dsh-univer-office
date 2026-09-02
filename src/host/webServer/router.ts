@@ -23,31 +23,44 @@ export function createUniverRouter(service: UniverService, sessions: SessionStor
         return
       }
       if (request.method === 'GET' && url.pathname === '/univer-api/state') {
-        sendJson(response, 200, await stateRoute(service, sessions, url.searchParams.get('file'), url.searchParams.get('sessionId')))
+        sendJson(
+          response,
+          200,
+          await stateRoute(
+            service,
+            sessions,
+            url.searchParams.get('file'),
+            url.searchParams.get('sessionId')
+          )
+        )
         return
       }
       if (request.method === 'POST' && url.pathname === '/univer-api/worktree-action') {
-        sendJson(response, 200, await worktreeActionRoute(service, sessions, await readJsonBody(request)))
+        sendJson(
+          response,
+          200,
+          await worktreeActionRoute(service, sessions, await readJsonBody(request))
+        )
         return
       }
       response.writeHead(404)
       response.end()
     } catch (error) {
-      const rejected = error instanceof UniverError && (
-        error.code === 'INVALID_REQUEST'
-        || error.code === 'INVALID_FILE_PATH'
-        || error.code === 'FILE_PERMISSION_DENIED'
-        || error.code === 'SESSION_SCOPE_UNAVAILABLE'
-        || error.code === 'SESSION_SCOPE_DENIED'
-      )
-      const forbidden = error instanceof UniverError && (
-        error.code === 'FILE_PERMISSION_DENIED' || error.code === 'SESSION_SCOPE_DENIED'
-      )
+      const rejected =
+        error instanceof UniverError &&
+        (error.code === 'INVALID_REQUEST' ||
+          error.code === 'INVALID_FILE_PATH' ||
+          error.code === 'FILE_PERMISSION_DENIED' ||
+          error.code === 'SESSION_SCOPE_UNAVAILABLE' ||
+          error.code === 'SESSION_SCOPE_DENIED')
+      const forbidden =
+        error instanceof UniverError &&
+        (error.code === 'FILE_PERMISSION_DENIED' || error.code === 'SESSION_SCOPE_DENIED')
       const status = rejected ? (forbidden ? 403 : 400) : 500
       sendJson(response, status, {
         ok: false,
         code: error instanceof UniverError ? error.code : 'INTERNAL_ERROR',
-        message: error instanceof Error ? error.message : String(error),
+        message: error instanceof Error ? error.message : String(error)
       })
     }
   }
@@ -57,7 +70,7 @@ export function createUniverRouter(service: UniverService, sessions: SessionStor
 export function sendJson(response: ServerResponse, status: number, value: unknown): void {
   response.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
-    'cache-control': 'no-store',
+    'cache-control': 'no-store'
   })
   response.end(JSON.stringify(value))
 }
@@ -68,7 +81,8 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   for await (const chunk of request) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     bytes += buffer.length
-    if (bytes > MAX_BODY_BYTES) throw new UniverError('request body is too large', 'INVALID_REQUEST')
+    if (bytes > MAX_BODY_BYTES)
+      throw new UniverError('request body is too large', 'INVALID_REQUEST')
     chunks.push(buffer)
   }
   if (chunks.length === 0) throw new UniverError('JSON body is required', 'INVALID_REQUEST')

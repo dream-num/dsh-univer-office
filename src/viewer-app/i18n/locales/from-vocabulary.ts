@@ -1,64 +1,64 @@
-import type { Messages } from "./en-US";
+import type { Messages } from './en-US'
 
 export interface MessageVocabulary {
-  title: string;
-  file: string;
-  modification: string;
-  currentVersion: string;
-  aiAssistant: string;
-  no: string;
-  create: string;
-  start: string;
-  load: string;
-  loading: string;
-  failed: string;
-  preview: string;
-  merge: string;
-  discard: string;
-  conflict: string;
-  updated: string;
-  editing: string;
-  ready: string;
-  readyChanged: string;
-  readyFailed: (error: string) => string;
-  submitForReview: string;
-  readyTitle: string;
-  readyBody: (name: string) => string;
-  readyConfirm: string;
-  merged: string;
-  discarded: string;
-  files: string;
-  inProgress: string;
-  awaiting: string;
-  collapse: string;
-  expand: string;
-  settings: string;
-  appearance: string;
-  light: string;
-  dark: string;
-  language: string;
-  cancel: string;
-  confirm: string;
-  viewOnly: string;
-  editable: string;
-  locked: string;
-  stop: string;
-  continue: string;
-  latestChanged: string;
-  permanent: string;
-  justNow: string;
-  minute: string;
-  hour: string;
-  day: string;
-  choose: string;
-  cannot: string;
-  empty: string;
+  title: string
+  file: string
+  modification: string
+  currentVersion: string
+  aiAssistant: string
+  no: string
+  create: string
+  start: string
+  load: string
+  loading: string
+  failed: string
+  preview: string
+  merge: string
+  discard: string
+  conflict: string
+  updated: string
+  editing: string
+  ready: string
+  readyChanged: string
+  readyFailed: (error: string) => string
+  submitForReview: string
+  readyTitle: string
+  readyBody: (name: string) => string
+  readyConfirm: string
+  merged: string
+  discarded: string
+  files: string
+  inProgress: string
+  awaiting: string
+  collapse: string
+  expand: string
+  settings: string
+  appearance: string
+  light: string
+  dark: string
+  language: string
+  cancel: string
+  confirm: string
+  viewOnly: string
+  editable: string
+  locked: string
+  stop: string
+  continue: string
+  latestChanged: string
+  permanent: string
+  justNow: string
+  minute: string
+  hour: string
+  day: string
+  choose: string
+  cannot: string
+  empty: string
 }
 
 /** Build a structurally complete shell table from locale-owned vocabulary, without English fallback. */
 export function messagesFromVocabulary(v: MessageVocabulary): Messages {
-  const failure = (action: string, error: string): string => `${action} ${v.failed}: ${error}`;
-  const ago = (n: number, unit: string): string => `${n} ${unit}`;
+  const failure = (action: string, error: string): string => `${action} ${v.failed}: ${error}`
+  const ago = (n: number, unit: string): string => `${n} ${unit}`
   return {
     app: { title: v.title },
     boot: {
@@ -104,7 +104,7 @@ export function messagesFromVocabulary(v: MessageVocabulary): Messages {
       expand: v.expand,
       tailReady: v.awaiting,
       tailDraft: v.inProgress,
-      worktreeRowSub: (when, tail) => `${v.aiAssistant}${when ? ` · ${when}` : ""} · ${tail}`
+      worktreeRowSub: (when, tail) => `${v.aiAssistant}${when ? ` · ${when}` : ''} · ${tail}`
     },
     status: { draft: v.editing, ready: v.ready, merged: v.merged, discarded: v.discarded },
     change: {
@@ -178,5 +178,5 @@ export function messagesFromVocabulary(v: MessageVocabulary): Messages {
       deleted: (n) => `${n} ${v.discarded}`,
       noChanges: `${v.no} ${v.modification}`
     }
-  };
+  }
 }

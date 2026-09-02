@@ -1,10 +1,10 @@
 export interface ElProps {
-  class?: string;
-  text?: string;
-  html?: string;
-  onClick?: (ev: MouseEvent) => void;
-  attrs?: Record<string, string>;
-  title?: string;
+  class?: string
+  text?: string
+  html?: string
+  onClick?: (ev: MouseEvent) => void
+  attrs?: Record<string, string>
+  title?: string
 }
 
 /**
@@ -16,29 +16,29 @@ export function el(
   props: ElProps = {},
   children: Array<Node | string> = []
 ): HTMLElement {
-  const node = document.createElement(tag);
+  const node = document.createElement(tag)
   if (props.class !== undefined) {
-    node.className = props.class;
+    node.className = props.class
   }
   if (props.text !== undefined) {
-    node.textContent = props.text;
+    node.textContent = props.text
   }
   if (props.html !== undefined) {
-    node.innerHTML = props.html;
+    node.innerHTML = props.html
   }
   if (props.title !== undefined) {
-    node.title = props.title;
+    node.title = props.title
   }
   if (props.onClick) {
-    node.addEventListener("click", props.onClick);
+    node.addEventListener('click', props.onClick)
   }
   if (props.attrs) {
     for (const [k, v] of Object.entries(props.attrs)) {
-      node.setAttribute(k, v);
+      node.setAttribute(k, v)
     }
   }
   for (const c of children) {
-    node.append(c);
+    node.append(c)
   }
-  return node;
+  return node
 }

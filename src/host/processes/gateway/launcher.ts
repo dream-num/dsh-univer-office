@@ -4,7 +4,11 @@ import { GATEWAY_ENTRY, PLUGIN_NODE_MODULES, VIEWER_ROOT } from '../../artifacts
 import { spawnEnvironment } from '../spawn-env.ts'
 
 /** Build the fixed executable and environment used for a bundled Gateway. */
-export function gatewayLaunch(port: number): { readonly command: string; readonly args: readonly string[]; readonly options: SpawnOptions } {
+export function gatewayLaunch(port: number): {
+  readonly command: string
+  readonly args: readonly string[]
+  readonly options: SpawnOptions
+} {
   const inherited = ['HOME', 'LANG', 'LC_ALL', 'PATH', 'TMPDIR'].flatMap((key) => {
     const value = process.env[key]
     return value === undefined ? [] : [[key, value] as const]
@@ -17,7 +21,9 @@ export function gatewayLaunch(port: number): { readonly command: string; readonl
     // (@univerjs-pro/exchange-node-binding, engine-formula-rust-binding, libsql) from this
     // plugin's node_modules; the formula binding package resolves its own
     // platform binary (no NAPI_RS_NATIVE_LIBRARY_PATH override needed).
-    NODE_PATH: [PLUGIN_NODE_MODULES, process.env.NODE_PATH].filter((value): value is string => value !== undefined && value.length > 0).join(delimiter),
+    NODE_PATH: [PLUGIN_NODE_MODULES, process.env.NODE_PATH]
+      .filter((value): value is string => value !== undefined && value.length > 0)
+      .join(delimiter)
   }
   return {
     command: process.execPath,
@@ -25,7 +31,7 @@ export function gatewayLaunch(port: number): { readonly command: string; readonl
     options: {
       env: spawnEnvironment(env),
       stdio: ['ignore', 'ignore', 'pipe'],
-      windowsHide: true,
-    },
+      windowsHide: true
+    }
   }
 }
