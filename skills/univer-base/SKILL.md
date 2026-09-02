@@ -58,16 +58,16 @@ Base Formula fields must use exact Excel structured references:
 Resolve every table's formula identifier with `table.getFormulaName()`. It may differ from the display name when duplicated or illegal as an Excel table name.
 
 ```js
-const ordersName = orders.getFormulaName()
-const pricingName = pricing.getFormulaName()
-orders.addField('Line Total', univerAPI.Enum.BaseFieldType.Formula, {
+const ordersName = orders.getFormulaName();
+const pricingName = pricing.getFormulaName();
+orders.addField("Line Total", univerAPI.Enum.BaseFieldType.Formula, {
   field: {
     config: {
-      formula: `=${ordersName}[[#This Row],[Quantity]]*${pricingName}[[#This Row],[Unit Price]]`
-    }
+      formula: `=${ordersName}[[#This Row],[Quantity]]*${pricingName}[[#This Row],[Unit Price]]`,
+    },
   },
-  externalReferences: []
-})
+  externalReferences: [],
+});
 ```
 
 A qualified `#This Row` reference to another Base table aligns by row position. Use it only when both tables deliberately share row order. For relational data, use a stable key or RecordLink with lookup logic. Use `#Data` only for intended full-column aggregation.
@@ -79,21 +79,21 @@ After writing a Formula field, subscribe to calculation completion before trigge
 Persist the complete external-reference binding with the Formula field:
 
 ```js
-const table = base?.getTableById('<table-id>')
-if (!table) throw new Error('Base table not found')
+const table = base?.getTableById("<table-id>");
+if (!table) throw new Error("Base table not found");
 
-table.addField('Current Total', univerAPI.Enum.BaseFieldType.Formula, {
+table.addField("Current Total", univerAPI.Enum.BaseFieldType.Formula, {
   field: {
-    config: { formula: "=SUM('[Sales Source]Data'!B2:B4)" }
+    config: { formula: "=SUM('[Sales Source]Data'!B2:B4)" },
   },
   externalReferences: [
     {
-      qualifier: 'Sales Source',
-      sourceUnitId: '<sheet-unit-id>',
-      sourceUnitType: univerAPI.Enum.UniverInstanceType.UNIVER_SHEET
-    }
-  ]
-})
+      qualifier: "Sales Source",
+      sourceUnitId: "<sheet-unit-id>",
+      sourceUnitType: univerAPI.Enum.UniverInstanceType.UNIVER_SHEET,
+    },
+  ],
+});
 ```
 
 The formula qualifier and binding qualifier must match exactly. For broader cross-Unit formula work, load `univer-cross-unit-formula` as well.

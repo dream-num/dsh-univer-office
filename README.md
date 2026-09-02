@@ -20,6 +20,7 @@ After installation, describe the result you want in natural language. The agent 
 
 [![Play the DSH × Univer Office demo](docs/assets/readme/nike-presentation-demo.png)](https://www.youtube.com/watch?v=k-2zW_CMiew)
 
+
 The agent created this spreadsheet from a natural-language request, then added conditional formatting and a chart in the same conversation. The result can be previewed, revised, merged into the current version, or discarded in place.
 
 ![Reviewing a spreadsheet with conditional formatting and a chart in DSH](docs/assets/readme/chart-and-formatting.png)
@@ -91,13 +92,13 @@ Create a sales Sheet and a summary Slide in the same .univer file, with the Slid
 
 ## Capabilities
 
-| Content | Create and edit                                                                           | Verify and review                                                                                     | Import                | Export                |
-| ------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------- | --------------------- |
-| Sheet   | Cells, formulas, styles, tables, charts, pivots, filters, validation, images, and more    | Structured range inspection, recalculation, range/workbook screenshots, live preview                  | `.xlsx` `.csv` `.tsv` | `.xlsx` `.csv` `.tsv` |
-| Doc     | Paragraphs, rich text, lists, tasks, tables, images, charts, headers, footers, pagination | Document readback, page screenshots, live preview                                                     | `.docx`               | `.docx`               |
-| Slide   | Pages, text, shapes, images, tables, charts, SVG layouts, transitions                     | Structure inspection, text bounds/overflow/overlap lint, page/contact-sheet screenshots, live preview | `.pptx`               | `.pptx`               |
-| Base    | Tables, fields, records, views, formulas, filters, sorting, grouping                      | Structured data checks, workbench screenshot, live preview                                            | —                     | `.xlsx` `.csv` `.tsv` |
-| Board   | Shapes, text, connectors, images, native charts, routing                                  | Element and connector analysis, overview/region/element screenshots, live preview                     | —                     | —                     |
+| Content | Create and edit | Verify and review | Import | Export |
+| --- | --- | --- | --- | --- |
+| Sheet | Cells, formulas, styles, tables, charts, pivots, filters, validation, images, and more | Structured range inspection, recalculation, range/workbook screenshots, live preview | `.xlsx` `.csv` `.tsv` | `.xlsx` `.csv` `.tsv` |
+| Doc | Paragraphs, rich text, lists, tasks, tables, images, charts, headers, footers, pagination | Document readback, page screenshots, live preview | `.docx` | `.docx` |
+| Slide | Pages, text, shapes, images, tables, charts, SVG layouts, transitions | Structure inspection, text bounds/overflow/overlap lint, page/contact-sheet screenshots, live preview | `.pptx` | `.pptx` |
+| Base | Tables, fields, records, views, formulas, filters, sorting, grouping | Structured data checks, workbench screenshot, live preview | — | `.xlsx` `.csv` `.tsv` |
+| Board | Shapes, text, connectors, images, native charts, routing | Element and connector analysis, overview/region/element screenshots, live preview | — | — |
 
 Every content type supports isolated draft editing, review, revision, approval, and discarding. Base and Board support structural verification; Board file export is not yet supported.
 
@@ -148,21 +149,21 @@ Approval and discarding always require an explicit user request.
 
 DSH selects these tools automatically; you normally do not need to call them manually.
 
-| Tool                 | Purpose                                                              |
-| -------------------- | -------------------------------------------------------------------- |
-| `univer_new`         | Create an empty `.univer` file without overwriting an existing file  |
-| `univer_status`      | View the content and draft status of a file                          |
-| `univer_worktree`    | Create, submit, revise, approve, or discard an isolated draft        |
-| `univer_unit`        | Add or remove Sheet, Doc, Slide, Base, or Board content              |
-| `univer_import`      | Import an Office file into a `.univer` file                          |
-| `univer_inspect`     | Read document structure or a selected Sheet range                    |
-| `univer_execute`     | Read or edit content through the Univer API                          |
-| `univer_export`      | Export Sheet, Doc, Slide, or Base content                            |
-| `univer_lint`        | Find off-page, overflowing, and overlapping Slide text               |
-| `univer_compile_svg` | Add an SVG layout to a Slide with measured text                      |
-| `univer_screenshot`  | Render supported content as PNG images for review                    |
-| `univer_api`         | Find bundled Univer API symbols by keyword and show exact references |
-| `univer_resources`   | Find and use bundled icons, logos, emoji, and illustrations          |
+| Tool | Purpose |
+| --- | --- |
+| `univer_new` | Create an empty `.univer` file without overwriting an existing file |
+| `univer_status` | View the content and draft status of a file |
+| `univer_worktree` | Create, submit, revise, approve, or discard an isolated draft |
+| `univer_unit` | Add or remove Sheet, Doc, Slide, Base, or Board content |
+| `univer_import` | Import an Office file into a `.univer` file |
+| `univer_inspect` | Read document structure or a selected Sheet range |
+| `univer_execute` | Read or edit content through the Univer API |
+| `univer_export` | Export Sheet, Doc, Slide, or Base content |
+| `univer_lint` | Find off-page, overflowing, and overlapping Slide text |
+| `univer_compile_svg` | Add an SVG layout to a Slide with measured text |
+| `univer_screenshot` | Render supported content as PNG images for review |
+| `univer_api` | Find bundled Univer API symbols by keyword and show exact references |
+| `univer_resources` | Find and use bundled icons, logos, emoji, and illustrations |
 
 ## Preview and review experience
 
@@ -185,23 +186,23 @@ DSH selects these tools automatically; you normally do not need to call them man
 
 The defaults are designed for local use: the service starts at port `9080`. If that port is occupied, it tries `9081`, then continues upward one port at a time. Set these plugin options when you need different values:
 
-| Field                           | Default                                       | Purpose                                                                          |
-| ------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------- |
-| `gatewayPort`                   | `9080`                                        | Initial loopback service port; occupied ports advance by one                     |
-| `autoStartGateway`              | `true`                                        | Start the service on first use                                                   |
-| `gatewayStartupTimeoutMs`       | `10000`                                       | Service startup timeout                                                          |
-| `gatewayRequestTimeoutMs`       | `3000`                                        | State-read timeout                                                               |
-| `gatewayMutationTimeoutMs`      | `60000`                                       | Write-operation timeout                                                          |
-| `unitContentOperationTimeoutMs` | `120000`                                      | Import, export, inspection, and execution timeout                                |
-| `screenshotOperationTimeoutMs`  | `120000`                                      | Overall timeout for one browser screenshot operation                             |
-| `screenshotMaxPages`            | `30`                                          | Maximum Doc or Slide pages rendered by one screenshot call                       |
-| `screenshotMaxPixels`           | `16777216`                                    | Maximum pixel count for each screenshot image                                    |
-| `resourceCacheRoot`             | `$DSH_HOME/cache/dsh-univer-office/resources` | Persistent downloaded-SVG cache; falls back to `~/.dsh` when `DSH_HOME` is unset |
-| `resourceDownloadTimeoutMs`     | `15000`                                       | Timeout for one SVG resource download                                            |
-| `resourceOperationTimeoutMs`    | `120000`                                      | Overall timeout for one resource-library tool operation                          |
-| `tools`                         | `true`                                        | Enable agent editing capabilities                                                |
-| `skills`                        | `true`                                        | Enable bundled task guidance                                                     |
-| `telemetry`                     | `true`                                        | Send anonymous product telemetry                                                 |
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `gatewayPort` | `9080` | Initial loopback service port; occupied ports advance by one |
+| `autoStartGateway` | `true` | Start the service on first use |
+| `gatewayStartupTimeoutMs` | `10000` | Service startup timeout |
+| `gatewayRequestTimeoutMs` | `3000` | State-read timeout |
+| `gatewayMutationTimeoutMs` | `60000` | Write-operation timeout |
+| `unitContentOperationTimeoutMs` | `120000` | Import, export, inspection, and execution timeout |
+| `screenshotOperationTimeoutMs` | `120000` | Overall timeout for one browser screenshot operation |
+| `screenshotMaxPages` | `30` | Maximum Doc or Slide pages rendered by one screenshot call |
+| `screenshotMaxPixels` | `16777216` | Maximum pixel count for each screenshot image |
+| `resourceCacheRoot` | `$DSH_HOME/cache/dsh-univer-office/resources` | Persistent downloaded-SVG cache; falls back to `~/.dsh` when `DSH_HOME` is unset |
+| `resourceDownloadTimeoutMs` | `15000` | Timeout for one SVG resource download |
+| `resourceOperationTimeoutMs` | `120000` | Overall timeout for one resource-library tool operation |
+| `tools` | `true` | Enable agent editing capabilities |
+| `skills` | `true` | Enable bundled task guidance |
+| `telemetry` | `true` | Send anonymous product telemetry |
 
 ## Telemetry
 

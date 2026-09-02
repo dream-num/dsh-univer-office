@@ -92,12 +92,12 @@ UniverTurnProjection + FileState
 
 同一 worktree 的成功生命周期操作按发生顺序转换：
 
-| 操作               | Turn outcome                       |
-| ------------------ | ---------------------------------- |
-| `worktree create`  | 选择返回的 worktree，进入 `draft`  |
-| `worktree reopen`  | 选择该 worktree，进入 `draft`      |
-| `worktree ready`   | 选择该 worktree，进入 `ready`      |
-| `worktree merge`   | 记录该 worktree 已合入，展示 Trunk |
+| 操作 | Turn outcome |
+| --- | --- |
+| `worktree create` | 选择返回的 worktree，进入 `draft` |
+| `worktree reopen` | 选择该 worktree，进入 `draft` |
+| `worktree ready` | 选择该 worktree，进入 `ready` |
+| `worktree merge` | 记录该 worktree 已合入，展示 Trunk |
 | `worktree discard` | 记录该 worktree 已丢弃，展示 Trunk |
 
 只有后续成功的生命周期操作可以改变已有生命周期结论。
@@ -136,15 +136,15 @@ Host 返回的最终 worktree 状态仍可校准投影预期。例如投影选�
 
 Viewer 选择由投影 scope 与权威状态共同决定：
 
-| scope / 权威状态 | Viewer                     |
-| ---------------- | -------------------------- |
-| Trunk            | 当前版本                   |
-| `draft`          | worktree 页面              |
-| `ready`          | merge preview 页面         |
-| `merged`         | 合入后的当前版本           |
-| `discarded`      | 未受该修改影响的当前版本   |
-| 加载中           | 同一卡片布局内的加载状态   |
-| worktree 不可用  | 同一卡片布局内的不可用状态 |
+| scope / 权威状态 | Viewer |
+| --- | --- |
+| Trunk | 当前版本 |
+| `draft` | worktree 页面 |
+| `ready` | merge preview 页面 |
+| `merged` | 合入后的当前版本 |
+| `discarded` | 未受该修改影响的当前版本 |
+| 加载中 | 同一卡片布局内的加载状态 |
+| worktree 不可用 | 同一卡片布局内的不可用状态 |
 
 状态加载失败时不得回退旧卡片。一般网络、Gateway 或授权失败仍使用同一卡片表达加载中或不可用；若 Host 以结构化 `INVALID_FILE_PATH` 明确确认文件已不存在，则不渲染卡片。这覆盖 Agent 在同一 Turn 中创建临时 `.univer`、完成排查后再通过 Bash 删除的场景，避免留下永久加载卡片。历史 Turn 也使用同一组件和布局，默认折叠；其 worktree 状态可由当前 `FileState` 校准。若历史卡片允许展开，Viewer 表达的是当前状态，不能表述为历史内容快照。
 
@@ -179,13 +179,10 @@ Viewer 选择由投影 scope 与权威状态共同决定：
 ```ts
 interface UniverFloatingWindowState {
   readonly openFiles: ReadonlySet<string>
-  readonly openWorktrees: ReadonlyMap<
-    string,
-    {
-      readonly file: string
-      readonly lastStatus: WorktreeStatus
-    }
-  >
+  readonly openWorktrees: ReadonlyMap<string, {
+    readonly file: string
+    readonly lastStatus: WorktreeStatus
+  }>
 }
 ```
 

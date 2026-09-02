@@ -40,7 +40,7 @@ if (
   !core.content.includes('univer_status') ||
   !core.content.includes('univer_screenshot') ||
   !core.content.includes('univer_resources') ||
-  !/await import\(['"]node:fs\/promises['"]\)/.test(core.content) ||
+  !core.content.includes('await import("node:fs/promises")') ||
   !core.content.includes('codeFile') ||
   !core.content.includes('- Base: `base`') ||
   !core.content.includes('Do not wait for the user to name a tool') ||
