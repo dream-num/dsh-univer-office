@@ -1,6 +1,9 @@
 import * as React from 'react'
-import type { ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'
+import type { ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
   outcomeOfTurnFile, resolveTurnFiles, type UniverTurnFile, type UniverTurnMatch,
 } from '../conversation/univer-turn-definition.ts'
@@ -8,29 +11,43 @@ import { useUniverStates } from '../hooks/use-univer-state.ts'
 import type { ViewerLocaleInjected } from '../viewer-locale.ts'
 import { ReviewPanel } from './review-panel.tsx'
 
-export type PreviewCardProps = PropsRuntime<'conversation.chat.turnTail'> & PropsLocale<'univer'> & ViewerLocaleInjected & { readonly matched: UniverTurnMatch }
+interface PreviewCardShared extends PropsLocale<'univer'>, ViewerLocaleInjected {
+  readonly matched: UniverTurnMatch
+}
 
-interface SplitSnapshotPreviewCardProps extends PreviewCardProps {
-  readonly useChat?: <Selected>(selector: (snapshot: { readonly timeline: ConversationTimelineSnapshot }) => Selected) => Selected
+export type PreviewCardProps = PropsRuntime<'conversation.chat.turnTail'> & PreviewCardShared
+
+interface LegacyPreviewCardProps extends PreviewCardShared {
+  readonly sessionId: SessionId
+  readonly useSession: <Selected>(selector: (snapshot: {
+    readonly chat: { readonly timeline: ConversationTimelineSnapshot }
+  }) => Selected) => Selected
+  readonly useSessions: <Selected>(selector: (snapshot: {
+    readonly byId: Readonly<Record<string, { readonly cwd?: string }>>
+  }) => Selected) => Selected
 }
 
 /** DSH 0.1.1-rc.2 adapter: Chat remains nested in the Session snapshot. */
-export function CombinedSnapshotPreviewCard(props: PreviewCardProps): React.ReactElement {
+export function CombinedSnapshotPreviewCard(props: LegacyPreviewCardProps): React.ReactElement {
   const timeline = props.useSession((snapshot) => snapshot.chat.timeline)
-  return <PreviewCardContent {...props} timeline={timeline} />
+  const cwd = props.useSessions((state) => state.byId[props.sessionId]?.cwd)
+  return <PreviewCardContent {...props} timeline={timeline} cwd={cwd} />
 }
 
 /** DSH 0.1.2-alpha.1 adapter: Chat owns its independently selected snapshot. */
-export function SplitSnapshotPreviewCard(props: SplitSnapshotPreviewCardProps): React.ReactElement {
-  if (props.useChat === undefined) throw new Error('dsh-univer-office: split DSH Client supplied no Chat selector')
-  const timeline = props.useChat((snapshot) => snapshot.timeline)
-  return <PreviewCardContent {...props} timeline={timeline} />
+export function SplitSnapshotPreviewCard(props: PreviewCardProps): React.ReactElement {
+  const timeline = props.useChat((snapshot: ChatSnapshot) => snapshot.timeline)
+  const cwd = props.useSessions((state: SessionListState) => state.byId[props.sessionId]?.cwd)
+  return <PreviewCardContent {...props} timeline={timeline} cwd={cwd} />
 }
 
 /** Render one unified Univer card for every file touched during the owning Turn. */
-function PreviewCardContent(props: PreviewCardProps & { readonly timeline: ConversationTimelineSnapshot }): React.ReactElement {
-  const cwd = props.useSessions((state) => state.byId[props.sessionId]?.cwd)
-  const files = React.useMemo(() => resolveTurnFiles(props.matched.files, cwd), [props.matched.files, cwd])
+function PreviewCardContent(props: PreviewCardShared & {
+  readonly sessionId: SessionId
+  readonly timeline: ConversationTimelineSnapshot
+  readonly cwd: string | undefined
+}): React.ReactElement {
+  const files = React.useMemo(() => resolveTurnFiles(props.matched.files, props.cwd), [props.matched.files, props.cwd])
   const { states, missingFiles } = useUniverStates(files.map((entry) => entry.file), props.sessionId)
   const latestTurns = React.useMemo(() => latestWorktreeTurns(props.timeline), [props.timeline])
   return <>{files.map((target) => {

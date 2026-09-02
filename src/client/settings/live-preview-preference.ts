@@ -1,4 +1,4 @@
-import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { UniverSettings } from '../../shared/settings.ts'
 
 /** Reactive projection of the optional DSH Settings scope used by the live-window surface. */

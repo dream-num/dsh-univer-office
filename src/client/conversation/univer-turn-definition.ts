@@ -1,7 +1,7 @@
 import type {
   ConversationNodeDefinition, ConversationTimelineSnapshot,
-} from '@deepseek-ai/dsh-client-runtime/client'
-import type { TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 
 export type UniverOperationName = 'new' | 'status' | 'worktree' | 'unit' | 'import' | 'inspect' | 'execute' | 'export' | 'lint' | 'screenshot' | 'compile-svg'
@@ -45,7 +45,7 @@ interface UniverTurnState extends UniverTurnData {
   readonly turn: number
 }
 
-declare module '@deepseek-ai/dsh-client-runtime/client' {
+declare module '@deepseek-ai/dsh-client-ui-conversation/client' {
   interface ConversationTurnDataMap {
     /** Structured Univer operations performed during this Turn. */
     univerTurn: UniverTurnData

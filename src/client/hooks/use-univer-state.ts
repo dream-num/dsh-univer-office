@@ -1,5 +1,5 @@
 import * as React from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { FileState } from '../../shared/wire/state.ts'
 import { getFileState, getUniverStatus, isMissingUniverFile, startGateway } from '../api/univer-api.ts'
 

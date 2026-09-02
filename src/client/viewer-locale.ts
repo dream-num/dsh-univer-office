@@ -8,14 +8,9 @@ export interface ViewerLocaleInjected {
   readonly getViewerLocale: () => ViewerLocale
 }
 
-const VIEWER_LOCALES = {
-  zh: 'zh-CN',
-  en: 'en-US',
-} as const satisfies Record<LocaleId, ViewerLocale>
-
 /** Map one DSH locale id to the corresponding Univer Viewer locale tag. */
 export function viewerLocaleOf(locale: LocaleId): ViewerLocale {
-  return VIEWER_LOCALES[locale]
+  return locale === 'zh' ? 'zh-CN' : 'en-US'
 }
 
 /** Add the active Viewer locale without reconstructing the Host-owned target. */
