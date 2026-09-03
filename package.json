@@ -1,7 +1,7 @@
 {
   "name": "dsh-univer-office",
   "version": "0.2.13",
-  "description": "DSH × Univer integration with a bundled collaboration Gateway and Viewer: inline previews, live floating Worktree windows, and session-end review actions in DeepSeek Harness.",
+  "description": "DSH \u00d7 Univer integration with a bundled collaboration Gateway and Viewer: inline previews, live floating Worktree windows, and session-end review actions in DeepSeek Harness.",
   "type": "module",
   "main": "./lib/index.js",
   "files": [
@@ -63,7 +63,7 @@
     }
   },
   "scripts": {
-    "prepare": "simple-git-hooks",
+    "prepare": "pnpm run build && simple-git-hooks",
     "uninstall": "node scripts/telemetry-entry.mjs uninstall",
     "build": "pnpm run build:lib && pnpm run build:worker && pnpm run build:gateway && pnpm run build:render && pnpm run build:viewer",
     "build:lib": "node scripts/build.mjs lib",
