@@ -215,7 +215,7 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
           univer.registerPlugin(UniverBoardsHistoryUIPlugin, historyConfig)
         } else if (opts.unitType === UNIT_TYPE_SHEET) {
           univer.registerPlugin(UniverSheetsHistoryUIPlugin, {
-            historyListServerUrl: historyServerUrl,
+            historyServerUrl,
             univerContainerId: opts.container
           })
         }
