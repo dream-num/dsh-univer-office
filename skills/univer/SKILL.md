@@ -89,8 +89,7 @@ Never reopen or reuse a merged or discarded worktree; create a new worktree inst
 | Verify | `univer_screenshot` | Render Sheet, Doc, Slide, Base, or Board PNG evidence and return it to an image-capable model. |
 | Reference | `univer_api` | Find an unknown name, or show a known class, API, or type. |
 | Reference | `univer_resources` | List/find/read/export bundled SVG resources or clear their download cache. |
-| Deliver | `univer_export` | Export Sheet/Base to xlsx/csv/tsv, Doc to docx, or Slide to pptx. |
-| Deliver | `univer_print_pdf` | Print Sheet, Doc, Slide, or Board from trunk or a worktree to an explicit PDF path. |
+| Deliver | `univer_export` / `univer_print_pdf` | Export Office files or print Sheet, Doc, Slide, or Board to PDF. |
 
 ## Facade execution
 
@@ -120,11 +119,10 @@ Read only task assets inside the session workspace. Do not print or return the d
 - Export Sheet or Base to `.xlsx`, `.csv`, or `.tsv`; Doc to `.docx`; Slide to `.pptx`.
 - Board export is unsupported.
 - Export uses an explicit Unit and an explicit trunk or worktree scope. Recalculate formulas and finish readback before exporting.
-- PDF printing supports Sheet, Doc, Slide, and Board; Base is not printable. Use an explicit Unit, output path ending in `.pdf`, and the same verified trunk or worktree scope.
 
 ## Unsupported CLI-only capabilities
 
-Do not invent equivalents for CLI maintenance, daemon/configuration, `compile-typst`, optimization, or shell command help. Use the bundled DSH tools for resources, screenshots, and PDF printing; if the task requires another missing capability, report that exact gap.
+Do not invent equivalents for CLI maintenance, daemon/configuration, `compile-typst`, optimization, or shell command help. Use the bundled DSH tools for resources and screenshots; if the task requires another missing capability, report that exact gap.
 
 ## Failure recovery
 
