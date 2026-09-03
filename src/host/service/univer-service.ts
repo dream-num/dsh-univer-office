@@ -53,6 +53,9 @@ export abstract class UniverService extends Service implements UniverServiceMeth
   abstract screenshotUnit(
     ...args: Parameters<UniverServiceMethods['screenshotUnit']>
   ): ReturnType<UniverServiceMethods['screenshotUnit']>
+  abstract printUnitPdf(
+    ...args: Parameters<UniverServiceMethods['printUnitPdf']>
+  ): ReturnType<UniverServiceMethods['printUnitPdf']>
   abstract compileSvg(
     ...args: Parameters<UniverServiceMethods['compileSvg']>
   ): ReturnType<UniverServiceMethods['compileSvg']>

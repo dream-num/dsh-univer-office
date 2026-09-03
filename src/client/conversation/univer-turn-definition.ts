@@ -16,6 +16,7 @@ export type UniverOperationName =
   | 'export'
   | 'lint'
   | 'screenshot'
+  | 'print-pdf'
   | 'compile-svg'
 export type UniverOperationPhase = 'pending' | 'succeeded' | 'failed'
 export type UniverTurnLifecycle = 'trunk' | 'draft' | 'ready' | 'merged' | 'discarded' | 'unchanged'
@@ -284,6 +285,7 @@ function operationName(name: string): UniverOperationName | null {
     operation === 'export' ||
     operation === 'lint' ||
     operation === 'screenshot' ||
+    operation === 'print-pdf' ||
     operation === 'compile-svg'
   )
     return operation

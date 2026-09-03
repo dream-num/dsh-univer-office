@@ -20,6 +20,7 @@ export const operationOutput = {
           'export',
           'lint',
           'screenshot',
+          'print-pdf',
           'compile-svg',
           'unit',
           'worktree'

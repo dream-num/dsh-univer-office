@@ -129,6 +129,9 @@ importers:
       '@univer-cli/unit-layout-lint':
         specifier: 1.0.0-insiders.20260902-a58c423
         version: 1.0.0-insiders.20260902-a58c423(react@18.3.1)(rxjs@7.8.2)
+      '@univer-cli/unit-pdf-printer':
+        specifier: 1.0.0-insiders.20260902-a58c423
+        version: 1.0.0-insiders.20260902-a58c423(react@18.3.1)(rxjs@7.8.2)
       '@univer-cli/unit-screenshot':
         specifier: 1.0.0-insiders.20260902-a58c423
         version: 1.0.0-insiders.20260902-a58c423(react@18.3.1)(rxjs@7.8.2)
@@ -2547,6 +2550,9 @@ packages:
 
   '@univer-cli/unit-layout-lint@1.0.0-insiders.20260902-a58c423':
     resolution: {integrity: sha512-2RCBOsGPzMQLPYBA4UzUY3zdL4a0ACWTvcSQYM5HidGgzJk30b/CTPXKYA/VKOaYcy+M6PG3JjafDh7Nzg4x0w==}
+
+  '@univer-cli/unit-pdf-printer@1.0.0-insiders.20260902-a58c423':
+    resolution: {integrity: sha512-Lf2CXl8fsvFE+nYJCKNQWf4JGKFlJU8mb/YCqDx5yB7GffbrpS8ztuPfYF+CUhpQmJjhOA8zxuQLVZpFtF0u2w==}
 
   '@univer-cli/unit-screenshot@1.0.0-insiders.20260902-a58c423':
     resolution: {integrity: sha512-EIzUeNpRa3yCiiCZara4pB6R+VQlQ0SJvmXEVYao7DzDWV7LWvw1gHAQKa1pFZtjSC24Sq1kmkJ6TYFUooAZCg==}
@@ -5984,6 +5990,17 @@ snapshots:
   '@univer-cli/svg-facade@1.0.0-insiders.20260902-a58c423': {}
 
   '@univer-cli/unit-layout-lint@1.0.0-insiders.20260902-a58c423(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univer-cli/univer-render-runtime': 1.0.0-insiders.20260902-a58c423(react@18.3.1)(rxjs@7.8.2)
+    transitivePeerDependencies:
+      - bufferutil
+      - proxy-agent
+      - react
+      - rxjs
+      - utf-8-validate
+      - yauzl
+
+  '@univer-cli/unit-pdf-printer@1.0.0-insiders.20260902-a58c423(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
       '@univer-cli/univer-render-runtime': 1.0.0-insiders.20260902-a58c423(react@18.3.1)(rxjs@7.8.2)
     transitivePeerDependencies:

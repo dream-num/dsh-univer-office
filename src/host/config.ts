@@ -18,6 +18,8 @@ export interface Config {
   unitContentOperationTimeoutMs?: number
   /** Maximum lifetime of one browser-backed screenshot operation. */
   screenshotOperationTimeoutMs?: number
+  /** Maximum lifetime of one browser-backed PDF print operation. */
+  printPdfOperationTimeoutMs?: number
   /** Maximum number of document or slide pages captured by one screenshot call. */
   screenshotMaxPages?: number
   /** Maximum pixel count for each rendered screenshot image. */
@@ -51,6 +53,7 @@ export interface ResolvedConfig {
   readonly gatewayMutationTimeoutMs: number
   readonly unitContentOperationTimeoutMs: number
   readonly screenshotOperationTimeoutMs: number
+  readonly printPdfOperationTimeoutMs: number
   readonly screenshotMaxPages: number
   readonly screenshotMaxPixels: number
   readonly resourceCacheRoot: string
@@ -73,6 +76,7 @@ export const Config: z<Config> = z.object({
   gatewayMutationTimeoutMs: z.natural().default(60_000),
   unitContentOperationTimeoutMs: z.natural().default(120_000),
   screenshotOperationTimeoutMs: z.natural().default(120_000),
+  printPdfOperationTimeoutMs: z.natural().default(120_000),
   screenshotMaxPages: z.natural().default(30),
   screenshotMaxPixels: z.natural().default(16_777_216),
   resourceCacheRoot: z.string(),
@@ -96,6 +100,7 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     gatewayMutationTimeoutMs: config.gatewayMutationTimeoutMs ?? 60_000,
     unitContentOperationTimeoutMs: config.unitContentOperationTimeoutMs ?? 120_000,
     screenshotOperationTimeoutMs: config.screenshotOperationTimeoutMs ?? 120_000,
+    printPdfOperationTimeoutMs: config.printPdfOperationTimeoutMs ?? 120_000,
     screenshotMaxPages: config.screenshotMaxPages ?? 30,
     screenshotMaxPixels: config.screenshotMaxPixels ?? 16_777_216,
     resourceCacheRoot: resolveResourceCacheRoot(config.resourceCacheRoot),
@@ -121,6 +126,7 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     gatewayMutationTimeoutMs: resolved.gatewayMutationTimeoutMs,
     unitContentOperationTimeoutMs: resolved.unitContentOperationTimeoutMs,
     screenshotOperationTimeoutMs: resolved.screenshotOperationTimeoutMs,
+    printPdfOperationTimeoutMs: resolved.printPdfOperationTimeoutMs,
     screenshotMaxPages: resolved.screenshotMaxPages,
     screenshotMaxPixels: resolved.screenshotMaxPixels,
     resourceDownloadTimeoutMs: resolved.resourceDownloadTimeoutMs,

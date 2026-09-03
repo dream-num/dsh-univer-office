@@ -19,6 +19,9 @@ if (defaultConfig.gatewayPort !== 9080)
 if (defaultConfig.screenshotMaxPages !== 30 || defaultConfig.screenshotMaxPixels !== 16_777_216) {
   throw new Error(`default screenshot limits drifted: ${JSON.stringify(defaultConfig)}`)
 }
+if (defaultConfig.printPdfOperationTimeoutMs !== 120_000) {
+  throw new Error(`default PDF print timeout drifted: ${JSON.stringify(defaultConfig)}`)
+}
 if (!defaultConfig.resourceCacheRoot.endsWith(join('cache', 'dsh-univer-office', 'resources'))) {
   throw new Error(`default resource cache root drifted: ${defaultConfig.resourceCacheRoot}`)
 }
@@ -39,7 +42,11 @@ try {
 } catch (error) {
   if (!(error instanceof Error) || !error.message.includes('gatewayPort')) throw error
 }
-for (const invalid of [{ screenshotMaxPages: 0 }, { resourceCacheRoot: 'relative/cache' }]) {
+for (const invalid of [
+  { screenshotMaxPages: 0 },
+  { printPdfOperationTimeoutMs: 0 },
+  { resourceCacheRoot: 'relative/cache' }
+]) {
   try {
     resolveConfig(invalid)
     throw new Error(`invalid config must be rejected: ${JSON.stringify(invalid)}`)
@@ -390,6 +397,15 @@ try {
     agent: owner
   })
   assertToolError(screenshotResult, 'GATEWAY_UNAVAILABLE')
+
+  const printPdfResult = await toolContext.tools.execute({
+    signal: new AbortController().signal,
+    callId: ToolCallId('host-smoke-print-pdf'),
+    name: 'univer_print_pdf',
+    arguments: { file: FILE, unitId: 'unit-1', output: 'report.pdf' },
+    agent: owner
+  })
+  assertToolError(printPdfResult, 'GATEWAY_UNAVAILABLE')
 
   const missingToolResult = await toolContext.tools.execute({
     signal: new AbortController().signal,

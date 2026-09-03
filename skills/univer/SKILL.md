@@ -55,7 +55,7 @@ Only `colorEditable: true` resources may follow an authored color. Fixed logos, 
 7. Read the changed scope with `univer_inspect`; use a fresh read-only `univer_execute` when inspection omits a required model field.
 8. For every changed Slide page, call `univer_lint` and resolve or explicitly justify each finding.
 9. For visually relevant changes, call `univer_screenshot` with an explicit workspace output directory and the narrowest useful Unit-specific target. Inspect every returned image; screenshots complement rather than replace structural readback or Slide lint.
-10. Export with `univer_export` only when requested and only from the verified scope.
+10. Export with `univer_export`, or print a PDF with `univer_print_pdf`, only when requested and only from the verified scope.
 11. Mark the worktree `ready` and confirm it with `univer_status`.
 
 `univer_screenshot` returns model-visible PNG evidence and writes the same PNGs under its explicit `output` directory. It requires an image-capable current model route. The DSH client also renders live worktree content and the ready review panel from tool results; that preview remains the user-facing handoff surface because there is no model-facing show/open tool. Claim visual verification only for images actually inspected in the current result.
@@ -90,6 +90,7 @@ Never reopen or reuse a merged or discarded worktree; create a new worktree inst
 | Reference | `univer_api` | Find an unknown name, or show a known class, API, or type. |
 | Reference | `univer_resources` | List/find/read/export bundled SVG resources or clear their download cache. |
 | Deliver | `univer_export` | Export Sheet/Base to xlsx/csv/tsv, Doc to docx, or Slide to pptx. |
+| Deliver | `univer_print_pdf` | Print Sheet, Doc, Slide, or Board from trunk or a worktree to an explicit PDF path. |
 
 ## Facade execution
 
@@ -119,10 +120,11 @@ Read only task assets inside the session workspace. Do not print or return the d
 - Export Sheet or Base to `.xlsx`, `.csv`, or `.tsv`; Doc to `.docx`; Slide to `.pptx`.
 - Board export is unsupported.
 - Export uses an explicit Unit and an explicit trunk or worktree scope. Recalculate formulas and finish readback before exporting.
+- PDF printing supports Sheet, Doc, Slide, and Board; Base is not printable. Use an explicit Unit, output path ending in `.pdf`, and the same verified trunk or worktree scope.
 
 ## Unsupported CLI-only capabilities
 
-Do not invent equivalents for CLI maintenance, daemon/configuration, `compile-typst`, optimization, or shell command help. Use the bundled DSH tools for resources and screenshots; if the task requires another missing capability, report that exact gap.
+Do not invent equivalents for CLI maintenance, daemon/configuration, `compile-typst`, optimization, or shell command help. Use the bundled DSH tools for resources, screenshots, and PDF printing; if the task requires another missing capability, report that exact gap.
 
 ## Failure recovery
 

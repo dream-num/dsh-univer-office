@@ -321,6 +321,13 @@ function registerOutputPlugins(
   }
 }
 
+function registerAllPrintPlugins(univer: Univer): void {
+  univer.registerPlugin(UniverSheetsPrintPlugin)
+  univer.registerPlugin(UniverDocsPrintPlugin)
+  univer.registerPlugin(UniverSlidesPrintPlugin)
+  univer.registerPlugin(UniverBoardsPrintPlugin)
+}
+
 function registerEmbedCorePlugin(
   univer: Univer,
   resourceRefDataProviderRegistrations: readonly IEmbedResourceRefDataProviderRegistration[]
@@ -384,6 +391,8 @@ export function registerViewRendering(univer: Univer, options: ViewRenderingOpti
   options.registerBeforeEmbedCore?.()
   if (options.unitType !== undefined) {
     registerOutputPlugins(univer, options.unitType, options.exchangeClientConfig)
+  } else {
+    registerAllPrintPlugins(univer)
   }
   registerEmbedCorePlugin(univer, options.resourceRefDataProviderRegistrations ?? [])
   options.registerAfterEmbedCore?.()

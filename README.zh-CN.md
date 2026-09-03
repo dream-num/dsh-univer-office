@@ -94,11 +94,11 @@ Agent 可以根据主题、受众、页数、内容结构和视觉要求生成�
 
 | 内容类型 | 创建与编辑 | 校验与审阅 | 导入 | 导出 |
 | --- | --- | --- | --- | --- |
-| Sheet | 单元格、公式、样式、表格、图表、透视表、筛选、验证、图片等 | 结构化范围检查、公式重算、范围/工作簿截图、实时预览 | `.xlsx` `.csv` `.tsv` | `.xlsx` `.csv` `.tsv` |
-| Doc | 段落、富文本、列表、任务、表格、图片、图表、页眉页脚、分页 | 文档结构回读、逐页截图、实时预览 | `.docx` | `.docx` |
-| Slide | 页面、文字、形状、图片、表格、图表、SVG 布局、转场 | 结构检查、文字越界/溢出/重叠检查、逐页/联系表截图、实时预览 | `.pptx` | `.pptx` |
+| Sheet | 单元格、公式、样式、表格、图表、透视表、筛选、验证、图片等 | 结构化范围检查、公式重算、截图、PDF 打印、实时预览 | `.xlsx` `.csv` `.tsv` | `.xlsx` `.csv` `.tsv` |
+| Doc | 段落、富文本、列表、任务、表格、图片、图表、页眉页脚、分页 | 文档结构回读、逐页截图、PDF 打印、实时预览 | `.docx` | `.docx` |
+| Slide | 页面、文字、形状、图片、表格、图表、SVG 布局、转场 | 结构检查、布局检查、截图、PDF 打印、实时预览 | `.pptx` | `.pptx` |
 | 多维表格（Base） | 表、字段、记录、视图、公式字段、筛选、排序、分组 | 结构化数据检查、工作台截图、实时预览 | — | `.xlsx` `.csv` `.tsv` |
-| Board | 形状、文字、连接线、图片、原生图表、自动布线 | 元素与连接关系分析、全局/区域/元素截图、实时预览 | — | — |
+| Board | 形状、文字、连接线、图片、原生图表、自动布线 | 元素分析、截图、PDF 打印、实时预览 | — | — |
 
 所有类型都支持隔离草稿、审阅、继续修改、确认或放弃。多维表格和 Board 支持结构校验；Board 暂不支持文件导出。
 
@@ -162,6 +162,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `univer_lint` | 检查 Slide 文字越界、溢出和重叠 |
 | `univer_compile_svg` | 将 SVG 布局按文字度量添加到 Slide |
 | `univer_screenshot` | 把支持的内容渲染为 PNG 图片供审阅 |
+| `univer_print_pdf` | 把 Sheet、Doc、Slide 或 Board 打印为 workspace 中的 PDF 文件 |
 | `univer_api` | 按关键词查找插件内置的 Univer API 符号并查看精确引用 |
 | `univer_resources` | 查找和使用内置图标、Logo、Emoji 与插画 |
 
@@ -195,6 +196,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `gatewayMutationTimeoutMs` | `60000` | 写操作超时 |
 | `unitContentOperationTimeoutMs` | `120000` | 导入、导出、检查和执行超时 |
 | `screenshotOperationTimeoutMs` | `120000` | 一次浏览器截图操作的总超时 |
+| `printPdfOperationTimeoutMs` | `120000` | 一次浏览器 PDF 打印操作的总超时 |
 | `screenshotMaxPages` | `30` | 一次 Doc 或 Slide 截图最多渲染的页数 |
 | `screenshotMaxPixels` | `16777216` | 每张截图允许的最大像素数 |
 | `resourceCacheRoot` | `$DSH_HOME/cache/dsh-univer-office/resources` | 下载 SVG 资源的持久缓存目录；未设置 `DSH_HOME` 时使用 `~/.dsh` |

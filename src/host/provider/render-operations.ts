@@ -1,6 +1,7 @@
+import { randomUUID } from 'node:crypto'
 import { readFileSync, realpathSync } from 'node:fs'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path'
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { basename, dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path'
 import {
   compileSvgToFacade,
   isSvgFacadeError,
@@ -10,6 +11,11 @@ import {
   type SvgTextMeasurer
 } from '@univer-cli/svg-facade'
 import { createUnitLayoutLint, isUnitLayoutLintError } from '@univer-cli/unit-layout-lint'
+import {
+  createUnitPdfPrinter,
+  isUnitPdfPrinterError,
+  type UnitPdfPrintInput
+} from '@univer-cli/unit-pdf-printer'
 import {
   createUnitScreenshot,
   isUnitScreenshotError,
@@ -22,6 +28,7 @@ import {
   UNIVER_RENDER_BROWSER_ENV_VAR,
   type UniverRenderRuntime,
   type UniverRenderUnit,
+  type UniverPrintPdfRuntime,
   type UniverSlideLayoutRuntime,
   type UniverTextMeasureRuntime
 } from '@univer-cli/univer-render-runtime'
@@ -36,7 +43,10 @@ import type {
 import { UniverError } from '../service/errors.ts'
 import { UNIVER_LICENSE } from '../../workers/unit-content/license.ts'
 
-type MachineRuntime = UniverRenderRuntime & UniverSlideLayoutRuntime & UniverTextMeasureRuntime
+type MachineRuntime = UniverPrintPdfRuntime &
+  UniverRenderRuntime &
+  UniverSlideLayoutRuntime &
+  UniverTextMeasureRuntime
 
 interface RenderSource {
   readonly unitType: UniverUnitKind
@@ -56,6 +66,46 @@ export interface CompiledSvgProgram {
 
 /** Browser-backed layout and authoring operations owned by the Service Provider. */
 export class RenderOperations {
+  /** Print one Unit snapshot to an authorized PDF output path. */
+  async printPdf(input: {
+    readonly source: UniverRenderUnit
+    readonly output: string
+    readonly signal?: AbortSignal
+  }): Promise<{
+    readonly output: string
+    readonly pageCount: number
+    readonly unitId: string
+    readonly unitType: Exclude<UniverUnitKind, 'base'>
+  }> {
+    if (extname(input.output).toLowerCase() !== '.pdf') {
+      throw new UniverError('PDF output path must end in .pdf.', 'UNIT_PRINT_PDF_OUTPUT_INVALID')
+    }
+    if (input.source.unitType === 'base') {
+      throw new UniverError(
+        'Base Units do not support PDF printing.',
+        'UNIT_PRINT_PDF_TYPE_UNSUPPORTED'
+      )
+    }
+    const runtime = await this.openRuntime(input.signal)
+    try {
+      const result = await createUnitPdfPrinter({ runtime }).print({
+        ...input.source,
+        ...(input.signal === undefined ? {} : { signal: input.signal })
+      } as UnitPdfPrintInput)
+      await writePdf(input.output, result.bytes, input.signal)
+      return {
+        output: input.output,
+        pageCount: result.pageCount,
+        unitId: result.unitId,
+        unitType: result.unitType
+      }
+    } catch (error) {
+      throw renderError(error)
+    } finally {
+      await runtime.close()
+    }
+  }
+
   /** Analyze one Slide snapshot without producing image output. */
   async lint(
     source: RenderSource,
@@ -313,6 +363,30 @@ function screenshotMetadata(image: ScreenshotImage): JsonValue {
   }
 }
 
+async function writePdf(output: string, bytes: Uint8Array, signal?: AbortSignal): Promise<void> {
+  await mkdir(dirname(output), { recursive: true })
+  const temporary = `${output}.${String(process.pid)}.${randomUUID()}.tmp`
+  try {
+    signal?.throwIfAborted()
+    await writeFile(temporary, bytes, signal === undefined ? undefined : { signal })
+    signal?.throwIfAborted()
+    await rename(temporary, output)
+  } catch (error) {
+    if (error instanceof UniverError) throw error
+    throw new UniverError('Failed to write PDF output.', 'UNIT_PRINT_PDF_WRITE_FAILED', {
+      cause: error
+    })
+  } finally {
+    await unlink(temporary).catch((error: unknown) => {
+      if (!isNodeError(error) || error.code !== 'ENOENT') throw error
+    })
+  }
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error
+}
+
 function assetResolver(
   workspace: string,
   source: string
@@ -413,6 +487,9 @@ function renderError(error: unknown): Error {
   }
   if (isUnitLayoutLintError(error)) {
     return new UniverError(error.message, `UNIT_LAYOUT_LINT_${error.code}`, { cause: error })
+  }
+  if (isUnitPdfPrinterError(error)) {
+    return new UniverError(error.message, `UNIT_PRINT_PDF_${error.code}`, { cause: error })
   }
   if (isUnitScreenshotError(error)) {
     return new UniverError(error.message, `SCREENSHOT_${error.code}`, { cause: error })
