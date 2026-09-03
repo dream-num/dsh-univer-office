@@ -143,6 +143,7 @@
     "@univer-cli/resource-library": "1.0.0-insiders.20260902-a58c423",
     "@univer-cli/svg-facade": "1.0.0-insiders.20260902-a58c423",
     "@univer-cli/unit-layout-lint": "1.0.0-insiders.20260902-a58c423",
+    "@univer-cli/unit-pdf-printer": "1.0.0-insiders.20260902-a58c423",
     "@univer-cli/unit-screenshot": "1.0.0-insiders.20260902-a58c423",
     "@univer-cli/univer-collaboration-runtime": "1.0.0-insiders.20260902-a58c423",
     "@univer-cli/univer-render-page": "1.0.0-insiders.20260902-a58c423",

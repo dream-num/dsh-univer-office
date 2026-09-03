@@ -39,6 +39,7 @@ if (
   core === undefined ||
   !core.content.includes('univer_status') ||
   !core.content.includes('univer_screenshot') ||
+  !core.content.includes('univer_print_pdf') ||
   !core.content.includes('univer_resources') ||
   !core.content.includes('await import("node:fs/promises")') ||
   !core.content.includes('codeFile') ||

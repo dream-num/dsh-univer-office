@@ -94,11 +94,11 @@ Create a sales Sheet and a summary Slide in the same .univer file, with the Slid
 
 | Content | Create and edit | Verify and review | Import | Export |
 | --- | --- | --- | --- | --- |
-| Sheet | Cells, formulas, styles, tables, charts, pivots, filters, validation, images, and more | Structured range inspection, recalculation, range/workbook screenshots, live preview | `.xlsx` `.csv` `.tsv` | `.xlsx` `.csv` `.tsv` |
-| Doc | Paragraphs, rich text, lists, tasks, tables, images, charts, headers, footers, pagination | Document readback, page screenshots, live preview | `.docx` | `.docx` |
-| Slide | Pages, text, shapes, images, tables, charts, SVG layouts, transitions | Structure inspection, text bounds/overflow/overlap lint, page/contact-sheet screenshots, live preview | `.pptx` | `.pptx` |
+| Sheet | Cells, formulas, styles, tables, charts, pivots, filters, validation, images, and more | Structured range inspection, recalculation, screenshots, PDF printing, live preview | `.xlsx` `.csv` `.tsv` | `.xlsx` `.csv` `.tsv` |
+| Doc | Paragraphs, rich text, lists, tasks, tables, images, charts, headers, footers, pagination | Document readback, page screenshots, PDF printing, live preview | `.docx` | `.docx` |
+| Slide | Pages, text, shapes, images, tables, charts, SVG layouts, transitions | Structure inspection, layout lint, screenshots, PDF printing, live preview | `.pptx` | `.pptx` |
 | Base | Tables, fields, records, views, formulas, filters, sorting, grouping | Structured data checks, workbench screenshot, live preview | — | `.xlsx` `.csv` `.tsv` |
-| Board | Shapes, text, connectors, images, native charts, routing | Element and connector analysis, overview/region/element screenshots, live preview | — | — |
+| Board | Shapes, text, connectors, images, native charts, routing | Element analysis, screenshots, PDF printing, live preview | — | — |
 
 Every content type supports isolated draft editing, review, revision, approval, and discarding. Base and Board support structural verification; Board file export is not yet supported.
 
@@ -162,6 +162,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 | `univer_lint` | Find off-page, overflowing, and overlapping Slide text |
 | `univer_compile_svg` | Add an SVG layout to a Slide with measured text |
 | `univer_screenshot` | Render supported content as PNG images for review |
+| `univer_print_pdf` | Print a Sheet, Doc, Slide, or Board to a workspace PDF file |
 | `univer_api` | Find bundled Univer API symbols by keyword and show exact references |
 | `univer_resources` | Find and use bundled icons, logos, emoji, and illustrations |
 
@@ -195,6 +196,7 @@ The defaults are designed for local use: the service starts at port `9080`. If t
 | `gatewayMutationTimeoutMs` | `60000` | Write-operation timeout |
 | `unitContentOperationTimeoutMs` | `120000` | Import, export, inspection, and execution timeout |
 | `screenshotOperationTimeoutMs` | `120000` | Overall timeout for one browser screenshot operation |
+| `printPdfOperationTimeoutMs` | `120000` | Overall timeout for one browser PDF print operation |
 | `screenshotMaxPages` | `30` | Maximum Doc or Slide pages rendered by one screenshot call |
 | `screenshotMaxPixels` | `16777216` | Maximum pixel count for each screenshot image |
 | `resourceCacheRoot` | `$DSH_HOME/cache/dsh-univer-office/resources` | Persistent downloaded-SVG cache; falls back to `~/.dsh` when `DSH_HOME` is unset |

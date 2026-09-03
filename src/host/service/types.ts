@@ -142,6 +142,14 @@ export interface ScreenshotUnitRequest extends ScopedFileRequest {
   readonly target?: ScreenshotTarget
 }
 
+/** Request for printing one Unit to an authorized workspace PDF file. */
+export interface PrintPdfUnitRequest extends ScopedFileRequest {
+  readonly unitId: UnitId
+  readonly worktreeId?: WorktreeId
+  readonly output: string
+  readonly outputWorkspace: WorkspacePath
+}
+
 /** One PNG returned to the Tools Consumer before attachment persistence. */
 export interface ScreenshotServiceImage {
   readonly data: string
@@ -222,6 +230,7 @@ export interface UniverOperationResult {
     | 'export'
     | 'lint'
     | 'screenshot'
+    | 'print-pdf'
     | 'compile-svg'
     | 'unit'
     | 'worktree'
@@ -271,6 +280,7 @@ export interface UniverServiceMethods {
     request: ScreenshotUnitRequest,
     signal?: AbortSignal
   ): Promise<ScreenshotServiceResult>
+  printUnitPdf(request: PrintPdfUnitRequest, signal?: AbortSignal): Promise<UniverOperationResult>
   compileSvg(request: CompileSvgRequest, signal?: AbortSignal): Promise<UniverOperationResult>
   apiReference(request: ApiReferenceRequest): Promise<UniverApiResult>
   resources(request: ResourceOperationRequest, signal?: AbortSignal): Promise<UniverResourceResult>

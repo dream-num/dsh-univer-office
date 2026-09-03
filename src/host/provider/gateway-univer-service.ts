@@ -17,6 +17,7 @@ import type {
   ImportUnitContentRequest,
   InspectUnitContentRequest,
   LintUnitLayoutRequest,
+  PrintPdfUnitRequest,
   ResourceOperationRequest,
   ScreenshotServiceResult,
   ScreenshotUnitRequest,
@@ -372,6 +373,32 @@ export class GatewayUniverService extends UniverService {
       })
     )
     return { ok: true, operation: 'screenshot', file: request.file, result }
+  }
+
+  /** Print one explicit Unit from trunk or a worktree to PDF. */
+  async printUnitPdf(
+    request: PrintPdfUnitRequest,
+    signal?: AbortSignal
+  ): Promise<UniverOperationResult> {
+    await Promise.all([
+      assertAuthorizedPath(request.workspace, request.file, true),
+      assertAuthorizedPath(request.outputWorkspace, request.output, false)
+    ])
+    const gateway = await this.requireGateway()
+    const source = await this.renderSources.load(
+      gateway,
+      request.file,
+      request.unitId,
+      request.worktreeId,
+      signal
+    )
+    const result = await this.render.printPdf({
+      source,
+      output: request.output,
+      ...(signal === undefined ? {} : { signal })
+    })
+    await assertAuthorizedPath(request.outputWorkspace, result.output, true)
+    return { ok: true, operation: 'print-pdf', file: request.file, result }
   }
 
   /** Compile one SVG and commit the generated Slide mutations to a draft worktree. */

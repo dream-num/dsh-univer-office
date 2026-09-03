@@ -8,6 +8,7 @@ import { exportTool } from './definitions/export.ts'
 import { importTool } from './definitions/import.ts'
 import { inspectTool } from './definitions/inspect.ts'
 import { lintTool } from './definitions/lint.ts'
+import { printPdfTool } from './definitions/print-pdf.ts'
 import { newTool } from './definitions/new.ts'
 import { resourcesTool } from './definitions/resources.ts'
 import { screenshotTool } from './definitions/screenshot.ts'
@@ -25,6 +26,7 @@ export function apply(ctx: Context, config: ResolvedConfig): void {
   const gatewayWriteTimeoutMs = config.gatewayStartupTimeoutMs + config.gatewayMutationTimeoutMs
   const unitContentTimeoutMs = config.gatewayStartupTimeoutMs + config.unitContentOperationTimeoutMs
   const screenshotTimeoutMs = config.gatewayStartupTimeoutMs + config.screenshotOperationTimeoutMs
+  const printPdfTimeoutMs = config.gatewayStartupTimeoutMs + config.printPdfOperationTimeoutMs
   ctx.tools.register(withUniverErrorContent(newTool(ctx, gatewayWriteTimeoutMs)))
   ctx.tools.register(withUniverErrorContent(statusTool(ctx, gatewayReadTimeoutMs)))
   ctx.tools.register(withUniverErrorContent(worktreeTool(ctx, gatewayWriteTimeoutMs)))
@@ -34,6 +36,7 @@ export function apply(ctx: Context, config: ResolvedConfig): void {
   ctx.tools.register(withUniverErrorContent(executeTool(ctx, unitContentTimeoutMs)))
   ctx.tools.register(withUniverErrorContent(exportTool(ctx, unitContentTimeoutMs)))
   ctx.tools.register(withUniverErrorContent(lintTool(ctx, unitContentTimeoutMs)))
+  ctx.tools.register(withUniverErrorContent(printPdfTool(ctx, printPdfTimeoutMs)))
   ctx.tools.register(withUniverErrorContent(compileSvgTool(ctx, unitContentTimeoutMs)))
   // A screenshot result must durably reference image bytes; advertise the tool only while
   // the deployment has an attachment store, and keep the execution-time re-check defensive.

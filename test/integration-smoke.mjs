@@ -40,6 +40,7 @@ const source = join(workspace, 'import.csv')
 const svgSource = join(workspace, 'slide.svg')
 const exported = join(workspace, 'smoke.xlsx')
 const screenshotOutput = join(workspace, 'screenshots')
+const printedPdf = join(workspace, 'rendered.pdf')
 const resourceOutput = join(workspace, 'resources')
 await writeFile(source, 'name,value\nalpha,1\nbeta,2\n')
 await writeFile(
@@ -216,6 +217,39 @@ try {
   for (const image of screenshot.result.images) {
     if ((await stat(image.path)).size === 0)
       throw new Error(`screenshot produced an empty file: ${image.path}`)
+  }
+
+  const printed = await service.printUnitPdf({
+    ...scoped,
+    worktreeId,
+    unitId: slideUnitId,
+    output: printedPdf,
+    outputWorkspace: workspace
+  })
+  if (
+    printed.operation !== 'print-pdf' ||
+    printed.result?.unitId !== slideUnitId ||
+    printed.result?.unitType !== 'slide' ||
+    printed.result?.pageCount !== 1 ||
+    printed.result?.output !== printedPdf
+  ) {
+    throw new Error(`Slide PDF print failed: ${JSON.stringify(printed)}`)
+  }
+  const pdfBytes = await readFile(printedPdf)
+  if (pdfBytes.byteLength === 0 || pdfBytes.subarray(0, 5).toString() !== '%PDF-') {
+    throw new Error('Slide PDF print did not produce a real PDF file')
+  }
+  try {
+    await service.printUnitPdf({
+      ...scoped,
+      worktreeId,
+      unitId: baseUnitId,
+      output: join(workspace, 'base.pdf'),
+      outputWorkspace: workspace
+    })
+    throw new Error('Base PDF printing must be rejected')
+  } catch (error) {
+    if (error?.code !== 'UNIT_PRINT_PDF_TYPE_UNSUPPORTED') throw error
   }
 
   const executed = await service.executeUnitContent({
@@ -535,7 +569,7 @@ try {
   }
 
   console.log(
-    'integration smoke OK (new/status/Unit/import/API/execute/5-Unit History/Sheet/Base/Board inspect/export/lint/compile-svg/screenshot/resources/Worktree lifecycle, no global CLI)'
+    'integration smoke OK (new/status/Unit/import/API/execute/5-Unit History/Sheet/Base/Board inspect/export/lint/compile-svg/screenshot/print-pdf/resources/Worktree lifecycle, no global CLI)'
   )
 } finally {
   await service.dispose()
