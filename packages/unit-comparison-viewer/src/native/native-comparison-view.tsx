@@ -21,6 +21,7 @@ import { structuralDiffFocusTarget } from './comparison-focus'
 import { useUnitComparisonViewerMessages } from '../i18n/messages.js'
 import { cn } from '../ui/cn.js'
 import { ComparisonPageTabs, type ComparisonPageTabOption } from '../shared/scope-tabs'
+import { shouldClearDiffSidebarSelection } from '../shared/sidebar-selection'
 import {
   structuralDiffItemEntityLabel,
   structuralDiffItemLabel
@@ -265,6 +266,10 @@ export function NativeComparisonView(input: {
     )
   }, [])
 
+  const clearFocusedItem = useCallback((): void => {
+    setSelectedItemId(undefined)
+  }, [])
+
   const bindLeftHost = useCallback((node: HTMLDivElement | null): void => {
     leftRef.current = node
   }, [])
@@ -308,6 +313,7 @@ export function NativeComparisonView(input: {
           items={scopedItems}
           fidelity={result.fidelity}
           selectedItemId={selectedItem?.id}
+          onClear={clearFocusedItem}
           onSelect={focusItem}
         />
         <div className="grid min-h-0 grid-rows-[minmax(0,1fr)] bg-card">
@@ -433,11 +439,22 @@ function attachLinkedBoardViewport(
 function NativeDiffSidebar(input: {
   readonly fidelity: 'history' | 'snapshot'
   readonly items: readonly UnitStructuralDiffItem[]
+  readonly onClear: () => void
   readonly onSelect: (item: UnitStructuralDiffItem) => void
   readonly selectedItemId: string | undefined
 }): ReactElement {
   const messages = useUnitComparisonViewerMessages()
   const sidebarRef = useEnsureSelectedDiffVisible<HTMLElement>(input.selectedItemId)
+  const onClear = input.onClear
+  useEffect(() => {
+    const sidebar = sidebarRef.current
+    if (sidebar === null) return
+    const clearBlankSelection = (event: MouseEvent): void => {
+      if (shouldClearDiffSidebarSelection(event.target)) onClear()
+    }
+    sidebar.addEventListener('click', clearBlankSelection)
+    return () => sidebar.removeEventListener('click', clearBlankSelection)
+  }, [onClear, sidebarRef])
   return (
     <aside
       className="min-h-0 overflow-auto border-r bg-card p-3 max-[1023px]:hidden"

@@ -28,6 +28,7 @@ import {
 import { cn } from '../ui/cn.js'
 import { useUnitComparisonViewerMessages } from '../i18n/messages.js'
 import { ComparisonPageTabs } from '../shared/scope-tabs'
+import { shouldClearDiffSidebarSelection } from '../shared/sidebar-selection'
 import { useEnsureSelectedDiffVisible } from '../shared/use-ensure-selected-diff-visible'
 import { structuralDiffItemLabel } from '../shared/structural-diff-item-label'
 
@@ -84,6 +85,7 @@ export function BaseTableDiffViewer(input: {
           items={scopedItems}
           selectedItemId={selectedItem?.id}
           tables={tables}
+          onClear={() => setSelectedItemId(undefined)}
           onSelect={selectItem}
         />
         <div className="grid min-h-0 grid-rows-[minmax(0,1fr)] bg-card">
@@ -489,10 +491,21 @@ function BaseDiffSidebar(input: {
   readonly items: readonly UnitStructuralDiffItem[]
   readonly selectedItemId: string | undefined
   readonly tables: readonly BaseTableDiff[]
+  readonly onClear: () => void
   readonly onSelect: (item: UnitStructuralDiffItem) => void
 }): ReactElement {
   const messages = useUnitComparisonViewerMessages()
   const sidebarRef = useEnsureSelectedDiffVisible<HTMLElement>(input.selectedItemId)
+  const onClear = input.onClear
+  useEffect(() => {
+    const sidebar = sidebarRef.current
+    if (sidebar === null) return
+    const clearBlankSelection = (event: MouseEvent): void => {
+      if (shouldClearDiffSidebarSelection(event.target)) onClear()
+    }
+    sidebar.addEventListener('click', clearBlankSelection)
+    return () => sidebar.removeEventListener('click', clearBlankSelection)
+  }, [onClear, sidebarRef])
   return (
     <aside
       className="min-h-0 overflow-auto border-r bg-card p-3 max-[1023px]:hidden"

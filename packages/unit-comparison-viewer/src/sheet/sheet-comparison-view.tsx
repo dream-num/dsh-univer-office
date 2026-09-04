@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react'
 import type { IWorkbookData } from '@univerjs/core'
 import type {
   IUnitComparisonResult as UnitComparisonContext,
@@ -39,6 +39,7 @@ import {
 } from '../i18n/messages.js'
 import { ComparisonPageTabs } from '../shared/scope-tabs.js'
 import { formatComparisonValue } from '../shared/comparison-value.js'
+import { shouldClearDiffSidebarSelection } from '../shared/sidebar-selection.js'
 import { structuralDiffItemsFromContext } from '../comparison-presentation.js'
 import { WorkbookDiffFxStrip } from './workbook-fx-strip.js'
 import { useEnsureSelectedDiffVisible } from '../shared/use-ensure-selected-diff-visible.js'
@@ -80,7 +81,7 @@ const EMPTY_PANE_FX_STATES: WorkbookComparePaneFxStates = {
   current: EMPTY_PANE_FX_STATE
 }
 
-export function WorkbookDiffViewer(input: {
+interface WorkbookDiffViewerProps {
   readonly compare: {
     readonly leftLabel: string
     readonly leftWorkbookData: IWorkbookData | null
@@ -94,7 +95,27 @@ export function WorkbookDiffViewer(input: {
   readonly leftSourceControl?: ReactNode
   readonly locale: Parameters<UnitComparisonUniverFactory>[0]['locale']
   readonly unitLabel: string
-}): ReactElement {
+}
+
+export function WorkbookDiffViewer(input: WorkbookDiffViewerProps): ReactElement {
+  const messages = useUnitComparisonViewerMessages()
+  if (input.compare.rightWorkbookData === null && input.compare.leftWorkbookData === null) {
+    return (
+      <section className="grid min-h-0 content-center gap-3 rounded-lg border border-border bg-card p-8 text-center">
+        <p className="m-0 text-[11px] font-bold uppercase text-muted-foreground">
+          {messages.workbookTitle}
+        </p>
+        <h2 className="m-0 text-xl font-semibold">{messages.invalidPayloadTitle}</h2>
+        <p className="m-0 text-sm leading-normal text-muted-foreground">
+          {messages.invalidPayloadBody}
+        </p>
+      </section>
+    )
+  }
+  return <WorkbookDiffViewerContent {...input} />
+}
+
+function WorkbookDiffViewerContent(input: WorkbookDiffViewerProps): ReactElement {
   const messages = useUnitComparisonViewerMessages()
   const sidebarTreeLabels = useMemo(() => createSidebarTreeLabels(messages), [messages])
   const targetWorkbookData = input.compare.rightWorkbookData
@@ -105,28 +126,31 @@ export function WorkbookDiffViewer(input: {
   const [activeSheetId, setActiveSheetId] = useState<string | null>(null)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const sidebarScrollRef = useEnsureSelectedDiffVisible<HTMLDivElement>(selectedItemId)
+  const sidebarRef = useRef<HTMLElement | null>(null)
   const [selectionSync, setSelectionSync] = useState<ReadonlyWorkbookControlledSelection | null>(
     null
   )
   const [scrollSync, setScrollSync] = useState<ReadonlyWorkbookControlledScroll | null>(null)
   const [fxByPane, setFxByPane] = useState<WorkbookComparePaneFxStates>(EMPTY_PANE_FX_STATES)
-  const diffModel = useMemo(() => {
-    if (targetWorkbookData === null && input.compare.leftWorkbookData === null) {
-      throw new Error(messages.invalidPayloadBody)
+  const diffModel = useMemo(
+    () =>
+      workbookComparisonFromContext({
+        left: input.compare.leftWorkbookData,
+        mode: displayMode,
+        context: input.compare.context,
+        right: targetWorkbookData
+      }),
+    [displayMode, input.compare.context, input.compare.leftWorkbookData, targetWorkbookData]
+  )
+  useEffect(() => {
+    const sidebar = sidebarRef.current
+    if (sidebar === null) return
+    const clearBlankSelection = (event: MouseEvent): void => {
+      if (shouldClearDiffSidebarSelection(event.target)) setSelectedItemId(null)
     }
-    return workbookComparisonFromContext({
-      left: input.compare.leftWorkbookData,
-      mode: displayMode,
-      context: input.compare.context,
-      right: targetWorkbookData
-    })
-  }, [
-    displayMode,
-    input.compare.context,
-    input.compare.leftWorkbookData,
-    messages.invalidPayloadBody,
-    targetWorkbookData
-  ])
+    sidebar.addEventListener('click', clearBlankSelection)
+    return () => sidebar.removeEventListener('click', clearBlankSelection)
+  }, [diffModel])
   const changedSheetOptions = diffModel.sheetOptions.filter(
     (worksheet) => worksheet.status !== 'default'
   )
@@ -330,7 +354,10 @@ export function WorkbookDiffViewer(input: {
         ) : null}
       </header>
       <div className="grid min-h-0 grid-cols-[268px_minmax(0,1fr)_minmax(0,1fr)] gap-px overflow-hidden bg-border max-[1023px]:grid-cols-1 max-[1023px]:grid-rows-2">
-        <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] bg-[color-mix(in_srgb,var(--color-muted)_52%,var(--color-card))] max-[1023px]:hidden">
+        <aside
+          className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] bg-[color-mix(in_srgb,var(--color-muted)_52%,var(--color-card))] max-[1023px]:hidden"
+          ref={sidebarRef}
+        >
           <header className="grid gap-2 border-b border-border px-3 py-2.5">
             <CompactSegmentedControl
               ariaLabel={messages.scopeLabel}
