@@ -129,3 +129,19 @@
     @apply bg-background font-sans text-sm text-foreground antialiased;
   }
 }
+
+/* The 2026-09 insiders cohort renders the 'grid' ribbon tabs at 16px/600 with a
+   36px strip, which overwhelms the embedded viewer panel. Keep the grid ribbon
+   (it is the only type that mounts the history menus) and compact it back to the
+   pre-upgrade visual weight. Pinned to the current cohort's utility classes. */
+header .univer-h-9 button.univer-text-base.univer-font-semibold {
+  font-size: 13px;
+  font-weight: 500;
+  height: 30px;
+  padding: 0 10px;
+  border-bottom-width: 2px;
+}
+
+header .univer-select-none.univer-h-9 {
+  height: 30px;
+}
