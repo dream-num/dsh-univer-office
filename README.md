@@ -106,7 +106,7 @@ Every content type supports isolated draft editing, review, revision, approval, 
 
 ### 1. Install the plugin
 
-Supported DSH versions are `0.1.1-rc.2` and the `0.1.2-alpha.1` through `0.1.2-alpha.5` prereleases.
+Supported DSH versions are `0.1.1-rc.2` and `0.1.2-rc.1`.
 
 If DSH is running, first press **Ctrl+C** in the terminal that started it. You can run the installation command while DSH is running, but the current DSH process will not load the new plugin automatically.
 
