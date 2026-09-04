@@ -680,7 +680,7 @@ function Topbar({ app, snap }: { app: App; snap: AppSnapshot }): ReactElement {
       className={cn(
         'topbar relative min-h-11 shrink-0 items-center gap-x-4 gap-y-2 border-b border-border bg-background px-4',
         snap.view.kind === 'worktree'
-          ? 'grid grid-cols-1 py-2 @min-[1100px]/workbench:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[1100px]/workbench:py-1'
+          ? 'grid grid-cols-1 py-2 @min-[620px]/workbench:grid-cols-[minmax(0,1fr)_auto] @min-[720px]/workbench:grid-cols-[minmax(0,1fr)_auto_auto] @min-[720px]/workbench:py-1'
           : 'flex flex-wrap justify-between py-1'
       )}
     >
@@ -794,7 +794,10 @@ function WorktreeTitle({
     worktree !== undefined && unit !== undefined ? app.unitBadgeInfo(worktree, unit) : undefined
   return (
     <>
-      <div className="flex min-w-0 items-center gap-2.5" data-testid="worktree-title">
+      <div
+        className="flex min-w-0 flex-1 items-center gap-2.5 @min-[620px]/workbench:col-span-2 @min-[720px]/workbench:col-span-1"
+        data-testid="worktree-title"
+      >
         {leading}
         <TitleUnitIcon
           type={unit?.type ?? 2}
@@ -834,10 +837,10 @@ function WorktreeTitle({
           unitBadge && <ChangeTag variant={unitBadge.variant}>{unitBadge.text}</ChangeTag>
         )}
       </div>
-      <div className="min-w-0 w-full @min-[1100px]/workbench:w-auto" data-testid="view-diff-center">
+      <div className="w-full min-w-0 @min-[720px]/workbench:w-auto" data-testid="view-diff-center">
         <SegmentedToggle
-          className="h-12 w-full bg-muted/80 p-0.5 shadow-xs @min-[1100px]/workbench:h-8"
-          itemClassName="h-11 min-w-0 flex-1 basis-0 px-5 py-0 text-[13px] @min-[1100px]/workbench:h-7 @min-[1100px]/workbench:min-w-[72px] @min-[1100px]/workbench:flex-none"
+          className="h-12 w-full bg-muted/80 p-0.5 shadow-xs @min-[620px]/workbench:h-8"
+          itemClassName="h-11 min-w-0 flex-1 basis-0 px-5 py-0 text-[13px] @min-[620px]/workbench:h-7 @min-[620px]/workbench:min-w-[72px] @min-[720px]/workbench:flex-none"
           value={snap.comparisonMode ? 'diff' : 'view'}
           options={[
             { value: 'view', label: t().topbar.segView },
@@ -847,7 +850,7 @@ function WorktreeTitle({
         />
       </div>
       <div
-        className="flex min-w-0 max-w-full flex-wrap items-center gap-2 empty:hidden @min-[1100px]/workbench:justify-end @min-[1100px]/workbench:justify-self-end"
+        className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 empty:hidden @min-[620px]/workbench:w-auto @min-[620px]/workbench:flex-nowrap @min-[620px]/workbench:justify-end @min-[620px]/workbench:justify-self-end"
         data-testid="worktree-actions"
       >
         {snap.comparisonMode && (
@@ -873,7 +876,7 @@ function WorktreeTitle({
         {worktree?.status === 'draft' && (
           <Button
             size="sm"
-            className="h-11 min-w-0 flex-1 whitespace-normal @min-[1100px]/workbench:h-8 @min-[1100px]/workbench:flex-none"
+            className="h-11 min-w-0 flex-1 whitespace-normal @min-[620px]/workbench:h-8 @min-[620px]/workbench:flex-none @min-[620px]/workbench:whitespace-nowrap"
             onClick={() => void app.doReady(worktreeId)}
           >
             <CircleCheck />
@@ -883,7 +886,7 @@ function WorktreeTitle({
         {worktree?.status === 'ready' && (
           <Button
             size="sm"
-            className="h-11 min-w-0 flex-1 whitespace-normal @min-[1100px]/workbench:h-8 @min-[1100px]/workbench:flex-none"
+            className="h-11 min-w-0 flex-1 whitespace-normal @min-[620px]/workbench:h-8 @min-[620px]/workbench:flex-none @min-[620px]/workbench:whitespace-nowrap"
             disabled={preview !== undefined && !mergeable}
             onClick={() => {
               if (preview !== undefined && !mergeable) {
@@ -901,7 +904,7 @@ function WorktreeTitle({
           <Button
             variant="destructiveGhost"
             size="sm"
-            className="h-11 @min-[1100px]/workbench:h-8"
+            className="h-11 @min-[620px]/workbench:h-8"
             onClick={() => void app.doDiscard(worktreeId)}
           >
             <Trash2 />

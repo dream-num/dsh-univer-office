@@ -862,8 +862,9 @@ async function verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey,
   })
   try {
     page.setDefaultTimeout(20_000)
+    await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 })
     await page.goto(
-      `${viewerOrigin}/?file=${encodeURIComponent(gatewayKey)}&worktree=${encodeURIComponent(target.worktreeId)}&unit=${encodeURIComponent(target.unitId)}&lang=en-US`,
+      `${viewerOrigin}/?file=${encodeURIComponent(gatewayKey)}&worktree=${encodeURIComponent(target.worktreeId)}&unit=${encodeURIComponent(target.unitId)}&sidebar=collapsed&lang=en-US`,
       { waitUntil: 'domcontentloaded' }
     )
     const compareToggle = '[data-testid="view-diff-center"] [aria-label="Compare"]'
@@ -875,6 +876,38 @@ async function verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey,
           (element) => getComputedStyle(element).display === 'none'
         )
     )
+    const compactLayout = await measureWorktreeTopbar(page)
+    if (
+      compactLayout.height > 64 ||
+      Math.abs(compactLayout.titleTop - compactLayout.switcherTop) > 8 ||
+      Math.abs(compactLayout.actionsTop - compactLayout.switcherTop) > 8 ||
+      compactLayout.switcherHeight > 34 ||
+      compactLayout.overflow
+    ) {
+      throw new Error(`800px worktree topbar was not compact: ${JSON.stringify(compactLayout)}`)
+    }
+    await page.setViewport({ width: 680, height: 720, deviceScaleFactor: 1 })
+    const mediumLayout = await measureWorktreeTopbar(page)
+    if (
+      mediumLayout.titleTop >= mediumLayout.switcherTop ||
+      Math.abs(mediumLayout.actionsTop - mediumLayout.switcherTop) > 8 ||
+      mediumLayout.switcherHeight > 34 ||
+      mediumLayout.actionsHeight > 34 ||
+      mediumLayout.overflow
+    ) {
+      throw new Error(`680px worktree topbar was not balanced: ${JSON.stringify(mediumLayout)}`)
+    }
+    await page.setViewport({ width: 560, height: 720, deviceScaleFactor: 1 })
+    const narrowLayout = await measureWorktreeTopbar(page)
+    if (
+      narrowLayout.titleTop >= narrowLayout.switcherTop ||
+      narrowLayout.switcherTop >= narrowLayout.actionsTop ||
+      narrowLayout.switcherWidth < narrowLayout.width - 40 ||
+      narrowLayout.overflow
+    ) {
+      throw new Error(`560px worktree topbar overflowed: ${JSON.stringify(narrowLayout)}`)
+    }
+    await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 })
     await page.click(compareToggle)
     await page.waitForSelector('[data-unit-comparison-viewer="true"]')
     await page.waitForSelector('[data-testid="comparison-source-title"]')
@@ -893,6 +926,36 @@ async function verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey,
   } finally {
     await page.close()
   }
+}
+
+async function measureWorktreeTopbar(page) {
+  return page.evaluate(() => {
+    const topbar = document.querySelector('.topbar')
+    const title = document.querySelector('[data-testid="worktree-title"]')
+    const switcher = document.querySelector('[data-testid="view-diff-center"]')
+    const actions = document.querySelector('[data-testid="worktree-actions"]')
+    if (topbar === null || title === null || switcher === null || actions === null) {
+      throw new Error('worktree topbar controls are missing')
+    }
+    const topbarRect = topbar.getBoundingClientRect()
+    const titleRect = title.getBoundingClientRect()
+    const switcherRect = switcher.getBoundingClientRect()
+    const actionsRect = actions.getBoundingClientRect()
+    const outside = (rect) => rect.left < topbarRect.left - 1 || rect.right > topbarRect.right + 1
+    return {
+      actionsHeight: actionsRect.height,
+      actionsTop: actionsRect.top,
+      height: topbarRect.height,
+      overflow:
+        document.documentElement.scrollWidth > document.documentElement.clientWidth ||
+        [titleRect, switcherRect, actionsRect].some(outside),
+      switcherHeight: switcherRect.height,
+      switcherTop: switcherRect.top,
+      switcherWidth: switcherRect.width,
+      titleTop: titleRect.top,
+      width: topbarRect.width
+    }
+  })
 }
 
 async function verifyAllowAllAuthz(exchangeBase, unitId) {

@@ -9,8 +9,15 @@ export function persistSidebarCollapsed(collapsed: boolean): void {
   }
 }
 
-/** Resolve a stored Sidebar choice, defaulting to the existing expanded shell. */
-export function resolveSidebarCollapsed(): boolean {
+/** Let an embedding URL choose the initial Sidebar state before falling back to user storage. */
+export function resolveSidebarCollapsed(search = location.search): boolean {
+  const requested = new URLSearchParams(search).get('sidebar')
+  if (requested === 'collapsed') {
+    return true
+  }
+  if (requested === 'expanded') {
+    return false
+  }
   try {
     return localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'
   } catch {
