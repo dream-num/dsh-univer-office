@@ -75,6 +75,7 @@ Give the agent a topic, audience, page count, content outline, and visual direct
 - **Compose several content types** — one `.univer` file can contain Sheets, Docs, Slides, Bases, and Boards. Formulas and embedded content can reference other content in the same file.
 - **Work with Office files** — import `.xlsx`, `.csv`, `.tsv`, `.docx`, and `.pptx`, then export the edited content in the matching format.
 - **Review agent changes safely** — every write starts in an isolated draft. Watch changes live, then approve or discard them instead of letting the agent overwrite the current version.
+- **Compare worktree changes semantically** — switch a draft or submitted worktree from View to Compare to inspect Sheet, Doc, Slide, Base, or Board changes side by side against a pinned trunk version or another active worktree.
 
 ### Example requests
 
@@ -100,7 +101,7 @@ Create a sales Sheet and a summary Slide in the same .univer file, with the Slid
 | Base | Tables, fields, records, views, formulas, filters, sorting, grouping | Structured data checks, workbench screenshot, live preview | — | `.xlsx` `.csv` `.tsv` |
 | Board | Shapes, text, connectors, images, native charts, routing | Element analysis, screenshots, PDF printing, live preview | — | — |
 
-Every content type supports isolated draft editing, review, revision, approval, and discarding. Base and Board support structural verification; Board file export is not yet supported.
+Every content type supports isolated draft editing, side-by-side semantic comparison, review, revision, approval, and discarding. Base and Board support structural verification; Board file export is not yet supported.
 
 ## Get started in 3 minutes
 
@@ -170,6 +171,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 
 - **Live Univer window** — changes open automatically in a window you can drag, resize, fold, or maximize. Disable automatic opening under **Settings → Plugins → Plugin configuration → Univer Office** without removing conversation review cards.
 - **Conversation review cards** — each edited `.univer` file has its own full preview card, while deleted temporary files leave no stale cards behind.
+- **Pinned worktree comparison** — use **Compare** in a draft or submitted worktree to compare it with trunk or another active worktree. Both sides are pinned when the comparison opens, changed entities can be navigated, and a refresh control appears if either side advances.
 - **Historical review** — drafts, submitted changes, approvals, and discarded results remain in the conversation, with older cards collapsed by default.
 - **Session isolation** — each DSH session shows only its own windows, cards, and review state.
 - **English and Chinese UI** — the plugin shell and every open Viewer follow the DSH locale.

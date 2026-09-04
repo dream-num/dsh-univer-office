@@ -1,9 +1,10 @@
-import { messagesFromVocabulary, type MessageVocabulary } from './from-vocabulary'
+import type { MessageVocabulary } from './from-vocabulary'
 
 const vocabulary = {
   title: 'Penampil kolaborasi',
   file: 'file',
   modification: 'perubahan',
+  compare: 'Bandingkan',
   currentVersion: 'versi saat ini',
   aiAssistant: 'asisten AI',
   no: 'tidak ada',
@@ -39,6 +40,7 @@ const vocabulary = {
   light: 'Terang',
   dark: 'Gelap',
   language: 'Bahasa',
+  joinDiscord: 'Bergabung dengan komunitas Discord',
   cancel: 'Batal',
   confirm: 'Konfirmasi',
   viewOnly: 'Hanya lihat',
@@ -57,4 +59,4 @@ const vocabulary = {
   empty: 'Tidak ada file terbuka'
 } satisfies MessageVocabulary
 
-export const ID_ID_MESSAGES = messagesFromVocabulary(vocabulary)
+export default vocabulary

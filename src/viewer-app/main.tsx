@@ -13,15 +13,11 @@ import { applyDocumentLang, resolveLang, setLang, t } from './i18n'
 import { App } from './ui/app'
 import { BootCard, FatalNotice } from './ui/boot'
 
-await setLang(resolveLang())
-applyDocumentLang()
-setAppearance(resolveAppearance())
-applyDocumentAppearance()
-
 const root = document.getElementById('app')
 if (!root) {
   throw new Error('missing #app root')
 }
+const appRoot: HTMLElement = root
 
 function mount(node: HTMLElement, view: ReactElement): void {
   flushSync(() => {
@@ -29,25 +25,33 @@ function mount(node: HTMLElement, view: ReactElement): void {
   })
 }
 
-const loc = readLocation()
-const selectedFile = loc.gatewayFileKey ?? loc.univerfile
+async function bootstrap(): Promise<void> {
+  await setLang(resolveLang())
+  applyDocumentLang()
+  setAppearance(resolveAppearance())
+  applyDocumentAppearance()
 
-if (selectedFile === null) {
-  // No file in the URL: do NOT silently open one. Tell the user what to do.
-  mount(
-    root,
-    <BootCard
-      title={t().boot.noFileTitle}
-      body={t().boot.noFileBody}
-      pre="?file=/tmp/ucb-demo.univer"
-      hint={t().boot.noFileHint}
-    />
-  )
-} else {
+  const loc = readLocation()
+  const selectedFile = loc.gatewayFileKey ?? loc.univerfile
+
+  if (selectedFile === null) {
+    // No file in the URL: do NOT silently open one. Tell the user what to do.
+    mount(
+      appRoot,
+      <BootCard
+        title={t().boot.noFileTitle}
+        body={t().boot.noFileBody}
+        pre="?file=/tmp/ucb-demo.univer"
+        hint={t().boot.noFileHint}
+      />
+    )
+    return
+  }
+
   const app =
     loc.gatewayFileKey !== null
       ? App.sameOriginGateway(
-          root,
+          appRoot,
           loc.gatewayFileKey,
           loc.worktreeId,
           loc.unitId,
@@ -56,7 +60,7 @@ if (selectedFile === null) {
           loc.mode
         )
       : new App(
-          root,
+          appRoot,
           location.origin,
           selectedFile,
           loc.worktreeId,
@@ -69,7 +73,7 @@ if (selectedFile === null) {
     if (error instanceof WorktreeServerHttpError && error.status === 404) {
       // Missing univerfile: the service never auto-creates one, so tell the user to create it first.
       mount(
-        root,
+        appRoot,
         <BootCard
           tone="warn"
           title={t().boot.notFoundTitle}
@@ -81,9 +85,13 @@ if (selectedFile === null) {
       return
     }
     const host = document.createElement('div')
-    root.append(host)
+    appRoot.append(host)
     mount(host, <FatalNotice text={t().boot.fatal(String(error))} />)
     // oxlint-disable-next-line no-console -- boot failure must surface in devtools
     console.error(error)
   })
 }
+
+// Do not top-level await locale loading. Locale chunks can share entry-module helpers after
+// bundling, so the entry must finish evaluating before those dynamic imports can resolve.
+void bootstrap()

@@ -5,18 +5,23 @@ import '@univer/render-preset/facades'
 import {
   IAuthzIoService,
   ICommandService,
+  LocaleService,
   IPermissionService,
   IUniverInstanceService,
   IUndoRedoService,
+  ThemeService,
   type LocaleType,
   Univer,
   UniverInstanceType
 } from '@univerjs/core'
+import { SetDocZoomRatioOperation } from '@univerjs/docs-ui'
 import type { IBoardData } from '@univerjs-pro/boards'
+import { SetSlideZoomRatioOperation, type ISlidePageSize } from '@univerjs-pro/slides'
 import type {
   IBaseSnapshot,
   ICellData,
   IObjectMatrixPrimitiveType,
+  IWorkbookData,
   ITableSnapshot
 } from '@univerjs/core'
 import type { IDeserializedSheetBlock, ISheetBlock, ISnapshot } from '@univerjs/protocol'
@@ -46,7 +51,6 @@ import {
   FormulaCalculationSessionService,
   SetTriggerFormulaCalculationStartMutation
 } from '@univerjs/engine-formula'
-import { WorkbookEditablePermission } from '@univerjs/sheets'
 import { TEST_LICENSE, ViewAssetIoOwner, registerViewRendering } from '@univer/render-preset'
 import {
   buildRuntimeConfig,
@@ -60,12 +64,13 @@ import {
 import {
   blockLocalEditingCommands,
   enforceSheetViewerReadOnlyPermissions,
-  resolveViewerReadOnlyEnforcement
+  resolveViewerReadOnlyEnforcement,
+  resolveViewerWorkbenchChrome
 } from './viewer-readonly'
 import { createCollaborationSheetResourceRefDataProvider } from './collaboration-sheet-resource-ref-data-provider'
 import { installHistoryShapeFormulaCompatibility } from './history-shape-formula-compatibility'
 import { loadViewerLocale } from './locales/generated/load'
-import { withReadOnlyPermissionLocale, type ReadOnlyLocaleCopy } from './locales/read-only'
+import { initializeDocumentViewPosition } from './document-view-position'
 
 installHistoryShapeFormulaCompatibility()
 
@@ -85,13 +90,11 @@ export interface ViewerOptions {
   locale: LocaleType
   /** Initial Univer appearance. Later changes use ViewerHandle.setDarkMode without rebuilding. */
   darkMode: boolean
-  /** Viewer-owned wording for native permission feedback when this instance is read-only. */
-  readOnlyCopy: ReadOnlyLocaleCopy
 }
 
 export interface ViewerHandle {
   setDarkMode(isDarkMode: boolean): void
-  setLocale(locale: LocaleType, readOnlyCopy: ReadOnlyLocaleCopy): Promise<void>
+  setLocale(locale: LocaleType): Promise<void>
   dispose(): void
 }
 
@@ -112,10 +115,8 @@ declare global {
  */
 export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
   const editable = opts.editable === true
-  const baseLocalePack = await loadViewerLocale(opts.locale)
-  const localePack = editable
-    ? baseLocalePack
-    : withReadOnlyPermissionLocale(baseLocalePack, opts.readOnlyCopy)
+  const localePack = await loadViewerLocale(opts.locale)
+  const readOnlyEnforcement = resolveViewerReadOnlyEnforcement(opts.unitType, editable)
   const urls = buildRuntimeConfig(
     opts.gatewayFileKey === undefined
       ? {
@@ -148,6 +149,7 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     return {
       referencedUnitManager: injector.get(IReferencedUnitManagerService),
       univerInstanceService: injector.get(IUniverInstanceService),
+      commandService: injector.get(ICommandService),
       waitForFormulaResultApplied: () =>
         injector.get(FormulaCalculationSessionService).waitForLatestApplied(),
       executeFormulaCalculation: () => {
@@ -166,7 +168,7 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     container: opts.container,
     assetIoOwner: ViewAssetIoOwner.CollaborationClient,
     license: TEST_LICENSE,
-    workbenchChrome: opts.unitType === UNIT_TYPE_BOARD ? 'hidden' : 'visible',
+    workbenchChrome: resolveViewerWorkbenchChrome(opts.unitType, editable),
     ribbonType: 'grid',
     unitType: toUniverInstanceType(opts.unitType),
     ...(opts.worktreeId === undefined && opts.unitType !== UNIT_TYPE_BOARD
@@ -197,12 +199,11 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
       })
       univer.registerPlugin(
         UniverCollaborationClientUIPlugin,
-        opts.unitType === UNIT_TYPE_BASE ? { enableDocumentCollaborationUI: false } : {}
+        opts.unitType === UNIT_TYPE_BASE ? { enableDocumentCollaborationUI: false } : undefined
       )
       if (opts.worktreeId === undefined) {
-        const historyServerUrl = urls.snapshotServerUrl.replace(/\/snapshot$/u, '/history')
         const historyConfig = {
-          historyServerUrl,
+          historyServerUrl: urls.historyListServerUrl,
           univerContainerId: opts.container
         }
         if (opts.unitType === UNIT_TYPE_DOC) {
@@ -214,10 +215,7 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
         } else if (opts.unitType === UNIT_TYPE_BOARD) {
           univer.registerPlugin(UniverBoardsHistoryUIPlugin, historyConfig)
         } else if (opts.unitType === UNIT_TYPE_SHEET) {
-          univer.registerPlugin(UniverSheetsHistoryUIPlugin, {
-            historyServerUrl,
-            univerContainerId: opts.container
-          })
+          univer.registerPlugin(UniverSheetsHistoryUIPlugin, historyConfig)
         }
       }
     },
@@ -226,7 +224,13 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     }
   })
 
-  const api = FUniver.newAPI(univer)
+  let api: ViewerDebugAPI
+  try {
+    api = FUniver.newAPI(univer)
+  } catch (error) {
+    console.error('[viewer] Failed to initialize facade', error)
+    throw error
+  }
   const collaboration = api.getCollaboration()
   const formulaResultAppliedSubscription = univer
     .__getInjector()
@@ -249,10 +253,13 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     throw new Error(`Unsupported viewer unit type: ${String(opts.unitType)}`)
   }
 
+  const documentViewPosition =
+    opts.unitType === UNIT_TYPE_DOC
+      ? initializeDocumentViewPosition(univer, opts.unitId)
+      : undefined
   await materializeHostEmbedChildren(univer, opts.unitId)
   const disposeDebugEndpoint = exposeDebugEndpoint(univer, api)
 
-  const readOnlyEnforcement = resolveViewerReadOnlyEnforcement(opts.unitType, editable)
   if (readOnlyEnforcement === 'sheet-permission') {
     enforceSheetViewerReadOnlyPermissions(
       univer.__getInjector().get(IPermissionService),
@@ -264,13 +271,13 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
 
   return {
     setDarkMode: (isDarkMode) => api.toggleDarkMode(isDarkMode),
-    setLocale: async (locale, readOnlyCopy) => {
-      const basePack = await loadViewerLocale(locale)
-      const pack = editable ? basePack : withReadOnlyPermissionLocale(basePack, readOnlyCopy)
+    setLocale: async (locale) => {
+      const pack = await loadViewerLocale(locale)
       api.loadLocales(locale, pack)
       api.setLocale(locale)
     },
     dispose: () => {
+      documentViewPosition?.dispose()
       formulaResultAppliedSubscription.unsubscribe()
       sheetResourceRefDataProvider.dispose()
       disposeDebugEndpoint()
@@ -290,15 +297,6 @@ async function materializeHostEmbedChildren(univer: Univer, hostUnitId: string):
   }
 }
 
-function makeReadonly(univer: Univer, unitId: string): void {
-  const permissionService = univer.__getInjector().get(IPermissionService)
-  const point = new WorkbookEditablePermission(unitId)
-  if (!permissionService.getPermissionPoint(point.id)) {
-    permissionService.addPermissionPoint(point)
-  }
-  permissionService.updatePermissionPoint(point.id, false)
-}
-
 export interface PreviewViewerOptions {
   /** DOM id of the (already-empty) element UniverUIPlugin mounts into. */
   container: string
@@ -313,8 +311,6 @@ export interface PreviewViewerOptions {
   locale: LocaleType
   /** Initial Univer appearance. Later changes use ViewerHandle.setDarkMode without rebuilding. */
   darkMode: boolean
-  /** Viewer-owned wording for native permission feedback in this read-only preview. */
-  readOnlyCopy: ReadOnlyLocaleCopy
 }
 
 /**
@@ -326,10 +322,7 @@ export interface PreviewViewerOptions {
  * opens comb and never writes back. Switching unit/worktree is done by disposing and recreating.
  */
 export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<ViewerHandle> {
-  const localePack = withReadOnlyPermissionLocale(
-    await loadViewerLocale(opts.locale),
-    opts.readOnlyCopy
-  )
+  const localePack = await loadViewerLocale(opts.locale)
   const univer = new Univer({
     locale: opts.locale,
     locales: { [opts.locale]: localePack },
@@ -340,19 +333,28 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
     container: opts.container,
     assetIoOwner: ViewAssetIoOwner.Local,
     license: TEST_LICENSE,
-    workbenchChrome: opts.unitType === UNIT_TYPE_BOARD ? 'hidden' : 'visible',
-    ribbonType: 'grid',
+    // Merge previews are inspection surfaces. The surrounding preview shell owns navigation,
+    // labels and actions, so mounting an editor ribbon is both redundant and a
+    // misleading affordance even though mutation commands are vetoed below.
+    workbenchChrome: 'hidden',
     unitType: toUniverInstanceType(opts.unitType)
   })
 
   const snapshot = decodeSnapshotFromWire(opts.snapshot) as ISnapshot
   let unitId = ''
+  let docPageWidth: number | undefined
+  let slidePageSize: ISlidePageSize | undefined
   if (opts.unitType === UNIT_TYPE_DOC) {
     const data = transformSnapshotToDocumentData(snapshot)
     unitId = data.id ?? ''
+    docPageWidth = data.documentStyle.pageSize?.width
     univer.createUnit(UniverInstanceType.UNIVER_DOC, data)
   } else if (opts.unitType === UNIT_TYPE_SLIDE) {
     const data = transformSnapshotToSlideData(snapshot)
+    // An editor snapshot may persist a zoom chosen for a full-window workbench. Preview panes can
+    // be narrower, so let Slides UI calculate its fit-to-pane zoom after mounting.
+    delete data.zoomRatio
+    slidePageSize = data.defaultPageSize
     unitId = data.id ?? ''
     univer.createUnit(UniverInstanceType.UNIVER_SLIDE, data)
   } else if (opts.unitType === UNIT_TYPE_BASE) {
@@ -386,31 +388,89 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
     }
   }
 
-  if (opts.unitType === UNIT_TYPE_SHEET) {
-    if (unitId !== '') {
-      makeReadonly(univer, unitId)
-    }
-  } else {
-    // doc/slide/base have no WorkbookEditablePermission-style point — veto data-changing commands instead.
-    blockLocalEditingCommands(univer.__getInjector().get(ICommandService))
+  if (opts.unitType === UNIT_TYPE_SLIDE && slidePageSize !== undefined) {
+    await fitSlidePreviewToPane(commandService, opts.container, unitId, slidePageSize)
+  }
+  if (opts.unitType === UNIT_TYPE_DOC) {
+    await fitDocPreviewToPane(commandService, opts.container, unitId, docPageWidth ?? 816)
   }
 
-  const api = FUniver.newAPI(univer)
-  const disposeDebugEndpoint = exposeDebugEndpoint(univer, api)
+  // Preview has no collaboration/authz controller, so its product-independent mutation gate is
+  // the sole read-only enforcement and must cover every Unit type, including Sheet.
+  blockLocalEditingCommands(univer.__getInjector().get(ICommandService))
 
   return {
-    setDarkMode: (isDarkMode) => api.toggleDarkMode(isDarkMode),
-    setLocale: async (locale, readOnlyCopy) => {
-      const pack = withReadOnlyPermissionLocale(await loadViewerLocale(locale), readOnlyCopy)
-      api.loadLocales(locale, pack)
-      api.setLocale(locale)
+    setDarkMode: (isDarkMode) => univer.__getInjector().get(ThemeService).setDarkMode(isDarkMode),
+    setLocale: async (locale) => {
+      const pack = await loadViewerLocale(locale)
+      const localeService = univer.__getInjector().get(LocaleService)
+      localeService.load({ [locale]: pack })
+      localeService.setLocale(locale)
     },
     dispose: () => {
-      disposeDebugEndpoint()
-      api.dispose()
       univer.dispose()
     }
   }
+}
+
+async function fitDocPreviewToPane(
+  commandService: ICommandService,
+  containerId: string,
+  unitId: string,
+  pageWidth: number
+): Promise<void> {
+  const canvas = await waitForElementSize(containerId, 'canvas')
+  if (canvas === null || pageWidth <= 0) return
+  const gutter = 20
+  const zoomRatio = Math.min(1, Math.max(1, canvas.clientWidth - gutter * 2) / pageWidth)
+  await commandService.executeCommand(
+    SetDocZoomRatioOperation.id,
+    { unitId, zoomRatio },
+    { onlyLocal: true }
+  )
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+}
+
+async function fitSlidePreviewToPane(
+  commandService: ICommandService,
+  containerId: string,
+  unitId: string,
+  pageSize: ISlidePageSize
+): Promise<void> {
+  const host = await waitForElementSize(containerId, "[data-slide-canvas-host='true']")
+  if (host === null || pageSize.width <= 0 || pageSize.height <= 0) return
+  const gutter = 24
+  const zoomRatio = Math.min(
+    1,
+    Math.max(1, host.clientWidth - gutter * 2) / pageSize.width,
+    Math.max(1, host.clientHeight - gutter * 2) / pageSize.height
+  )
+  await commandService.executeCommand(
+    SetSlideZoomRatioOperation.id,
+    { unitId, zoomRatio },
+    { onlyLocal: true }
+  )
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+}
+
+async function waitForElementSize(
+  containerId: string,
+  selector: string
+): Promise<HTMLElement | null> {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const container = document.getElementById(containerId)
+    const element = container?.querySelector<HTMLElement>(selector)
+    if (
+      element !== undefined &&
+      element !== null &&
+      element.clientWidth > 0 &&
+      element.clientHeight > 0
+    ) {
+      return element
+    }
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  }
+  return null
 }
 
 function exposeDebugEndpoint(univer: Univer, univerAPI: ViewerDebugAPI): () => void {
@@ -460,6 +520,39 @@ function decodeSnapshotFromWire(snapshot: unknown): unknown {
     out.workbook = { ...s.workbook, originalMeta: dec(s.workbook.originalMeta), sheets }
   }
   return out
+}
+
+/** Decode one fully materialized Sheet comparison side into the comparison component's input. */
+export async function decodeComparisonWorkbookData(
+  snapshot: unknown,
+  sheetBlocks: readonly unknown[] = []
+): Promise<IWorkbookData> {
+  return transformSnapshotToWorkbookData(
+    decodeSnapshotFromWire(snapshot) as ISnapshot,
+    sheetBlocks as Parameters<typeof transformSnapshotToWorkbookData>[1]
+  )
+}
+
+/** Decode any fully materialized comparison side into its native Unit model data. */
+export async function decodeComparisonUnitData(
+  unitType: UnitType,
+  snapshot: unknown,
+  sheetBlocks: readonly unknown[] = []
+): Promise<unknown> {
+  const decoded = decodeSnapshotFromWire(snapshot) as ISnapshot
+  if (unitType === UNIT_TYPE_DOC) return transformSnapshotToDocumentData(decoded)
+  if (unitType === UNIT_TYPE_SLIDE) return transformSnapshotToSlideData(decoded)
+  if (unitType === UNIT_TYPE_BASE) {
+    return decodeBaseSnapshotData(
+      decoded,
+      sheetBlocks as Array<IDeserializedSheetBlock | ISheetBlock>
+    )
+  }
+  if (unitType === UNIT_TYPE_BOARD) return decodeBoardSnapshotData(decoded)
+  if (unitType === UNIT_TYPE_SHEET) {
+    return decodeComparisonWorkbookData(snapshot, sheetBlocks)
+  }
+  throw new Error(`Unsupported comparison unit type: ${String(unitType)}`)
 }
 
 function decodeBoardSnapshotData(snapshot: ISnapshot): IBoardData {

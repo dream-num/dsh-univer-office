@@ -3,6 +3,8 @@ import type {
   CreateWorktreeRequest,
   CreateWorktreeResponse,
   CreateUniverfileResponse,
+  CreateUnitComparisonRequest,
+  CreateUnitComparisonResponse,
   DiscardResponse,
   ErrorEnvelope,
   Worktree,
@@ -16,7 +18,10 @@ import type {
   OptimizeUniverfileResponse,
   ReadyResponse,
   ReopenResponse,
-  UnitSummary
+  UnitSummary,
+  UnitComparisonContextQuery,
+  UnitComparisonContextResponse,
+  UnitComparisonResponse
 } from './types.js'
 
 /** HTTP 层错误(non-2xx),带 status:404=univerfile 不存在、409=已存在、400=寻址非法。 */
@@ -127,6 +132,72 @@ export class WorktreeControlClient {
   ): Promise<MergePreviewUnitResponse> {
     return this.getJson<MergePreviewUnitResponse>(
       `${this.base}/worktrees/${worktreeId}/preview/units/${encodeURIComponent(unitId)}`
+    )
+  }
+
+  /** Create a read-only comparison whose left/right Unit heads remain pinned until refresh. */
+  public createUnitComparison(
+    rightWorktreeId: string,
+    request: CreateUnitComparisonRequest = {}
+  ): Promise<CreateUnitComparisonResponse> {
+    return this.postJson<CreateUnitComparisonResponse>(
+      `${this.base}/worktrees/${rightWorktreeId}/comparisons`,
+      request
+    )
+  }
+
+  /** Fetch one Unit's fully materialized symmetric comparison input. */
+  public getUnitComparison(
+    rightWorktreeId: string,
+    comparisonId: string,
+    unitId: string
+  ): Promise<UnitComparisonResponse> {
+    return this.getJson<UnitComparisonResponse>(
+      `${this.base}/worktrees/${rightWorktreeId}/comparisons/${encodeURIComponent(comparisonId)}/units/${encodeURIComponent(unitId)}`
+    )
+  }
+
+  /**
+   * Fetch one page of normalized changes for a pinned Unit comparison.
+   *
+   * Use `detail: "summary"` to discover changed entities cheaply, `detail: "changes"` to receive
+   * agent-ready leaf changes and text/formula hunks, and `detail: "full"` only when the original
+   * product projections are required. Discover product views through `context.scopes`, then pass
+   * one scope back to query a worksheet, slide, Base table, or Board page. A comparison remains pinned; `context.stale` tells callers
+   * to create a new comparison when either source advances.
+   */
+  public getUnitComparisonContext(
+    rightWorktreeId: string,
+    comparisonId: string,
+    unitId: string,
+    query: UnitComparisonContextQuery = {}
+  ): Promise<UnitComparisonContextResponse> {
+    const params = new URLSearchParams()
+    if (query.offset !== undefined) params.set('offset', String(query.offset))
+    if (query.limit !== undefined) params.set('limit', String(query.limit))
+    if (query.contextOffset !== undefined) params.set('contextOffset', String(query.contextOffset))
+    if (query.contextLimit !== undefined) params.set('contextLimit', String(query.contextLimit))
+    if (query.kinds !== undefined && query.kinds.length > 0) {
+      params.set('kind', query.kinds.join(','))
+    }
+    if (query.entityTypes !== undefined && query.entityTypes.length > 0) {
+      params.set('entityType', query.entityTypes.join(','))
+    }
+    if (query.parentStableId !== undefined) {
+      params.set('parentStableId', query.parentStableId)
+    }
+    if (query.scope !== undefined) {
+      params.set('scopeEntityType', query.scope.entityType)
+      params.set('scopeStableId', query.scope.stableId)
+    }
+    if (query.search !== undefined) params.set('search', query.search)
+    if (query.detail !== undefined) params.set('detail', query.detail)
+    if (query.includeValues !== undefined) {
+      params.set('includeValues', query.includeValues ? 'true' : 'false')
+    }
+    const suffix = params.size === 0 ? '' : `?${params.toString()}`
+    return this.getJson<UnitComparisonContextResponse>(
+      `${this.base}/worktrees/${rightWorktreeId}/comparisons/${encodeURIComponent(comparisonId)}/units/${encodeURIComponent(unitId)}/diff${suffix}`
     )
   }
 

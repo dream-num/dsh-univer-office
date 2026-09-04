@@ -1,9 +1,10 @@
-import { messagesFromVocabulary, type MessageVocabulary } from './from-vocabulary'
+import type { MessageVocabulary } from './from-vocabulary'
 
 const vocabulary = {
   title: '협업 뷰어',
   file: '파일',
   modification: '변경 사항',
+  compare: '비교',
   currentVersion: '현재 버전',
   aiAssistant: 'AI 어시스턴트',
   no: '없음',
@@ -38,6 +39,7 @@ const vocabulary = {
   light: '라이트',
   dark: '다크',
   language: '언어',
+  joinDiscord: 'Discord 커뮤니티 참여',
   cancel: '취소',
   confirm: '확인',
   viewOnly: '보기 전용',
@@ -56,4 +58,4 @@ const vocabulary = {
   empty: '열린 파일 없음'
 } satisfies MessageVocabulary
 
-export const KO_KR_MESSAGES = messagesFromVocabulary(vocabulary)
+export default vocabulary

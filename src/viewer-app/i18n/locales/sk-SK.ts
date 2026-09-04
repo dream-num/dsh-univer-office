@@ -1,9 +1,10 @@
-import { messagesFromVocabulary, type MessageVocabulary } from './from-vocabulary'
+import type { MessageVocabulary } from './from-vocabulary'
 
 const vocabulary = {
   title: 'Prehliadač spolupráce',
   file: 'súbor',
   modification: 'úprava',
+  compare: 'Porovnať',
   currentVersion: 'aktuálna verzia',
   aiAssistant: 'AI asistent',
   no: 'žiadne',
@@ -39,6 +40,7 @@ const vocabulary = {
   light: 'Svetlý',
   dark: 'Tmavý',
   language: 'Jazyk',
+  joinDiscord: 'Pripojiť sa ku komunite Discord',
   cancel: 'Zrušiť',
   confirm: 'Potvrdiť',
   viewOnly: 'Iba na čítanie',
@@ -57,4 +59,4 @@ const vocabulary = {
   empty: 'Nie je otvorený žiadny súbor'
 } satisfies MessageVocabulary
 
-export const SK_SK_MESSAGES = messagesFromVocabulary(vocabulary)
+export default vocabulary

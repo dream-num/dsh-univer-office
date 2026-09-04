@@ -1,9 +1,10 @@
-import { messagesFromVocabulary, type MessageVocabulary } from './from-vocabulary'
+import type { MessageVocabulary } from './from-vocabulary'
 
 const vocabulary = {
   title: '協作檢視器',
   file: '檔案',
   modification: '修改',
+  compare: '比較',
   currentVersion: '目前版本',
   aiAssistant: 'AI 助理',
   no: '無',
@@ -38,6 +39,7 @@ const vocabulary = {
   light: '淺色',
   dark: '深色',
   language: '語言',
+  joinDiscord: '加入 Discord 社群',
   cancel: '取消',
   confirm: '確認',
   viewOnly: '僅檢視',
@@ -56,4 +58,4 @@ const vocabulary = {
   empty: '尚未開啟檔案'
 } satisfies MessageVocabulary
 
-export const ZH_TW_MESSAGES = messagesFromVocabulary(vocabulary)
+export default vocabulary

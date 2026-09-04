@@ -229,6 +229,10 @@ if (target === 'all' || target === 'viewer') {
       alias: {
         ...createEmbedUiMenuSchemaAliases(viewerRoot),
         '@univer/collab-gateway-contract': resolve('src/gateway-app/contract/index.ts'),
+        '@univer/unit-comparison-viewer/styles.css': resolve(
+          'packages/unit-comparison-viewer/styles.css'
+        ),
+        '@univer/unit-comparison-viewer': resolve('packages/unit-comparison-viewer/src/index.ts'),
         '@univer/render-preset/styles': resolve('src/viewer-support/render-preset/styles.ts'),
         '@univer/render-preset/facades': resolve('src/viewer-support/render-preset/facades.ts'),
         '@univer/render-preset/machine-locale': resolve(

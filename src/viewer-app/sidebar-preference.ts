@@ -9,9 +9,9 @@ export function persistSidebarCollapsed(collapsed: boolean): void {
   }
 }
 
-/** Resolve an explicit URL default before the stored Sidebar choice. */
-export function resolveSidebarCollapsed(): boolean {
-  const requested = new URLSearchParams(location.search).get('sidebar')
+/** Let an embedding URL choose the initial Sidebar state before falling back to user storage. */
+export function resolveSidebarCollapsed(search = location.search): boolean {
+  const requested = new URLSearchParams(search).get('sidebar')
   if (requested === 'collapsed') {
     return true
   }

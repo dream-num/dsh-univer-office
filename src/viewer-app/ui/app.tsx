@@ -4,6 +4,10 @@ import {
   fetchGatewayDescriptor,
   type MergePreview,
   type MergePreviewUnitResponse,
+  type CreateUnitComparisonResponse,
+  type UnitComparisonRefRequest,
+  type UnitComparisonContext,
+  type UnitComparisonResponse,
   type Worktree,
   type WorktreeLifecycleEvent,
   type UnitSummary
@@ -22,7 +26,12 @@ import type { AppConfig, AppContentScope, AppMode, WriteLocationOptions } from '
 import { gatewayFileEndpointFromKey, ufPrefix, writeLocation } from '../core/config'
 import { type EventChannel, openEventChannel } from '../core/events'
 import { loadViewerLocale } from '../core/locales/generated/load'
-import { createPreviewViewer, createViewer, type ViewerHandle } from '../core/viewer'
+import {
+  createPreviewViewer,
+  createViewer,
+  decodeComparisonUnitData,
+  type ViewerHandle
+} from '../core/viewer'
 import {
   activateLang,
   applyDocumentLang,
@@ -33,7 +42,6 @@ import {
   t,
   type Lang
 } from '../i18n'
-import type { Messages } from '../i18n/locales/en-US'
 import { persistSidebarCollapsed, resolveSidebarCollapsed } from '../sidebar-preference'
 import { AppView } from './app-view'
 import { el } from './dom'
@@ -42,6 +50,12 @@ import { confirmDialog, conflictDialog, escapeHtml, toast, type DialogChip } fro
 
 type View = { kind: 'trunk' } | { kind: 'worktree'; worktreeId: string }
 type ViewableWorktreeStatus = Extract<Worktree['status'], 'draft' | 'ready'>
+
+interface ComparisonRequestIdentity {
+  readonly generation: number
+  readonly worktreeId: string
+  readonly comparisonId?: string
+}
 
 function isViewableWorktreeStatus(status: Worktree['status']): status is ViewableWorktreeStatus {
   switch (status) {
@@ -58,6 +72,13 @@ type ViewerJob =
   | { mode: 'live'; view: View; unit: UnitSummary; editable: boolean }
   | { mode: 'preview'; unit: UnitSummary; data: MergePreviewUnitResponse }
 
+export interface ComparisonViewData {
+  readonly response: UnitComparisonResponse
+  readonly context: UnitComparisonContext
+  readonly leftUnitData?: unknown
+  readonly rightUnitData?: unknown
+}
+
 /** Immutable snapshot of everything the React shell renders; rebuilt on every state change. */
 export interface AppSnapshot {
   view: View
@@ -67,6 +88,11 @@ export interface AppSnapshot {
   worktrees: Worktree[]
   previews: Map<string, MergePreview>
   previewErrors: Map<string, string>
+  comparisonMode: boolean
+  comparisonLeft: UnitComparisonRefRequest
+  comparisonSession: CreateUnitComparisonResponse | undefined
+  comparisonData: ComparisonViewData | undefined
+  comparisonError: string | undefined
   viewPreview: boolean
   trunkEditingOptIn: boolean
   flashWorktreeId: string | undefined
@@ -106,13 +132,20 @@ class ViewerController {
     return loadViewerLocale(locale)
   }
 
-  public async setLocale(locale: LocaleType, messages: Messages = t()): Promise<void> {
-    await this.handle?.setLocale(locale, this.readOnlyCopy(this.last, messages))
+  public async setLocale(locale: LocaleType): Promise<void> {
+    await this.handle?.setLocale(locale)
   }
 
   /** The React content pane hands its host element to the viewer once mounted. */
   public bind(content: HTMLElement): void {
     this.content = content
+    if (
+      this.handle !== undefined &&
+      this.host !== undefined &&
+      this.host.parentElement !== content
+    ) {
+      content.append(this.host)
+    }
   }
 
   public async show(view: View, unit: UnitSummary, editable: boolean): Promise<void> {
@@ -154,6 +187,15 @@ class ViewerController {
     this.key = ''
     this.last = undefined
     this.teardown()
+  }
+
+  /**
+   * Detach the live viewer while Compare owns the content pane without destroying its Univer
+   * instance. Returning to View reattaches the same host in `bind()`, avoiding a synchronous
+   * teardown/rebuild on every mode switch while the collaboration model keeps receiving updates.
+   */
+  public suspendView(): void {
+    this.content = undefined
   }
 
   /** Replace the content pane with a plain message (e.g. a unit that won't render in preview). */
@@ -220,8 +262,7 @@ class ViewerController {
           ...(job.data.sheetBlocks === undefined ? {} : { sheetBlocks: job.data.sheetBlocks }),
           changesets: job.data.changesets,
           locale: this.getLocale(),
-          darkMode: this.getDarkMode(),
-          readOnlyCopy: this.readOnlyCopy(job)
+          darkMode: this.getDarkMode()
         })
       } else {
         handle = await createViewer({
@@ -237,8 +278,7 @@ class ViewerController {
           // Only trunk views can be editable; worktree views are always read-only.
           editable: job.view.kind === 'trunk' && job.editable,
           locale: this.getLocale(),
-          darkMode: this.getDarkMode(),
-          readOnlyCopy: this.readOnlyCopy(job)
+          darkMode: this.getDarkMode()
         })
       }
       if (generation !== this.generation) {
@@ -249,7 +289,7 @@ class ViewerController {
       this.handle = handle
       // Preferences may have changed while this async viewer was being created.
       handle.setDarkMode(this.getDarkMode())
-      await handle.setLocale(this.getLocale(), this.readOnlyCopy(job))
+      await handle.setLocale(this.getLocale())
     } catch (error) {
       if (generation === this.generation) {
         host.append(
@@ -264,16 +304,6 @@ class ViewerController {
         this.setBusy(false)
       }
     }
-  }
-
-  private readOnlyCopy(job: ViewerJob | undefined, messages: Messages = t()) {
-    const message =
-      job?.mode === 'preview'
-        ? messages.viewer.mergePreviewReadOnly
-        : job?.view.kind === 'worktree'
-          ? messages.viewer.worktreeReadOnly
-          : messages.viewer.currentVersionReadOnly
-    return { title: messages.topbar.readOnlyPreview, message }
   }
 
   private teardown(): void {
@@ -311,6 +341,16 @@ export class App {
   private previewErrors = new Map<string, string>()
   /** Within a diverged worktree: showing the merge preview (true) vs the original edits (false). */
   private viewPreview = false
+  /** Orthogonal Worktree content mode. Diff always renders two pinned, read-only sides. */
+  private comparisonMode = false
+  private comparisonLeft: UnitComparisonRefRequest = { kind: 'trunk' }
+  private comparisonSession: CreateUnitComparisonResponse | undefined = undefined
+  private comparisonData: ComparisonViewData | undefined = undefined
+  private comparisonError: string | undefined = undefined
+  /** Reject async comparison responses that no longer belong to the latest source/view request. */
+  private comparisonRequestGeneration = 0
+  /** Generation that currently owns the shared busy indicator. */
+  private comparisonBusyGeneration: number | undefined = undefined
   /** Keep `?lang=` in the address bar once it arrived there (deep link) or the user toggled it. */
   private langInUrl = new URLSearchParams(location.search).has('lang')
   /** Local shell preference; independent from file/worktree state. */
@@ -432,9 +472,19 @@ export class App {
 
   /** Publish the current state to React and mirror it into the address bar. */
   private emit(): void {
+    const remountViewer = this.snapshot.comparisonMode && !this.comparisonMode
     this.snapshot = this.collectSnapshot()
-    for (const listener of this.listeners) {
-      listener()
+    const notify = (): void => {
+      for (const listener of this.listeners) {
+        listener()
+      }
+    }
+    if (remountViewer) {
+      // Compare unmounts the View host. Commit its replacement (and bindContent ref)
+      // before any caller creates a viewer, including sidebar/trunk navigation.
+      flushSync(notify)
+    } else {
+      notify()
     }
     this.syncUrl()
   }
@@ -444,10 +494,15 @@ export class App {
       view: this.view,
       selectedUnitId: this.selectedUnitId,
       trunkUnits: this.trunkUnits,
-      worktreeUnits: this.worktreeUnits,
+      worktreeUnits: this.comparisonMode ? this.comparisonUnits() : this.worktreeUnits,
       worktrees: [...this.worktrees.values()],
       previews: this.previews,
       previewErrors: this.previewErrors,
+      comparisonMode: this.comparisonMode,
+      comparisonLeft: this.comparisonLeft,
+      comparisonSession: this.comparisonSession,
+      comparisonData: this.comparisonData,
+      comparisonError: this.comparisonError,
       viewPreview: this.viewPreview,
       trunkEditingOptIn: this.trunkEditingOptIn,
       flashWorktreeId: this.flashWorktreeId,
@@ -552,8 +607,37 @@ export class App {
     }
   }
 
+  /** Refresh the change summaries used to decide which Worktrees can compare this product. */
+  private refreshComparisonSourcePreviews(): Promise<void> | undefined {
+    const candidates = [...this.worktrees.values()].filter(
+      (worktree) =>
+        isViewableWorktreeStatus(worktree.status) && !this.previews.has(worktree.worktreeId)
+    )
+    if (candidates.length === 0) {
+      return undefined
+    }
+    return Promise.all(candidates.map((worktree) => this.refreshPreview(worktree.worktreeId))).then(
+      () => undefined
+    )
+  }
+
   private currentUnits(): UnitSummary[] {
-    return this.view.kind === 'worktree' ? this.worktreeUnits : this.trunkUnits
+    return this.view.kind === 'worktree'
+      ? this.comparisonMode
+        ? this.comparisonUnits()
+        : this.worktreeUnits
+      : this.trunkUnits
+  }
+
+  private comparisonUnits(): UnitSummary[] {
+    const session = this.comparisonSession
+    if (session === undefined) return []
+    return session.units.map((unit) => ({
+      unitId: unit.unitId,
+      type: unit.type,
+      name: unit.name,
+      headRev: session.right.heads[unit.unitId] ?? session.left.heads[unit.unitId] ?? 0
+    }))
   }
 
   // ---- worktree unit change status (vs the worktree's baseline) ----
@@ -617,6 +701,36 @@ export class App {
       return previewBadgeInfo(p)
     }
     return changeBadgeInfo(this.worktreeUnitChange(worktree, u))
+  }
+
+  /** Active left-side Worktrees that actually changed a Unit of the selected product type. */
+  public comparisonSourceWorktrees(): Worktree[] {
+    if (this.view.kind !== 'worktree' || this.selectedUnitId === undefined) {
+      return []
+    }
+    const selectedType =
+      this.comparisonSession?.units.find((unit) => unit.unitId === this.selectedUnitId)?.type ??
+      this.worktreeUnits.find((unit) => unit.unitId === this.selectedUnitId)?.type
+    if (selectedType === undefined) {
+      return []
+    }
+    const currentWorktreeId = this.view.worktreeId
+    const currentWorktreeChangedSelectedType = this.previews
+      .get(currentWorktreeId)
+      ?.units.some((unit) => unit.type === selectedType && unit.status !== 'unchanged')
+    if (currentWorktreeChangedSelectedType !== true) {
+      return []
+    }
+    return [...this.worktrees.values()].filter((worktree) => {
+      if (worktree.worktreeId === currentWorktreeId || !isViewableWorktreeStatus(worktree.status)) {
+        return false
+      }
+      return (
+        this.previews
+          .get(worktree.worktreeId)
+          ?.units.some((unit) => unit.type === selectedType && unit.status !== 'unchanged') === true
+      )
+    })
   }
 
   // ---- trunk editing gate (univerfile-level) ----
@@ -854,12 +968,273 @@ export class App {
     return this.viewPreview ? 'mergePreview' : 'worktree'
   }
 
+  public async setComparisonMode(enabled: boolean): Promise<void> {
+    if (this.view.kind !== 'worktree' || this.comparisonMode === enabled) return
+    if (!enabled) this.cancelComparisonRequests()
+    this.comparisonMode = enabled
+    this.comparisonError = undefined
+    if (!enabled) {
+      this.comparisonSession = undefined
+      this.comparisonData = undefined
+      this.emit()
+      const selected = this.selectedUnitId
+      if (selected !== undefined) await this.selectWorktreeUnit(this.view.worktreeId, selected)
+      return
+    }
+    this.viewer.suspendView()
+    // Commit the lightweight Compare shell before fetching snapshots or mounting native panes.
+    // In particular, do not make the click wait for a live Board Univer instance to dispose.
+    this.emit()
+    await this.refreshUnitComparison()
+  }
+
+  public async setComparisonLeft(left: UnitComparisonRefRequest): Promise<void> {
+    if (
+      this.comparisonLeft.kind === left.kind &&
+      (left.kind === 'trunk' ||
+        (this.comparisonLeft.kind === 'worktree' &&
+          this.comparisonLeft.worktreeId === left.worktreeId))
+    ) {
+      return
+    }
+    this.comparisonLeft = left
+    if (this.comparisonMode) await this.refreshUnitComparison()
+  }
+
+  public async refreshUnitComparison(): Promise<void> {
+    if (this.view.kind !== 'worktree') return
+    const worktreeId = this.view.worktreeId
+    const request = this.beginComparisonRequest(worktreeId)
+    this.setBusy(true)
+    this.comparisonError = undefined
+    this.comparisonData = undefined
+    try {
+      const sourcePreviewRefresh = this.refreshComparisonSourcePreviews()
+      if (sourcePreviewRefresh !== undefined) {
+        await sourcePreviewRefresh
+      }
+      if (!this.isCurrentComparisonRequest(request)) return
+      const comparisonLeftWorktreeId =
+        this.comparisonLeft.kind === 'worktree' ? this.comparisonLeft.worktreeId : undefined
+      if (
+        comparisonLeftWorktreeId !== undefined &&
+        !this.comparisonSourceWorktrees().some(
+          (worktree) => worktree.worktreeId === comparisonLeftWorktreeId
+        )
+      ) {
+        this.comparisonLeft = { kind: 'trunk' }
+      }
+      const session = await this.control.createUnitComparison(worktreeId, {
+        left: this.comparisonLeft
+      })
+      if (session.error.code !== 1) throw new Error(session.error.message || 'Comparison failed')
+      if (!this.isCurrentComparisonRequest(request)) return
+      this.comparisonSession = session
+      const unitId =
+        (this.selectedUnitId !== undefined &&
+        session.units.some((unit) => unit.unitId === this.selectedUnitId)
+          ? this.selectedUnitId
+          : session.units[0]?.unitId) ?? undefined
+      this.selectedUnitId = unitId
+      this.emit()
+      if (unitId !== undefined) {
+        await this.loadUnitComparison(worktreeId, unitId, {
+          ...request,
+          comparisonId: session.comparisonId
+        })
+      }
+    } catch (error) {
+      if (!this.isCurrentComparisonRequest(request)) return
+      this.comparisonSession = undefined
+      this.comparisonError = error instanceof Error ? error.message : String(error)
+      this.emit()
+    } finally {
+      this.completeComparisonRequest(request)
+    }
+  }
+
+  private async loadUnitComparison(
+    worktreeId: string,
+    unitId: string,
+    parentRequest?: ComparisonRequestIdentity
+  ): Promise<void> {
+    const session = this.comparisonSession
+    if (session === undefined) return
+    const request = parentRequest ?? this.beginComparisonRequest(worktreeId, session.comparisonId)
+    if (!this.isCurrentComparisonRequest(request)) return
+    this.setBusy(true)
+    this.comparisonError = undefined
+    this.comparisonData = undefined
+    this.emit()
+    try {
+      const response = await this.control.getUnitComparison(
+        worktreeId,
+        session.comparisonId,
+        unitId
+      )
+      if (response.error.code !== 1) throw new Error(response.error.message || 'Comparison failed')
+      const [leftUnitData, rightUnitData, context] = await Promise.all([
+        response.left.snapshot === undefined
+          ? Promise.resolve(undefined)
+          : decodeComparisonUnitData(
+              response.unit.type,
+              response.left.snapshot,
+              response.left.sheetBlocks ?? []
+            ),
+        response.right.snapshot === undefined
+          ? Promise.resolve(undefined)
+          : decodeComparisonUnitData(
+              response.unit.type,
+              response.right.snapshot,
+              response.right.sheetBlocks ?? []
+            ),
+        this.loadAllUnitComparisonContext(worktreeId, session.comparisonId, unitId)
+      ])
+      if (!this.isCurrentComparisonRequest(request)) return
+      this.comparisonData = {
+        response,
+        context,
+        ...(leftUnitData === undefined ? {} : { leftUnitData }),
+        ...(rightUnitData === undefined ? {} : { rightUnitData })
+      }
+      this.emit()
+    } catch (error) {
+      if (!this.isCurrentComparisonRequest(request)) return
+      this.comparisonError = error instanceof Error ? error.message : String(error)
+      this.emit()
+    } finally {
+      this.completeComparisonRequest(request)
+    }
+  }
+
+  private async loadAllUnitComparisonContext(
+    worktreeId: string,
+    comparisonId: string,
+    unitId: string
+  ): Promise<UnitComparisonContext> {
+    const items: UnitComparisonContext['items'][number][] = []
+    let offset = 0
+    let contextOffset = 0
+    const alignmentRows: Extract<
+      UnitComparisonContext['productContext'],
+      { kind: 'doc' }
+    >['paragraphAlignment']['rows'][number][] = []
+    let context: UnitComparisonContext | undefined
+
+    let hasMore = true
+    while (hasMore) {
+      const response = await this.control.getUnitComparisonContext(
+        worktreeId,
+        comparisonId,
+        unitId,
+        { detail: 'full', limit: 1000, offset, contextOffset, contextLimit: 1000 }
+      )
+      if (response.error.code !== 1 || response.context === undefined) {
+        throw new Error(response.error.message || t().diff.comparisonFailed)
+      }
+      context ??= response.context
+      items.push(...response.context.items)
+      offset += response.context.items.length
+      const product = response.context.productContext
+      const alignment = product.kind === 'doc' ? product.paragraphAlignment : undefined
+      if (alignment !== undefined) {
+        alignmentRows.push(...alignment.rows)
+        contextOffset += alignment.rows.length
+      }
+      if (!response.context.page.hasMore && !alignment?.page.hasMore) {
+        hasMore = false
+        continue
+      }
+      if (response.context.page.hasMore && response.context.items.length === 0) {
+        throw new Error(t().diff.incompletePage)
+      }
+      if (alignment?.page.hasMore && alignment.rows.length === 0) {
+        throw new Error(t().diff.incompletePage)
+      }
+    }
+
+    if (context === undefined) {
+      throw new Error(t().diff.comparisonFailed)
+    }
+
+    return {
+      ...context,
+      page: {
+        offset: 0,
+        limit: items.length,
+        matched: context.page.matched,
+        hasMore: false
+      },
+      items,
+      ...(context.productContext.kind === 'doc'
+        ? {
+            productContext: {
+              ...context.productContext,
+              paragraphAlignment: {
+                total: alignmentRows.length,
+                rows: alignmentRows,
+                page: {
+                  offset: 0,
+                  limit: alignmentRows.length,
+                  matched: alignmentRows.length,
+                  hasMore: false
+                }
+              }
+            }
+          }
+        : {})
+    }
+  }
+
+  private beginComparisonRequest(
+    worktreeId: string,
+    comparisonId?: string
+  ): ComparisonRequestIdentity {
+    const generation = ++this.comparisonRequestGeneration
+    this.comparisonBusyGeneration = generation
+    return {
+      generation,
+      worktreeId,
+      ...(comparisonId === undefined ? {} : { comparisonId })
+    }
+  }
+
+  private completeComparisonRequest(request: ComparisonRequestIdentity): void {
+    if (this.comparisonBusyGeneration !== request.generation) return
+    this.comparisonBusyGeneration = undefined
+    this.setBusy(false)
+  }
+
+  private cancelComparisonRequests(): void {
+    this.comparisonRequestGeneration += 1
+    if (this.comparisonBusyGeneration === undefined) return
+    this.comparisonBusyGeneration = undefined
+    this.setBusy(false)
+  }
+
+  private isCurrentComparisonRequest(request: ComparisonRequestIdentity): boolean {
+    return (
+      request.generation === this.comparisonRequestGeneration &&
+      this.comparisonMode &&
+      this.view.kind === 'worktree' &&
+      this.view.worktreeId === request.worktreeId &&
+      (request.comparisonId === undefined ||
+        this.comparisonSession?.comparisonId === request.comparisonId)
+    )
+  }
+
   /** Enter a worktree and show its first unit in the content pane. The sidebar stays put. */
   public async enterWorktree(
     worktreeId: string,
     preferUnitId?: string,
     forcePreview?: boolean
   ): Promise<void> {
+    this.cancelComparisonRequests()
+    this.comparisonMode = false
+    this.comparisonLeft = { kind: 'trunk' }
+    this.comparisonSession = undefined
+    this.comparisonData = undefined
+    this.comparisonError = undefined
     this.view = { kind: 'worktree', worktreeId }
     this.selectedUnitId = undefined
     await this.loadWorktreeUnits(worktreeId)
@@ -882,9 +1257,14 @@ export class App {
 
   /** Back to the current version (trunk) — used after merge/discard. */
   private exitToHome(): void {
+    this.cancelComparisonRequests()
     this.view = { kind: 'trunk' }
     this.selectedUnitId = undefined
     this.viewPreview = false
+    this.comparisonMode = false
+    this.comparisonSession = undefined
+    this.comparisonData = undefined
+    this.comparisonError = undefined
     this.worktreeEvents?.close()
     this.worktreeEvents = undefined
     this.emit()
@@ -907,6 +1287,11 @@ export class App {
   /** Show a trunk (current-version) unit, leaving any worktree view. */
   public async selectTrunkUnit(unitId: string): Promise<void> {
     if (this.view.kind === 'worktree') {
+      this.cancelComparisonRequests()
+      this.comparisonMode = false
+      this.comparisonSession = undefined
+      this.comparisonData = undefined
+      this.comparisonError = undefined
       this.worktreeEvents?.close()
       this.worktreeEvents = undefined
       this.view = { kind: 'trunk' }
@@ -922,6 +1307,27 @@ export class App {
 
   /** Show a unit of the given worktree in the content pane (merge preview or original edits). */
   public async selectWorktreeUnit(worktreeId: string, unitId: string): Promise<void> {
+    if (this.comparisonMode) {
+      const unit = this.comparisonSession?.units.find((candidate) => candidate.unitId === unitId)
+      if (unit === undefined) return
+      this.view = { kind: 'worktree', worktreeId }
+      this.selectedUnitId = unitId
+      const comparisonLeftWorktreeId =
+        this.comparisonLeft.kind === 'worktree' ? this.comparisonLeft.worktreeId : undefined
+      if (
+        comparisonLeftWorktreeId !== undefined &&
+        !this.comparisonSourceWorktrees().some(
+          (worktree) => worktree.worktreeId === comparisonLeftWorktreeId
+        )
+      ) {
+        this.comparisonLeft = { kind: 'trunk' }
+        await this.refreshUnitComparison()
+        return
+      }
+      this.emit()
+      await this.loadUnitComparison(worktreeId, unitId)
+      return
+    }
     const unit = this.worktreeUnits.find((u) => u.unitId === unitId)
     if (!unit) {
       return
@@ -1096,7 +1502,7 @@ export class App {
       if (generation !== this.languageGeneration) {
         return
       }
-      await this.viewer.setLocale(locale, messages)
+      await this.viewer.setLocale(locale)
       if (generation !== this.languageGeneration) {
         return
       }

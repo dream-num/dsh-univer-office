@@ -1,9 +1,10 @@
-import { messagesFromVocabulary, type MessageVocabulary } from './from-vocabulary'
+import type { MessageVocabulary } from './from-vocabulary'
 
 const vocabulary = {
   title: 'Visor colaborativo',
   file: 'archivo',
   modification: 'modificación',
+  compare: 'Comparar',
   currentVersion: 'versión actual',
   aiAssistant: 'asistente de IA',
   no: 'ninguno',
@@ -39,6 +40,7 @@ const vocabulary = {
   light: 'Claro',
   dark: 'Oscuro',
   language: 'Idioma',
+  joinDiscord: 'Únete a la comunidad de Discord',
   cancel: 'Cancelar',
   confirm: 'Confirmar',
   viewOnly: 'Solo lectura',
@@ -57,4 +59,4 @@ const vocabulary = {
   empty: 'No hay archivo abierto'
 } satisfies MessageVocabulary
 
-export const ES_ES_MESSAGES = messagesFromVocabulary(vocabulary)
+export default vocabulary

@@ -506,13 +506,61 @@ try {
       )
     }
   }
-  await verifyViewerHistoryMenus(origin, gatewayKey, [
-    ['Sheet', unitId, 'Edit History', null],
-    ['Doc', docUnitId, 'Version history', 'docs-history-ui.operation.open'],
-    ['Slide', slideUnitId, 'Version history', 'slides-history-ui.operation.open'],
-    ['Base', baseUnitId, 'Version history', 'bases-history-ui.operation.open'],
-    ['Board', boardUnitId, null, 'boards-history-ui.operation.open']
-  ])
+  const comparisonWorktree = await service.worktree({
+    ...scoped,
+    action: 'create',
+    name: 'compare worktree'
+  })
+  const comparisonWorktreeId = comparisonWorktree.result?.worktreeId
+  if (typeof comparisonWorktreeId !== 'string') {
+    throw new Error(`comparison worktree failed: ${JSON.stringify(comparisonWorktree)}`)
+  }
+  const comparisonEdit = await service.executeUnitContent({
+    ...scoped,
+    worktreeId: comparisonWorktreeId,
+    unitId,
+    code: 'workbook.getActiveSheet().getRange("C3").setValue("worktree diff"); return "compared";'
+  })
+  if (comparisonEdit.result?.committed !== true || comparisonEdit.result?.value !== 'compared') {
+    throw new Error(`comparison edit failed: ${JSON.stringify(comparisonEdit)}`)
+  }
+  const pinnedComparison = await verifyWorktreeComparison(
+    origin,
+    gatewayKey,
+    comparisonWorktreeId,
+    unitId
+  )
+  const laterComparisonEdit = await service.executeUnitContent({
+    ...scoped,
+    worktreeId: comparisonWorktreeId,
+    unitId,
+    code: 'workbook.getActiveSheet().getRange("D4").setValue("after pin"); return "advanced";'
+  })
+  if (
+    laterComparisonEdit.result?.committed !== true ||
+    laterComparisonEdit.result?.value !== 'advanced'
+  ) {
+    throw new Error(`post-pin comparison edit failed: ${JSON.stringify(laterComparisonEdit)}`)
+  }
+  await verifyPinnedComparisonStale(
+    origin,
+    gatewayKey,
+    comparisonWorktreeId,
+    unitId,
+    pinnedComparison
+  )
+  await verifyViewerHistoryMenus(
+    origin,
+    gatewayKey,
+    [
+      ['Sheet', unitId, 'Edit History', null],
+      ['Doc', docUnitId, 'Version history', 'docs-history-ui.operation.open'],
+      ['Slide', slideUnitId, 'Version history', 'slides-history-ui.operation.open'],
+      ['Base', baseUnitId, 'Version history', 'bases-history-ui.operation.open'],
+      ['Board', boardUnitId, null, 'boards-history-ui.operation.open']
+    ],
+    { worktreeId: comparisonWorktreeId, unitId }
+  )
   const exchangeCsv = Buffer.from('name,value\nserver,7\n', 'utf8')
   const exchangeForm = new FormData()
   exchangeForm.append('file', new Blob([exchangeCsv], { type: 'text/csv' }), '服务端.csv')
@@ -551,25 +599,21 @@ try {
     throw new Error('server exchange download failed')
   }
 
-  const disposable = await service.worktree({ ...scoped, action: 'create', name: 'discard me' })
-  const disposableId = disposable.result?.worktreeId
-  if (typeof disposableId !== 'string')
-    throw new Error(`disposable worktree failed: ${JSON.stringify(disposable)}`)
   const discarded = await service.worktreeAction({
     ...scoped,
     action: 'discard',
-    worktreeId: disposableId
+    worktreeId: comparisonWorktreeId
   })
   if (
     !discarded.ok ||
-    discarded.state.worktrees.find((entry) => entry.worktreeId === disposableId)?.status !==
+    discarded.state.worktrees.find((entry) => entry.worktreeId === comparisonWorktreeId)?.status !==
       'discarded'
   ) {
     throw new Error(`discard transition failed: ${JSON.stringify(discarded)}`)
   }
 
   console.log(
-    'integration smoke OK (new/status/Unit/import/API/execute/5-Unit History/Sheet/Base/Board inspect/export/lint/compile-svg/screenshot/print-pdf/resources/Worktree lifecycle, no global CLI)'
+    'integration smoke OK (new/status/Unit/import/API/execute/5-Unit History/worktree diff/Sheet/Base/Board inspect/export/lint/compile-svg/screenshot/print-pdf/resources/Worktree lifecycle, no global CLI)'
   )
 } finally {
   await service.dispose()
@@ -665,7 +709,71 @@ async function fetchHistoryChangesets(exchangeBase, unitId, startRevision, endRe
   return response.json()
 }
 
-async function verifyViewerHistoryMenus(viewerOrigin, gatewayKey, units) {
+async function verifyWorktreeComparison(viewerOrigin, gatewayKey, worktreeId, unitId) {
+  const comparisonBase = `${viewerOrigin}/uf/${gatewayKey}/worktrees/${encodeURIComponent(worktreeId)}/comparisons`
+  const session = await postJson(comparisonBase, { left: { kind: 'trunk' } })
+  const unit = session.units?.find((candidate) => candidate.unitId === unitId)
+  if (
+    session.error?.code !== 1 ||
+    typeof session.comparisonId !== 'string' ||
+    session.left?.kind !== 'trunk' ||
+    session.right?.worktreeId !== worktreeId ||
+    unit?.presence !== 'paired'
+  ) {
+    throw new Error(`worktree comparison session failed: ${JSON.stringify(session)}`)
+  }
+  const unitEndpoint = `${comparisonBase}/${encodeURIComponent(session.comparisonId)}/units/${encodeURIComponent(unitId)}`
+  const response = await fetch(unitEndpoint)
+  const comparison = await response.json()
+  if (
+    !response.ok ||
+    comparison.error?.code !== 1 ||
+    comparison.fidelity !== 'history' ||
+    comparison.left?.present !== true ||
+    comparison.right?.present !== true ||
+    typeof comparison.right?.revision !== 'number' ||
+    comparison.stale !== false
+  ) {
+    throw new Error(`pinned Unit comparison failed: ${JSON.stringify(comparison)}`)
+  }
+  const contextResponse = await fetch(
+    `${unitEndpoint}/diff?entityType=cell&detail=changes&limit=10`
+  )
+  const contextBody = await contextResponse.json()
+  const context = contextBody.context
+  if (
+    !contextResponse.ok ||
+    contextBody.error?.code !== 1 ||
+    context?.schemaVersion !== 1 ||
+    context?.comparisonId !== session.comparisonId ||
+    context?.fidelity !== 'history' ||
+    context?.detail !== 'changes' ||
+    context?.diagnostics?.readiness !== 'ready' ||
+    typeof context?.summary?.total !== 'number' ||
+    context.summary.total < 1 ||
+    !context.items?.some((item) => item.entityType === 'cell')
+  ) {
+    throw new Error(`semantic worktree diff failed: ${JSON.stringify(contextBody)}`)
+  }
+  return { comparisonId: session.comparisonId, rightRevision: comparison.right.revision }
+}
+
+async function verifyPinnedComparisonStale(viewerOrigin, gatewayKey, worktreeId, unitId, pinned) {
+  const response = await fetch(
+    `${viewerOrigin}/uf/${gatewayKey}/worktrees/${encodeURIComponent(worktreeId)}/comparisons/${encodeURIComponent(pinned.comparisonId)}/units/${encodeURIComponent(unitId)}`
+  )
+  const comparison = await response.json()
+  if (
+    !response.ok ||
+    comparison.error?.code !== 1 ||
+    comparison.stale !== true ||
+    comparison.right?.revision !== pinned.rightRevision
+  ) {
+    throw new Error(`pinned comparison did not become stale: ${JSON.stringify(comparison)}`)
+  }
+}
+
+async function verifyViewerHistoryMenus(viewerOrigin, gatewayKey, units, comparisonTarget) {
   const browserResolution = await resolveUniverRenderBrowser()
   if (browserResolution.status !== 'found') {
     throw new Error(`Viewer History browser was not found: ${JSON.stringify(browserResolution)}`)
@@ -736,9 +844,118 @@ async function verifyViewerHistoryMenus(viewerOrigin, gatewayKey, units) {
         await page.close()
       }
     }
+    await verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey, comparisonTarget)
   } finally {
     await browser.close()
   }
+}
+
+async function verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey, target) {
+  const page = await browser.newPage()
+  const browserMessages = []
+  page.on('console', (message) => browserMessages.push(`${message.type()}: ${message.text()}`))
+  page.on('pageerror', (error) => browserMessages.push(`pageerror: ${String(error)}`))
+  page.on('response', (response) => {
+    if (response.status() >= 400) {
+      browserMessages.push(`response: ${response.status()} ${response.url()}`)
+    }
+  })
+  try {
+    page.setDefaultTimeout(20_000)
+    await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 })
+    await page.goto(
+      `${viewerOrigin}/?file=${encodeURIComponent(gatewayKey)}&worktree=${encodeURIComponent(target.worktreeId)}&unit=${encodeURIComponent(target.unitId)}&sidebar=collapsed&lang=en-US`,
+      { waitUntil: 'domcontentloaded' }
+    )
+    const compareToggle = '[data-testid="view-diff-center"] [aria-label="Compare"]'
+    await page.waitForSelector(compareToggle)
+    await page.waitForFunction(
+      () =>
+        window.univerAPI !== undefined &&
+        [...document.querySelectorAll('.overlay')].every(
+          (element) => getComputedStyle(element).display === 'none'
+        )
+    )
+    const compactLayout = await measureWorktreeTopbar(page)
+    if (
+      compactLayout.height > 64 ||
+      Math.abs(compactLayout.titleTop - compactLayout.switcherTop) > 8 ||
+      Math.abs(compactLayout.actionsTop - compactLayout.switcherTop) > 8 ||
+      compactLayout.switcherHeight > 34 ||
+      compactLayout.overflow
+    ) {
+      throw new Error(`800px worktree topbar was not compact: ${JSON.stringify(compactLayout)}`)
+    }
+    await page.setViewport({ width: 680, height: 720, deviceScaleFactor: 1 })
+    const mediumLayout = await measureWorktreeTopbar(page)
+    if (
+      mediumLayout.titleTop >= mediumLayout.switcherTop ||
+      Math.abs(mediumLayout.actionsTop - mediumLayout.switcherTop) > 8 ||
+      mediumLayout.switcherHeight > 34 ||
+      mediumLayout.actionsHeight > 34 ||
+      mediumLayout.overflow
+    ) {
+      throw new Error(`680px worktree topbar was not balanced: ${JSON.stringify(mediumLayout)}`)
+    }
+    await page.setViewport({ width: 560, height: 720, deviceScaleFactor: 1 })
+    const narrowLayout = await measureWorktreeTopbar(page)
+    if (
+      narrowLayout.titleTop >= narrowLayout.switcherTop ||
+      narrowLayout.switcherTop >= narrowLayout.actionsTop ||
+      narrowLayout.switcherWidth < narrowLayout.width - 40 ||
+      narrowLayout.overflow
+    ) {
+      throw new Error(`560px worktree topbar overflowed: ${JSON.stringify(narrowLayout)}`)
+    }
+    await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 })
+    await page.click(compareToggle)
+    await page.waitForSelector('[data-unit-comparison-viewer="true"]')
+    await page.waitForSelector('[data-testid="comparison-source-title"]')
+  } catch (error) {
+    const state = await page.evaluate(() => ({
+      bodyText: document.body.innerText.slice(0, 2_000),
+      comparePressed: document
+        .querySelector('[data-testid="view-diff-center"] [aria-label="Compare"]')
+        ?.getAttribute('data-pressed'),
+      sourceVisible: document.querySelector('[data-testid="comparison-source-title"]') !== null
+    }))
+    throw new Error(
+      `Viewer did not expose worktree Compare: ${String(error)}; messages=${JSON.stringify(browserMessages)}; state=${JSON.stringify(state)}`,
+      { cause: error }
+    )
+  } finally {
+    await page.close()
+  }
+}
+
+async function measureWorktreeTopbar(page) {
+  return page.evaluate(() => {
+    const topbar = document.querySelector('.topbar')
+    const title = document.querySelector('[data-testid="worktree-title"]')
+    const switcher = document.querySelector('[data-testid="view-diff-center"]')
+    const actions = document.querySelector('[data-testid="worktree-actions"]')
+    if (topbar === null || title === null || switcher === null || actions === null) {
+      throw new Error('worktree topbar controls are missing')
+    }
+    const topbarRect = topbar.getBoundingClientRect()
+    const titleRect = title.getBoundingClientRect()
+    const switcherRect = switcher.getBoundingClientRect()
+    const actionsRect = actions.getBoundingClientRect()
+    const outside = (rect) => rect.left < topbarRect.left - 1 || rect.right > topbarRect.right + 1
+    return {
+      actionsHeight: actionsRect.height,
+      actionsTop: actionsRect.top,
+      height: topbarRect.height,
+      overflow:
+        document.documentElement.scrollWidth > document.documentElement.clientWidth ||
+        [titleRect, switcherRect, actionsRect].some(outside),
+      switcherHeight: switcherRect.height,
+      switcherTop: switcherRect.top,
+      switcherWidth: switcherRect.width,
+      titleTop: titleRect.top,
+      width: topbarRect.width
+    }
+  })
 }
 
 async function verifyAllowAllAuthz(exchangeBase, unitId) {

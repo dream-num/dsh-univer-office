@@ -1,6 +1,8 @@
-import { EN_US_MESSAGES } from './locales/en-US'
-import { LocaleType } from '@univerjs/core'
+import type { IUnitComparisonLabelDescriptor } from '@univerjs-pro/edit-history-ui'
+import { LocaleService, LocaleType, type ILanguagePack } from '@univerjs/core'
 import type { Messages } from './locales/en-US'
+import type { UnitComparisonTranslate } from './locales/comparison-labels'
+import { messagesFromVocabulary, type MessageVocabulary } from './locales/from-vocabulary'
 
 export const LOCALE_MANIFEST = [
   { tag: 'en-US', sdkLocale: LocaleType.EN_US, nativeName: 'English' },
@@ -24,35 +26,87 @@ export const LOCALE_MANIFEST = [
 
 export type Lang = (typeof LOCALE_MANIFEST)[number]['tag']
 
-const messageLoaders: Record<Lang, () => Promise<Messages>> = {
-  'en-US': () => Promise.resolve(EN_US_MESSAGES),
-  'fr-FR': () => import('./locales/fr-FR.js').then(({ FR_FR_MESSAGES }) => FR_FR_MESSAGES),
-  'zh-CN': () => import('./locales/zh-CN.js').then(({ ZH_CN_MESSAGES }) => ZH_CN_MESSAGES),
-  'ru-RU': () => import('./locales/ru-RU.js').then(({ RU_RU_MESSAGES }) => RU_RU_MESSAGES),
-  'zh-TW': () => import('./locales/zh-TW.js').then(({ ZH_TW_MESSAGES }) => ZH_TW_MESSAGES),
-  'zh-HK': () => import('./locales/zh-HK.js').then(({ ZH_HK_MESSAGES }) => ZH_HK_MESSAGES),
-  'vi-VN': () => import('./locales/vi-VN.js').then(({ VI_VN_MESSAGES }) => VI_VN_MESSAGES),
-  'ja-JP': () => import('./locales/ja-JP.js').then(({ JA_JP_MESSAGES }) => JA_JP_MESSAGES),
-  'ko-KR': () => import('./locales/ko-KR.js').then(({ KO_KR_MESSAGES }) => KO_KR_MESSAGES),
-  'es-ES': () => import('./locales/es-ES.js').then(({ ES_ES_MESSAGES }) => ES_ES_MESSAGES),
-  'ca-ES': () => import('./locales/ca-ES.js').then(({ CA_ES_MESSAGES }) => CA_ES_MESSAGES),
-  'sk-SK': () => import('./locales/sk-SK.js').then(({ SK_SK_MESSAGES }) => SK_SK_MESSAGES),
-  'pt-BR': () => import('./locales/pt-BR.js').then(({ PT_BR_MESSAGES }) => PT_BR_MESSAGES),
-  'de-DE': () => import('./locales/de-DE.js').then(({ DE_DE_MESSAGES }) => DE_DE_MESSAGES),
-  'it-IT': () => import('./locales/it-IT.js').then(({ IT_IT_MESSAGES }) => IT_IT_MESSAGES),
-  'id-ID': () => import('./locales/id-ID.js').then(({ ID_ID_MESSAGES }) => ID_ID_MESSAGES),
-  'pl-PL': () => import('./locales/pl-PL.js').then(({ PL_PL_MESSAGES }) => PL_PL_MESSAGES)
+type MessageFactory = (translateComparison: UnitComparisonTranslate) => Messages
+type VocabularyModule = { default: MessageVocabulary }
+type ComparisonLocaleModule = { default: ILanguagePack }
+
+function vocabularyLoader(
+  locale: Lang,
+  load: () => Promise<VocabularyModule>
+): () => Promise<MessageFactory> {
+  return () =>
+    load().then(
+      ({ default: vocabulary }) =>
+        (translateComparison): Messages =>
+          messagesFromVocabulary(vocabulary, locale, translateComparison)
+    )
 }
 
-const messageCache = new Map<Lang, Promise<Messages>>([['en-US', Promise.resolve(EN_US_MESSAGES)]])
+const messageFactoryLoaders: Record<Lang, () => Promise<MessageFactory>> = {
+  'en-US': () => import('./locales/en-US.js').then(({ createEnUsMessages }) => createEnUsMessages),
+  'fr-FR': vocabularyLoader('fr-FR', () => import('./locales/fr-FR.js')),
+  'zh-CN': () => import('./locales/zh-CN.js').then(({ createZhCnMessages }) => createZhCnMessages),
+  'ru-RU': vocabularyLoader('ru-RU', () => import('./locales/ru-RU.js')),
+  'zh-TW': vocabularyLoader('zh-TW', () => import('./locales/zh-TW.js')),
+  'zh-HK': vocabularyLoader('zh-HK', () => import('./locales/zh-HK.js')),
+  'vi-VN': vocabularyLoader('vi-VN', () => import('./locales/vi-VN.js')),
+  'ja-JP': vocabularyLoader('ja-JP', () => import('./locales/ja-JP.js')),
+  'ko-KR': vocabularyLoader('ko-KR', () => import('./locales/ko-KR.js')),
+  'es-ES': vocabularyLoader('es-ES', () => import('./locales/es-ES.js')),
+  'ca-ES': vocabularyLoader('ca-ES', () => import('./locales/ca-ES.js')),
+  'sk-SK': vocabularyLoader('sk-SK', () => import('./locales/sk-SK.js')),
+  'pt-BR': vocabularyLoader('pt-BR', () => import('./locales/pt-BR.js')),
+  'de-DE': vocabularyLoader('de-DE', () => import('./locales/de-DE.js')),
+  'it-IT': vocabularyLoader('it-IT', () => import('./locales/it-IT.js')),
+  'id-ID': vocabularyLoader('id-ID', () => import('./locales/id-ID.js')),
+  'pl-PL': vocabularyLoader('pl-PL', () => import('./locales/pl-PL.js'))
+}
+
+const comparisonLocaleLoaders: Record<Lang, () => Promise<ComparisonLocaleModule>> = {
+  'en-US': () => import('@univerjs-pro/edit-history-ui/locale/en-US'),
+  'fr-FR': () => import('@univerjs-pro/edit-history-ui/locale/fr-FR'),
+  'zh-CN': () => import('@univerjs-pro/edit-history-ui/locale/zh-CN'),
+  'ru-RU': () => import('@univerjs-pro/edit-history-ui/locale/ru-RU'),
+  'zh-TW': () => import('@univerjs-pro/edit-history-ui/locale/zh-TW'),
+  'zh-HK': () => import('@univerjs-pro/edit-history-ui/locale/zh-HK'),
+  'vi-VN': () => import('@univerjs-pro/edit-history-ui/locale/vi-VN'),
+  'ja-JP': () => import('@univerjs-pro/edit-history-ui/locale/ja-JP'),
+  'ko-KR': () => import('@univerjs-pro/edit-history-ui/locale/ko-KR'),
+  'es-ES': () => import('@univerjs-pro/edit-history-ui/locale/es-ES'),
+  'ca-ES': () => import('@univerjs-pro/edit-history-ui/locale/ca-ES'),
+  'sk-SK': () => import('@univerjs-pro/edit-history-ui/locale/sk-SK'),
+  'pt-BR': () => import('@univerjs-pro/edit-history-ui/locale/pt-BR'),
+  'de-DE': () => import('@univerjs-pro/edit-history-ui/locale/de-DE'),
+  'it-IT': () => import('@univerjs-pro/edit-history-ui/locale/it-IT'),
+  'id-ID': () => import('@univerjs-pro/edit-history-ui/locale/id-ID'),
+  'pl-PL': () => import('@univerjs-pro/edit-history-ui/locale/pl-PL')
+}
+
+const messageCache = new Map<Lang, Promise<Messages>>()
+
+function createComparisonTranslate(
+  locale: LocaleType,
+  localePack: ILanguagePack
+): UnitComparisonTranslate {
+  // The shell lives outside either read-only Univer instance. Give each cached language its own
+  // public LocaleService so rapid language loads cannot change another table's descriptor output.
+  const localeService = new LocaleService()
+  localeService.load({ [locale]: localePack })
+  localeService.setLocale(locale)
+  return (descriptor: IUnitComparisonLabelDescriptor): string =>
+    localeService.t(descriptor.key, ...(descriptor.args ?? []))
+}
 
 export const LANG_STORAGE_KEY = 'univer-collab-client-lang'
 
 let active: Lang = 'en-US'
-let table: Messages = EN_US_MESSAGES
+let table: Messages | undefined
 
 /** The live message table for the active language. Read at render time, never cache the result. */
 export function t(): Messages {
+  if (table === undefined) {
+    throw new Error('Application locale has not been initialized')
+  }
   return table
 }
 
@@ -70,16 +124,22 @@ export async function loadMessages(lang: Lang): Promise<Messages> {
   if (cached !== undefined) {
     return cached
   }
-  const pending = messageLoaders[lang]().catch((error: unknown) => {
-    messageCache.delete(lang)
-    throw error
-  })
+  const locale = sdkLocaleOf(lang)
+  const pending = Promise.all([comparisonLocaleLoaders[lang](), messageFactoryLoaders[lang]()])
+    .then(([{ default: localePack }, createMessages]) => {
+      return createMessages(createComparisonTranslate(locale, localePack))
+    })
+    .catch((error: unknown) => {
+      messageCache.delete(lang)
+      throw error
+    })
   messageCache.set(lang, pending)
   return pending
 }
 
 export async function setLang(lang: Lang): Promise<void> {
-  activateLang(lang, await loadMessages(lang))
+  const messages = await loadMessages(lang)
+  activateLang(lang, messages)
 }
 
 export function sdkLocaleOf(lang: Lang): LocaleType {
