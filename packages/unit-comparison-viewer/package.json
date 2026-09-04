@@ -1,0 +1,61 @@
+{
+  "name": "@univer/unit-comparison-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Copyable React viewer for read-only Univer unit comparisons.",
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./styles.css": "./styles.css"
+  },
+  "scripts": {
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit --pretty false"
+  },
+  "dependencies": {
+    "@univerjs-pro/bases": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs-pro/boards": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs-pro/boards-ui": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs-pro/edit-history-ui": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs-pro/slides": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs-pro/slides-ui": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/core": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/docs-ui": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/drawing": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/engine-formula": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/engine-render": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/sheets": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/sheets-conditional-formatting": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/sheets-filter": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/sheets-formula": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/sheets-numfmt": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/sheets-table": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/sheets-ui": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs/ui": "1.0.0-insiders.20260902-a58c423",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.28.0",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@univerjs-pro/docs-history": "1.0.0-insiders.20260902-a58c423",
+    "@univerjs-pro/sheets-history": "1.0.0-insiders.20260902-a58c423",
+    "jsdom": "^30.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "react": ">=18.3.1 <20",
+    "react-dom": ">=18.3.1 <20",
+    "tailwindcss": ">=4"
+  }
+}

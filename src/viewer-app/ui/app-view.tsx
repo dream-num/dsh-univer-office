@@ -1,4 +1,4 @@
-import type { UnitSummary, Worktree } from '@univer/collab-gateway-contract'
+import { type UnitSummary, type Worktree } from '@univer/collab-gateway-contract'
 import { UniverCliIcon } from '@univerjs/icons'
 import {
   Check,
@@ -7,6 +7,7 @@ import {
   Eye,
   FolderOpen,
   GitMerge,
+  RefreshCw,
   Lock,
   Moon,
   PanelLeftClose,
@@ -31,17 +32,30 @@ import {
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { ChangeTag } from '../components/ui/change-tag'
-import { MenuContent, MenuItem, MenuLabel, MenuRoot, MenuTrigger } from '../components/ui/menu'
+import {
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuRoot,
+  MenuSubmenuContent,
+  MenuSubmenuRoot,
+  MenuSubmenuTrigger,
+  MenuTrigger
+} from '../components/ui/menu'
 import { Spinner } from '../components/ui/spinner'
 import { SegmentedToggle } from '../components/ui/toggle-group'
-import { LOCALE_MANIFEST, t, type Lang } from '../i18n'
+import { LOCALE_MANIFEST, sdkLocaleOf, t, type Lang } from '../i18n'
 import type { Appearance } from '../appearance'
 import { cn } from '../lib/utils'
+import {
+  UnitComparisonViewer,
+  type UnitComparisonViewerValue
+} from '@univer/unit-comparison-viewer'
+import { createCollabWebComparisonUniver } from '../core/create-collab-web-comparison-univer'
 import type { App, AppSnapshot } from './app'
 import { relativeTime, summaryText } from './format'
 import { toast } from './modals'
 import { UnitIcon } from './unit-icon'
-
 const SIDEBAR_DRAWER_ID = 'gateway-sidebar-hover-drawer'
 const SIDEBAR_DRAWER_OPEN_DELAY_MS = 120
 const SIDEBAR_DRAWER_CLOSE_DELAY_MS = 200
@@ -255,7 +269,7 @@ export function AppView({ app }: { app: App }): ReactElement {
           }}
         />
       )}
-      <section className="relative flex min-w-0 flex-1 flex-col">
+      <section className="@container/workbench relative flex min-w-0 flex-1 flex-col">
         {standalone && <Topbar app={app} snap={snap} />}
         <ContentPane app={app} snap={snap} />
         <LoadingOverlay busy={snap.busy} />
@@ -348,7 +362,7 @@ function Sidebar({
           )}
         </SidebarSection>
       </div>
-      <div className="sidebar-footer flex h-9 shrink-0 items-center px-2">
+      <div className="sidebar-footer flex h-9 shrink-0 items-center gap-1 px-2">
         <SettingsMenu
           app={app}
           lang={snap.lang}
@@ -576,20 +590,28 @@ function SettingsMenu({
   onOpenChange?: (open: boolean) => void
   onOpenChangeComplete?: (open: boolean) => void
 }): ReactElement {
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
+  const activeLocaleName = LOCALE_MANIFEST.find((option) => option.tag === lang)?.nativeName ?? lang
+  const handleSettingsOpenChange = (open: boolean): void => {
+    if (!open) {
+      setLanguageMenuOpen(false)
+    }
+    onOpenChange?.(open)
+  }
   return (
     <MenuRoot
-      {...(onOpenChange === undefined ? {} : { onOpenChange })}
+      onOpenChange={handleSettingsOpenChange}
       {...(onOpenChangeComplete === undefined ? {} : { onOpenChangeComplete })}
     >
       <MenuTrigger
         className={cn(
-          'settings-row row flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-muted-foreground transition-colors outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 data-[popup-open]:bg-sidebar-accent data-[popup-open]:text-foreground'
+          'settings-row row flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-muted-foreground transition-colors outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 data-[popup-open]:bg-sidebar-accent data-[popup-open]:text-foreground'
         )}
       >
         <Settings className="size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">{t().settings.title}</span>
       </MenuTrigger>
-      <MenuContent>
+      <MenuContent className="min-w-52">
         <MenuLabel>{t().settings.appearance}</MenuLabel>
         {(['light', 'dark'] as const).map((option) => {
           const AppearanceIcon = option === 'light' ? Sun : Moon
@@ -607,31 +629,41 @@ function SettingsMenu({
             </MenuItem>
           )
         })}
-        <MenuLabel>{t().settings.language}</MenuLabel>
-        {LOCALE_MANIFEST.map((opt) => (
-          <MenuItem
-            key={opt.tag}
-            onClick={() => void app.chooseLang(opt.tag)}
-            className={cn(opt.tag === lang && 'active font-medium')}
-          >
-            <span>{opt.nativeName}</span>
-            {opt.tag === languageLoading ? (
-              <Spinner className="size-3.5 shrink-0" />
-            ) : (
-              opt.tag === lang && <Check className="size-3.5 shrink-0" />
+        <MenuSubmenuRoot open={languageMenuOpen} onOpenChange={(open) => setLanguageMenuOpen(open)}>
+          <MenuSubmenuTrigger onClick={() => setLanguageMenuOpen(true)}>
+            <span>{t().settings.language}</span>
+            <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+              <span className="max-w-28 truncate">{activeLocaleName}</span>
+              <ChevronRight className="size-3.5 shrink-0" />
+            </span>
+          </MenuSubmenuTrigger>
+          <MenuSubmenuContent>
+            {LOCALE_MANIFEST.map((opt) => (
+              <MenuItem
+                key={opt.tag}
+                onClick={() => void app.chooseLang(opt.tag)}
+                className={cn(opt.tag === lang && 'active font-medium')}
+              >
+                <span>{opt.nativeName}</span>
+                {opt.tag === languageLoading ? (
+                  <Spinner className="size-3.5 shrink-0" />
+                ) : (
+                  opt.tag === lang && <Check className="size-3.5 shrink-0" />
+                )}
+              </MenuItem>
+            ))}
+            {languageLoading !== undefined && (
+              <div className="px-2 py-1 text-xs text-muted-foreground">
+                {t().settings.loadingLanguage}
+              </div>
             )}
-          </MenuItem>
-        ))}
-        {languageLoading !== undefined && (
-          <div className="px-2 py-1 text-xs text-muted-foreground">
-            {t().settings.loadingLanguage}
-          </div>
-        )}
-        {languageError && (
-          <div className="px-2 py-1 text-xs text-destructive">
-            {t().settings.languageLoadFailed}
-          </div>
-        )}
+            {languageError && (
+              <div className="px-2 py-1 text-xs text-destructive">
+                {t().settings.languageLoadFailed}
+              </div>
+            )}
+          </MenuSubmenuContent>
+        </MenuSubmenuRoot>
       </MenuContent>
     </MenuRoot>
   )
@@ -644,7 +676,14 @@ function Topbar({ app, snap }: { app: App; snap: AppSnapshot }): ReactElement {
     <span aria-hidden="true" className="sidebar-toggle-spacer size-8 shrink-0" />
   ) : undefined
   return (
-    <header className="topbar flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-background px-4 py-1">
+    <header
+      className={cn(
+        'topbar relative min-h-11 shrink-0 items-center gap-x-4 gap-y-2 border-b border-border bg-background px-4',
+        snap.view.kind === 'worktree'
+          ? 'grid grid-cols-1 py-2 @min-[1100px]/workbench:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[1100px]/workbench:py-1'
+          : 'flex flex-wrap justify-between py-1'
+      )}
+    >
       {snap.view.kind === 'trunk' ? (
         <TrunkTitle app={app} snap={snap} leading={leading} />
       ) : (
@@ -755,24 +794,28 @@ function WorktreeTitle({
     worktree !== undefined && unit !== undefined ? app.unitBadgeInfo(worktree, unit) : undefined
   return (
     <>
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div className="flex min-w-0 items-center gap-2.5" data-testid="worktree-title">
         {leading}
         <TitleUnitIcon
           type={unit?.type ?? 2}
           className="border-amber-200/80 bg-amber-50 text-amber-600"
         />
         <div className="flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate text-sm font-semibold">
+          <span
+            className="min-w-0 truncate text-sm font-semibold"
+            title={worktree?.name || worktreeId || t().topbar.fallbackWorktreeName}
+          >
             {worktree?.name || worktreeId || t().topbar.fallbackWorktreeName}
           </span>
           {unit !== undefined && (
-            <span className="shrink-0 truncate text-xs text-muted-foreground">· {unit.name}</span>
+            <span
+              className="min-w-0 max-w-[40%] shrink-0 truncate text-xs text-muted-foreground"
+              title={unit.name}
+            >
+              · {unit.name}
+            </span>
           )}
         </div>
-        <Badge variant="outline">
-          <Lock />
-          {t().topbar.readOnlyPreview}
-        </Badge>
         {previewError !== undefined ? (
           <Badge variant="warn" title={previewError}>
             <TriangleAlert />
@@ -791,7 +834,32 @@ function WorktreeTitle({
           unitBadge && <ChangeTag variant={unitBadge.variant}>{unitBadge.text}</ChangeTag>
         )}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="min-w-0 w-full @min-[1100px]/workbench:w-auto" data-testid="view-diff-center">
+        <SegmentedToggle
+          className="h-12 w-full bg-muted/80 p-0.5 shadow-xs @min-[1100px]/workbench:h-8"
+          itemClassName="h-11 min-w-0 flex-1 basis-0 px-5 py-0 text-[13px] @min-[1100px]/workbench:h-7 @min-[1100px]/workbench:min-w-[72px] @min-[1100px]/workbench:flex-none"
+          value={snap.comparisonMode ? 'diff' : 'view'}
+          options={[
+            { value: 'view', label: t().topbar.segView },
+            { value: 'diff', label: t().topbar.segDiff }
+          ]}
+          onChange={(value) => void app.setComparisonMode(value === 'diff')}
+        />
+      </div>
+      <div
+        className="flex min-w-0 max-w-full flex-wrap items-center gap-2 empty:hidden @min-[1100px]/workbench:justify-end @min-[1100px]/workbench:justify-self-end"
+        data-testid="worktree-actions"
+      >
+        {snap.comparisonMode && (
+          <>
+            {snap.comparisonData?.response.stale && (
+              <Button variant="outline" size="sm" onClick={() => void app.refreshUnitComparison()}>
+                <RefreshCw />
+                {t().topbar.refreshComparison}
+              </Button>
+            )}
+          </>
+        )}
         {preview?.diverged && (
           <SegmentedToggle
             value={snap.viewPreview ? 'preview' : 'original'}
@@ -803,7 +871,11 @@ function WorktreeTitle({
           />
         )}
         {worktree?.status === 'draft' && (
-          <Button size="sm" onClick={() => void app.doReady(worktreeId)}>
+          <Button
+            size="sm"
+            className="h-11 min-w-0 flex-1 whitespace-normal @min-[1100px]/workbench:h-8 @min-[1100px]/workbench:flex-none"
+            onClick={() => void app.doReady(worktreeId)}
+          >
             <CircleCheck />
             {t().topbar.submitForReview}
           </Button>
@@ -811,6 +883,7 @@ function WorktreeTitle({
         {worktree?.status === 'ready' && (
           <Button
             size="sm"
+            className="h-11 min-w-0 flex-1 whitespace-normal @min-[1100px]/workbench:h-8 @min-[1100px]/workbench:flex-none"
             disabled={preview !== undefined && !mergeable}
             onClick={() => {
               if (preview !== undefined && !mergeable) {
@@ -828,6 +901,7 @@ function WorktreeTitle({
           <Button
             variant="destructiveGhost"
             size="sm"
+            className="h-11 @min-[1100px]/workbench:h-8"
             onClick={() => void app.doDiscard(worktreeId)}
           >
             <Trash2 />
@@ -839,9 +913,54 @@ function WorktreeTitle({
   )
 }
 
+function ComparisonSourceSelect({ app, snap }: { app: App; snap: AppSnapshot }): ReactElement {
+  const pinnedRevision = snap.comparisonData?.response.left.revision
+  return (
+    <label className="grid min-w-0 gap-0.5" data-testid="comparison-source-title">
+      <span className="text-[9px] font-bold uppercase tracking-[0.09em] text-muted-foreground">
+        {t().topbar.comparisonSource}
+      </span>
+      <div className="flex min-w-0 items-center gap-2">
+        <select
+          aria-label={t().topbar.comparisonSource}
+          className="-ml-1 h-7 min-w-0 max-w-56 cursor-pointer rounded-md border border-transparent bg-transparent px-1 text-[12px] font-semibold text-foreground outline-none transition-[border-color,background,box-shadow] hover:border-border hover:bg-muted/55 focus-visible:border-ring focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-ring/20"
+          value={
+            snap.comparisonLeft.kind === 'trunk'
+              ? 'trunk'
+              : `worktree:${snap.comparisonLeft.worktreeId}`
+          }
+          onChange={(event) => {
+            const value = event.target.value
+            void app.setComparisonLeft(
+              value === 'trunk'
+                ? { kind: 'trunk' }
+                : { kind: 'worktree', worktreeId: value.slice('worktree:'.length) }
+            )
+          }}
+        >
+          <option value="trunk">{t().topbar.trunk}</option>
+          {app.comparisonSourceWorktrees().map((candidate) => (
+            <option key={candidate.worktreeId} value={`worktree:${candidate.worktreeId}`}>
+              {candidate.name || candidate.worktreeId}
+            </option>
+          ))}
+        </select>
+        {pinnedRevision !== undefined ? (
+          <span className="shrink-0 text-[9px] font-semibold tabular-nums text-muted-foreground">
+            {t().diff.revision(pinnedRevision)}
+          </span>
+        ) : null}
+      </div>
+    </label>
+  )
+}
+
 // ---- content pane ----
 
 function ContentPane({ app, snap }: { app: App; snap: AppSnapshot }): ReactElement {
+  if (snap.comparisonMode) {
+    return <ComparisonContent app={app} snap={snap} />
+  }
   return (
     <div className="content relative min-h-0 flex-1 bg-background">
       <div
@@ -852,6 +971,48 @@ function ContentPane({ app, snap }: { app: App; snap: AppSnapshot }): ReactEleme
       />
       {snap.selectedUnitId === undefined && <EmptyContent />}
     </div>
+  )
+}
+
+function ComparisonContent({ app, snap }: { app: App; snap: AppSnapshot }): ReactElement {
+  const data = snap.comparisonData
+  if (snap.comparisonError !== undefined) {
+    return (
+      <div className="grid min-h-0 flex-1 place-items-center p-8 text-sm text-destructive">
+        {snap.comparisonError}
+      </div>
+    )
+  }
+  if (data === undefined || snap.comparisonSession === undefined) {
+    return <div className="min-h-0 flex-1" />
+  }
+  const session = snap.comparisonSession
+  const comparison = {
+    result: data.context,
+    left: {
+      label: session.left.label,
+      ...(data.response.left.revision === undefined
+        ? {}
+        : { revision: data.response.left.revision }),
+      unitData: data.leftUnitData ?? null
+    },
+    right: {
+      label: session.right.label,
+      ...(data.response.right.revision === undefined
+        ? {}
+        : { revision: data.response.right.revision }),
+      unitData: data.rightUnitData ?? null
+    }
+  } as UnitComparisonViewerValue
+  return (
+    <UnitComparisonViewer
+      key={`${comparison.result.comparisonId}:${comparison.result.unit.unitId}`}
+      comparison={comparison}
+      createUniver={createCollabWebComparisonUniver}
+      leftHeaderControl={<ComparisonSourceSelect app={app} snap={snap} />}
+      locale={sdkLocaleOf(snap.lang)}
+      darkMode={snap.appearance === 'dark'}
+    />
   )
 }
 

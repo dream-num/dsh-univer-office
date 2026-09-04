@@ -1,5 +1,21 @@
 import { randomUUID } from 'node:crypto'
-import { type UnitType } from './contract'
+import {
+  type PinnedUnitComparisonRef,
+  type UnitComparisonRefRequest,
+  type UnitComparisonSession,
+  type UnitType
+} from './contract/index.js'
+import type {
+  UnitComparisonContext,
+  UnitComparisonContextQuery,
+  UnitComparisonSummary
+} from './contract/index.js'
+import { decodeComparisonUnitData } from './comparison-unit-data.js'
+import {
+  prepareGatewayUnitComparison,
+  queryGatewayUnitComparison,
+  type PreparedGatewayUnitComparison
+} from './comparison/unit-comparison-runtime.js'
 import type {
   CollabMemberContext,
   CreateUnitFromDataInput,
@@ -10,6 +26,7 @@ import type { ISnapshotWithBlocks } from '@univerjs-pro/exchange-node'
 import type {
   IChangeset as IProtocolChangeset,
   IDeserializedSheetBlock,
+  ISheetBlock,
   IMutation,
   ISnapshot
 } from '@univerjs/protocol'
@@ -30,14 +47,17 @@ import type {
 import { externalizeEmbeddedImages } from './assets/externalize-embedded-images.js'
 import { CollabGatewayAssetScopeNotFoundError } from './assets/errors.js'
 import { GatewayFileRuntime } from './gateway-file-runtime.js'
-import type { UniverfileAssetRecord, UniverfileOpenedAsset } from './univerfile-sqlite'
-import { UNIVERFILE_UNIT_METADATA_KEY, type UniverfileUnitSummary } from './univerfile-sqlite'
+import type { UniverfileAssetRecord, UniverfileOpenedAsset } from './univerfile-sqlite/index.js'
+import {
+  UNIVERFILE_UNIT_METADATA_KEY,
+  type UniverfileUnitSummary
+} from './univerfile-sqlite/index.js'
 import {
   UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY,
   UNIVERFILE_WORKTREE_METADATA_KEY,
   type UniverfileWorktreeSummary,
   type UniverfileWorktreeUnitSummary
-} from './univerfile-sqlite'
+} from './univerfile-sqlite/index.js'
 import { unitAdapter } from './univer/unit-types.js'
 import { KeyedLock } from './util/lock.js'
 import { GatewayExchangeService } from './exchange/gateway-exchange-service.js'
@@ -49,6 +69,48 @@ export interface CollabServiceOptions {
 }
 
 const INITIAL_REVISION = 1
+const MAX_PINNED_COMPARISONS = 64
+const MAX_PREPARED_COMPARISON_CONTEXTS = 128
+
+interface PinnedComparisonUnit {
+  readonly unitId: string
+  readonly type: UniverType
+  readonly name: string
+  readonly revision: number
+}
+
+interface PinnedComparisonSide {
+  readonly ref: PinnedUnitComparisonRef
+  readonly units: ReadonlyMap<string, PinnedComparisonUnit>
+  readonly baseline: Readonly<Record<string, number>>
+}
+
+interface PinnedComparisonRecord {
+  readonly session: UnitComparisonSession
+  readonly left: PinnedComparisonSide
+  readonly right: PinnedComparisonSide & {
+    readonly ref: PinnedUnitComparisonRef & { readonly kind: 'worktree' }
+  }
+}
+
+export interface MaterializedComparisonSide {
+  readonly present: boolean
+  readonly revision?: number
+  readonly snapshot?: ISnapshot
+  readonly sheetBlocks?: readonly IDeserializedSheetBlock[]
+}
+
+export interface UnitComparisonData {
+  readonly comparisonId: string
+  readonly unit: UnitComparisonSummary
+  readonly fidelity: 'history' | 'snapshot'
+  readonly commonBaseRevision?: number
+  readonly left: MaterializedComparisonSide
+  readonly right: MaterializedComparisonSide
+  readonly leftChangesets: readonly IProtocolChangeset[]
+  readonly rightChangesets: readonly IProtocolChangeset[]
+  readonly stale: boolean
+}
 
 /**
  * Compatibility facade over one SDK-backed {@link GatewayFileRuntime}.
@@ -64,6 +126,12 @@ export class CollabService {
   public readonly exchange: GatewayExchangeService
 
   private readonly _lock = new KeyedLock()
+  private readonly _comparisons = new Map<string, PinnedComparisonRecord>()
+  private readonly _materializedComparisons = new Map<string, Promise<UnitComparisonData>>()
+  private readonly _preparedComparisonContexts = new Map<
+    string,
+    Promise<PreparedGatewayUnitComparison>
+  >()
 
   public constructor(options: CollabServiceOptions = {}) {
     this.runtime = new GatewayFileRuntime(options)
@@ -106,10 +174,7 @@ export class CollabService {
     if (unit === undefined || unit.type !== type) {
       throw new Error(`Unit ${unitId} was not found with type ${String(type)}`)
     }
-    const loadData = await this.runtime.trunkService.getUnitLoadDataWithBlocks(
-      { unitID: unitId, type, revision: 0 },
-      callOptions('local', { source: 'gateway-exchange' })
-    )
+    const loadData = await this._getTrunkLoadDataWithBlocks(unitId, type, 0, 'gateway-exchange')
     const materializer = new UnitSnapshotMaterializer()
     try {
       return await materializer.materializeSnapshot(loadData)
@@ -207,6 +272,208 @@ export class CollabService {
     return {
       changesets: [...result.changesets],
       latestRevision: result.latestRevision
+    }
+  }
+
+  public createUnitComparison(
+    rightWorktreeId: string,
+    leftRequest: UnitComparisonRefRequest = { kind: 'trunk' }
+  ): UnitComparisonSession {
+    const right = this._pinComparisonSide({ kind: 'worktree', worktreeId: rightWorktreeId })
+    if (right.ref.kind !== 'worktree') {
+      throw new Error('The right comparison ref must be a Worktree')
+    }
+    const left = this._pinComparisonSide(leftRequest)
+    if (left.ref.kind === 'worktree' && left.ref.worktreeId === rightWorktreeId) {
+      throw new Error('A Worktree cannot be compared with itself')
+    }
+
+    const unitIds = new Set([...left.units.keys(), ...right.units.keys()])
+    const units = [...unitIds]
+      .map((unitId): UnitComparisonSummary => {
+        const leftUnit = left.units.get(unitId)
+        const rightUnit = right.units.get(unitId)
+        if (leftUnit !== undefined && rightUnit !== undefined && leftUnit.type !== rightUnit.type) {
+          throw new Error(`Unit ${unitId} has different types on the comparison sides`)
+        }
+        const unit = rightUnit ?? leftUnit
+        if (unit === undefined) {
+          throw new Error(`Unit ${unitId} was not captured by either comparison side`)
+        }
+        return {
+          unitId,
+          type: unit.type as UnitType,
+          name: unit.name,
+          presence:
+            leftUnit === undefined ? 'right-only' : rightUnit === undefined ? 'left-only' : 'paired'
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name) || a.unitId.localeCompare(b.unitId))
+    const comparisonId = `cmp-${randomUUID()}`
+    const session: UnitComparisonSession = {
+      comparisonId,
+      createdAt: new Date().toISOString(),
+      left: left.ref,
+      right: right.ref,
+      units
+    }
+    this._comparisons.set(comparisonId, { session, left, right: { ...right, ref: right.ref } })
+    while (this._comparisons.size > MAX_PINNED_COMPARISONS) {
+      const oldest = this._comparisons.keys().next().value as string | undefined
+      if (oldest === undefined) break
+      this._comparisons.delete(oldest)
+      this._deletePreparedComparisonContexts(oldest)
+    }
+    return session
+  }
+
+  public async getUnitComparison(
+    rightWorktreeId: string,
+    comparisonId: string,
+    unitId: string
+  ): Promise<UnitComparisonData> {
+    const comparison = this._comparisons.get(comparisonId)
+    if (comparison === undefined || comparison.right.ref.worktreeId !== rightWorktreeId) {
+      throw new Error(`Comparison ${comparisonId} was not found`)
+    }
+    const unit = comparison.session.units.find((candidate) => candidate.unitId === unitId)
+    if (unit === undefined) {
+      throw new Error(`Unit ${unitId} is not part of comparison ${comparisonId}`)
+    }
+
+    const cacheKey = `${comparisonId}:${unitId}`
+    let materialized = this._materializedComparisons.get(cacheKey)
+    if (materialized === undefined) {
+      materialized = this._materializeUnitComparison(comparison, unit)
+      this._materializedComparisons.set(cacheKey, materialized)
+      materialized.catch(() => {
+        if (this._materializedComparisons.get(cacheKey) === materialized) {
+          this._materializedComparisons.delete(cacheKey)
+        }
+      })
+      while (this._materializedComparisons.size > MAX_PREPARED_COMPARISON_CONTEXTS) {
+        const oldest = this._materializedComparisons.keys().next().value
+        if (oldest === undefined) break
+        // Expire the entire pinned session: replaying just an evicted Unit can regenerate native IDs
+        // while an already delivered snapshot or semantic result still refers to the old identities.
+        const expiredId = oldest.slice(0, oldest.indexOf(':'))
+        this._comparisons.delete(expiredId)
+        this._deletePreparedComparisonContexts(expiredId)
+      }
+    }
+    const data = await materialized
+    if (this._comparisons.get(comparisonId) !== comparison) {
+      throw new Error(`Comparison ${comparisonId} has expired`)
+    }
+    // Native Sheet decoding consumes its block buffers; never expose the cached canonical payload.
+    return { ...structuredClone(data), stale: this._isComparisonStale(comparison) }
+  }
+
+  private async _materializeUnitComparison(
+    comparison: PinnedComparisonRecord,
+    unit: UnitComparisonSummary
+  ): Promise<UnitComparisonData> {
+    const [left, right, history] = await Promise.all([
+      this._materializeComparisonSide(comparison.left, unit.unitId),
+      this._materializeComparisonSide(comparison.right, unit.unitId),
+      this._comparisonHistory(comparison, unit.unitId)
+    ])
+    return {
+      comparisonId: comparison.session.comparisonId,
+      unit,
+      fidelity: history.fidelity,
+      ...(history.commonBaseRevision === undefined
+        ? {}
+        : { commonBaseRevision: history.commonBaseRevision }),
+      left,
+      right,
+      leftChangesets: history.leftChangesets,
+      rightChangesets: history.rightChangesets,
+      stale: this._isComparisonStale(comparison)
+    }
+  }
+
+  /** Build a paged, UI-independent diff context over one pinned Unit comparison. */
+  public async getUnitComparisonContext(
+    rightWorktreeId: string,
+    comparisonId: string,
+    unitId: string,
+    query: UnitComparisonContextQuery = {}
+  ): Promise<UnitComparisonContext> {
+    const record = this._comparisons.get(comparisonId)
+    if (record === undefined || record.right.ref.worktreeId !== rightWorktreeId) {
+      throw new Error(`Comparison ${comparisonId} was not found`)
+    }
+    const cacheKey = `${comparisonId}:${unitId}`
+    let preparedPromise = this._preparedComparisonContexts.get(cacheKey)
+    if (preparedPromise === undefined) {
+      preparedPromise = this._prepareUnitComparisonContext(rightWorktreeId, comparisonId, unitId)
+      this._preparedComparisonContexts.set(cacheKey, preparedPromise)
+      preparedPromise.catch(() => {
+        if (this._preparedComparisonContexts.get(cacheKey) === preparedPromise) {
+          this._preparedComparisonContexts.delete(cacheKey)
+        }
+      })
+      while (this._preparedComparisonContexts.size > MAX_PREPARED_COMPARISON_CONTEXTS) {
+        const oldest = this._preparedComparisonContexts.keys().next().value as string | undefined
+        if (oldest === undefined) break
+        this._preparedComparisonContexts.delete(oldest)
+      }
+    }
+    const prepared = await preparedPromise
+    if (this._comparisons.get(comparisonId) !== record) {
+      throw new Error(`Comparison ${comparisonId} expired; create a new comparison`)
+    }
+    return {
+      ...queryGatewayUnitComparison(prepared, query),
+      stale: this._isComparisonStale(record)
+    }
+  }
+
+  private async _prepareUnitComparisonContext(
+    rightWorktreeId: string,
+    comparisonId: string,
+    unitId: string
+  ): Promise<PreparedGatewayUnitComparison> {
+    const comparison = await this.getUnitComparison(rightWorktreeId, comparisonId, unitId)
+    const [leftData, rightData] = await Promise.all([
+      comparison.left.snapshot === undefined
+        ? Promise.resolve(undefined)
+        : decodeComparisonUnitData(
+            comparison.unit.type,
+            comparison.left.snapshot,
+            comparison.left.sheetBlocks ?? []
+          ),
+      comparison.right.snapshot === undefined
+        ? Promise.resolve(undefined)
+        : decodeComparisonUnitData(
+            comparison.unit.type,
+            comparison.right.snapshot,
+            comparison.right.sheetBlocks ?? []
+          )
+    ])
+    return prepareGatewayUnitComparison({
+      comparisonId,
+      unit: comparison.unit,
+      fidelity: comparison.fidelity,
+      ...(comparison.commonBaseRevision === undefined
+        ? {}
+        : { commonBaseRevision: comparison.commonBaseRevision }),
+      stale: comparison.stale,
+      leftData,
+      rightData,
+      leftChangesets: comparison.leftChangesets,
+      rightChangesets: comparison.rightChangesets
+    })
+  }
+
+  private _deletePreparedComparisonContexts(comparisonId: string): void {
+    const prefix = `${comparisonId}:`
+    for (const key of this._materializedComparisons.keys()) {
+      if (key.startsWith(prefix)) this._materializedComparisons.delete(key)
+    }
+    for (const key of this._preparedComparisonContexts.keys()) {
+      if (key.startsWith(prefix)) this._preparedComparisonContexts.delete(key)
     }
   }
 
@@ -495,7 +762,7 @@ export class CollabService {
     )
     const sheetBlocks =
       unit.type === UniverType.UNIVER_SHEET
-        ? await this._readWorktreeSheetBlocks(worktreeId, unitId, result.snapshot)
+        ? await this._readWorktreeSheetBlocks(worktreeId, unitId, unit.type, result.snapshot)
         : undefined
     return {
       type: unit.type,
@@ -556,6 +823,9 @@ export class CollabService {
   }
 
   public async dispose(): Promise<void> {
+    this._comparisons.clear()
+    this._materializedComparisons.clear()
+    this._preparedComparisonContexts.clear()
     await this.exchange.dispose()
     await this.runtime.dispose()
   }
@@ -627,6 +897,253 @@ export class CollabService {
     return this.runtime.hasConnections()
   }
 
+  private _pinComparisonSide(request: UnitComparisonRefRequest): PinnedComparisonSide {
+    if (request.kind === 'trunk') {
+      const units = this.listUnits().map((unit): PinnedComparisonUnit => ({
+        unitId: unit.unitId,
+        type: unit.type,
+        name: unit.name,
+        revision: unit.headRev
+      }))
+      return {
+        ref: {
+          kind: 'trunk',
+          label: 'Trunk',
+          heads: Object.fromEntries(units.map((unit) => [unit.unitId, unit.revision]))
+        },
+        units: new Map(units.map((unit) => [unit.unitId, unit])),
+        baseline: {}
+      }
+    }
+
+    const worktree = requireWorktree(this.runtime, request.worktreeId)
+    if (worktree.status !== 'draft' && worktree.status !== 'ready') {
+      throw new Error(`Worktree ${request.worktreeId} is ${worktree.status}; cannot compare it`)
+    }
+    const units = this.worktreeUnits(request.worktreeId).map((unit): PinnedComparisonUnit => ({
+      unitId: unit.unitId,
+      type: unit.type,
+      name: unit.name,
+      revision: unit.headRev
+    }))
+    return {
+      ref: {
+        kind: 'worktree',
+        worktreeId: request.worktreeId,
+        label: worktree.name || request.worktreeId,
+        heads: Object.fromEntries(units.map((unit) => [unit.unitId, unit.revision]))
+      },
+      units: new Map(units.map((unit) => [unit.unitId, unit])),
+      baseline: { ...worktree.baseline }
+    }
+  }
+
+  private async _materializeComparisonSide(
+    side: PinnedComparisonSide,
+    unitId: string
+  ): Promise<MaterializedComparisonSide> {
+    const unit = side.units.get(unitId)
+    if (unit === undefined) return { present: false }
+
+    const loadData =
+      side.ref.kind === 'trunk'
+        ? await this._getTrunkLoadDataWithBlocks(
+            unitId,
+            unit.type,
+            unit.revision,
+            'worktree-comparison'
+          )
+        : await this._getWorktreeLoadDataWithBlocks(
+            side.ref.worktreeId,
+            unitId,
+            unit.type,
+            unit.revision
+          )
+    const materializer = new UnitSnapshotMaterializer()
+    try {
+      const materialized = await materializer.materializeSnapshot(loadData)
+      return {
+        present: true,
+        revision: unit.revision,
+        snapshot: materialized.snapshot,
+        ...(materialized.sheetBlocks.length === 0
+          ? {}
+          : {
+              sheetBlocks: materialized.sheetBlocks.map((block) => ({
+                id: block.id,
+                startRow: block.startRow,
+                endRow: block.endRow,
+                data: JSON.parse(new TextDecoder().decode(block.data)) as object
+              }))
+            })
+      }
+    } finally {
+      await materializer.dispose()
+    }
+  }
+
+  private async _getWorktreeLoadDataWithBlocks(
+    worktreeId: string,
+    unitId: string,
+    type: UniverType,
+    revision: number
+  ): Promise<{
+    readonly snapshot: ISnapshot
+    readonly changesets: readonly IProtocolChangeset[]
+    readonly targetRevision: number
+    readonly sheetBlocks: readonly ISheetBlock[]
+  }> {
+    const loadData = await this.runtime.worktreeService.getUnitLoadData(
+      { worktreeID: worktreeId, unitID: unitId, type, revision },
+      callOptions('local')
+    )
+    const sheetBlocks =
+      loadData.snapshot.workbook === undefined
+        ? []
+        : await this._readWorktreeSerializedSheetBlocks(worktreeId, unitId, type, loadData.snapshot)
+    return { ...loadData, sheetBlocks }
+  }
+
+  private async _getTrunkLoadDataWithBlocks(
+    unitId: string,
+    type: UniverType,
+    revision: number,
+    source: string
+  ): Promise<{
+    readonly snapshot: ISnapshot
+    readonly changesets: readonly IProtocolChangeset[]
+    readonly targetRevision: number
+    readonly sheetBlocks: readonly ISheetBlock[]
+  }> {
+    const loadData = await this.runtime.trunkService.getUnitLoadDataWithBlocks(
+      { unitID: unitId, type, revision },
+      callOptions('local', { source })
+    )
+    if (loadData.snapshot.workbook === undefined || loadData.sheetBlocks.length > 0) {
+      return loadData
+    }
+    const blockIDs = Object.values(loadData.snapshot.workbook.blockMeta ?? {}).flatMap(
+      (meta) => meta.blocks
+    )
+    const blocks = await Promise.all(
+      blockIDs.map(async (blockID) => {
+        const result = await this.runtime.trunkService.getSheetBlock(
+          { unitID: unitId, type, blockID },
+          callOptions('local', { source })
+        )
+        return result.block ?? undefined
+      })
+    )
+    return {
+      ...loadData,
+      sheetBlocks: blocks.filter((block): block is ISheetBlock => block !== undefined)
+    }
+  }
+
+  private async _comparisonHistory(
+    comparison: PinnedComparisonRecord,
+    unitId: string
+  ): Promise<{
+    readonly fidelity: 'history' | 'snapshot'
+    readonly commonBaseRevision?: number
+    readonly leftChangesets: readonly IProtocolChangeset[]
+    readonly rightChangesets: readonly IProtocolChangeset[]
+  }> {
+    const leftUnit = comparison.left.units.get(unitId)
+    const rightUnit = comparison.right.units.get(unitId)
+    if (leftUnit === undefined || rightUnit === undefined) {
+      return { fidelity: 'snapshot', leftChangesets: [], rightChangesets: [] }
+    }
+    const leftBase =
+      comparison.left.ref.kind === 'trunk' ? undefined : comparison.left.baseline[unitId]
+    const rightBase = comparison.right.baseline[unitId]
+    const commonBaseRevision =
+      comparison.left.ref.kind === 'trunk'
+        ? rightBase
+        : leftBase === undefined || rightBase === undefined
+          ? undefined
+          : Math.min(leftBase, rightBase)
+    if (commonBaseRevision === undefined) {
+      return { fidelity: 'snapshot', leftChangesets: [], rightChangesets: [] }
+    }
+    try {
+      const [leftChangesets, rightChangesets] = await Promise.all([
+        this._comparisonPathChangesets(comparison.left, unitId, commonBaseRevision),
+        this._comparisonPathChangesets(comparison.right, unitId, commonBaseRevision)
+      ])
+      return {
+        fidelity: 'history',
+        commonBaseRevision,
+        leftChangesets,
+        rightChangesets
+      }
+    } catch {
+      return { fidelity: 'snapshot', leftChangesets: [], rightChangesets: [] }
+    }
+  }
+
+  private async _comparisonPathChangesets(
+    side: PinnedComparisonSide,
+    unitId: string,
+    commonBaseRevision: number
+  ): Promise<readonly IProtocolChangeset[]> {
+    const unit = side.units.get(unitId)
+    if (unit === undefined) return []
+    if (side.ref.kind === 'trunk') {
+      const trunk = await this.runtime.trunkService.getChangesets(
+        {
+          unitID: unitId,
+          type: unit.type,
+          from: commonBaseRevision,
+          to: unit.revision
+        },
+        callOptions('local')
+      )
+      return trunk.changesets
+    }
+
+    const baseline = side.baseline[unitId]
+    if (baseline === undefined) throw new Error(`Unit ${unitId} has no common Trunk baseline`)
+    const trunk =
+      baseline <= commonBaseRevision
+        ? []
+        : (
+            await this.runtime.trunkService.getChangesets(
+              {
+                unitID: unitId,
+                type: unit.type,
+                from: commonBaseRevision,
+                to: baseline
+              },
+              callOptions('local')
+            )
+          ).changesets
+    const draft = await this.runtime.worktreeService.getChangesets(
+      {
+        worktreeID: side.ref.worktreeId,
+        unitID: unitId,
+        type: unit.type,
+        from: baseline,
+        to: unit.revision
+      },
+      callOptions('local')
+    )
+    return [...trunk, ...draft.changesets]
+  }
+
+  private _isComparisonStale(comparison: PinnedComparisonRecord): boolean {
+    return (
+      this._isComparisonSideStale(comparison.left) || this._isComparisonSideStale(comparison.right)
+    )
+  }
+
+  private _isComparisonSideStale(side: PinnedComparisonSide): boolean {
+    const current =
+      side.ref.kind === 'trunk' ? this.listUnits() : this.worktreeUnits(side.ref.worktreeId)
+    if (current.length !== side.units.size) return true
+    return current.some((unit) => side.units.get(unit.unitId)?.revision !== unit.headRev)
+  }
+
   private _requireWorktreeUnit(worktreeId: string, unitId: string): UniverfileWorktreeUnitSummary {
     const unit = this.worktreeUnits(worktreeId).find((candidate) => candidate.unitId === unitId)
     if (!unit) {
@@ -654,8 +1171,24 @@ export class CollabService {
   private async _readWorktreeSheetBlocks(
     worktreeId: string,
     unitId: string,
+    type: UniverType,
     snapshot: ISnapshot
   ): Promise<IDeserializedSheetBlock[]> {
+    const blocks = await this._readWorktreeSerializedSheetBlocks(worktreeId, unitId, type, snapshot)
+    return blocks.map((block) => ({
+      id: block.id,
+      startRow: block.startRow,
+      endRow: block.endRow,
+      data: JSON.parse(new TextDecoder().decode(block.data)) as object
+    }))
+  }
+
+  private async _readWorktreeSerializedSheetBlocks(
+    worktreeId: string,
+    unitId: string,
+    type: UniverType,
+    snapshot: ISnapshot
+  ): Promise<ISheetBlock[]> {
     const blockIDs = Object.values(snapshot.workbook?.blockMeta ?? {}).flatMap(
       (meta) => meta.blocks
     )
@@ -665,21 +1198,16 @@ export class CollabService {
           {
             worktreeID: worktreeId,
             unitID: unitId,
-            type: UniverType.UNIVER_SHEET,
+            type,
             blockID
           },
           callOptions('local')
         )
         if (!result.block) return undefined
-        return {
-          id: result.block.id,
-          startRow: result.block.startRow,
-          endRow: result.block.endRow,
-          data: JSON.parse(new TextDecoder().decode(result.block.data)) as object
-        }
+        return result.block
       })
     )
-    return blocks.filter((block): block is IDeserializedSheetBlock => block !== undefined)
+    return blocks.filter((block): block is ISheetBlock => block !== undefined)
   }
 }
 

@@ -1,9 +1,10 @@
-import { messagesFromVocabulary, type MessageVocabulary } from './from-vocabulary'
+import type { MessageVocabulary } from './from-vocabulary'
 
 const vocabulary = {
   title: '共同編集ビューアー',
   file: 'ファイル',
   modification: '変更',
+  compare: '比較',
   currentVersion: '現在のバージョン',
   aiAssistant: 'AI アシスタント',
   no: 'なし',
@@ -39,6 +40,7 @@ const vocabulary = {
   light: 'ライト',
   dark: 'ダーク',
   language: '言語',
+  joinDiscord: 'Discord コミュニティに参加',
   cancel: 'キャンセル',
   confirm: '確認',
   viewOnly: '閲覧のみ',
@@ -57,4 +59,4 @@ const vocabulary = {
   empty: 'ファイルが開かれていません'
 } satisfies MessageVocabulary
 
-export const JA_JP_MESSAGES = messagesFromVocabulary(vocabulary)
+export default vocabulary

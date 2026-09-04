@@ -13,6 +13,7 @@
     "skipLibCheck": true,
     "paths": {
       "@univer/collab-gateway-contract": ["./src/gateway-app/contract/index.ts"],
+      "@univer/unit-comparison-viewer": ["./packages/unit-comparison-viewer/src/index.ts"],
       "@univer/render-preset": ["./src/viewer-support/render-preset/index.ts"],
       "@univer/render-preset/*": ["./src/viewer-support/render-preset/*"],
       "@univer/importrange-formula": ["./src/viewer-support/importrange-formula/index.ts"]
@@ -22,6 +23,8 @@
     "src/viewer-app/**/*.ts",
     "src/viewer-app/**/*.tsx",
     "src/viewer-support/**/*.ts",
-    "src/gateway-app/contract/**/*.ts"
+    "src/gateway-app/contract/**/*.ts",
+    "packages/unit-comparison-viewer/src/**/*.ts",
+    "packages/unit-comparison-viewer/src/**/*.tsx"
   ]
 }

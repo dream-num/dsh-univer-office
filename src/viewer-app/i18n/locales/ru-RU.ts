@@ -1,9 +1,10 @@
-import { messagesFromVocabulary, type MessageVocabulary } from './from-vocabulary'
+import type { MessageVocabulary } from './from-vocabulary'
 
 const vocabulary = {
   title: 'Совместный просмотр',
   file: 'файл',
   modification: 'изменение',
+  compare: 'Сравнить',
   currentVersion: 'текущая версия',
   aiAssistant: 'ИИ-помощник',
   no: 'нет',
@@ -39,6 +40,7 @@ const vocabulary = {
   light: 'Светлая',
   dark: 'Тёмная',
   language: 'Язык',
+  joinDiscord: 'Присоединиться к сообществу Discord',
   cancel: 'Отмена',
   confirm: 'Подтвердить',
   viewOnly: 'Только просмотр',
@@ -57,4 +59,4 @@ const vocabulary = {
   empty: 'Файл не открыт'
 } satisfies MessageVocabulary
 
-export const RU_RU_MESSAGES = messagesFromVocabulary(vocabulary)
+export default vocabulary

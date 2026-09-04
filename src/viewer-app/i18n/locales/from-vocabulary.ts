@@ -1,9 +1,12 @@
 import type { Messages } from './en-US'
+import type { Lang } from '../index.js'
+import { comparisonTerm, type UnitComparisonTranslate } from './comparison-labels.js'
 
 export interface MessageVocabulary {
   title: string
   file: string
   modification: string
+  compare: string
   currentVersion: string
   aiAssistant: string
   no: string
@@ -37,6 +40,7 @@ export interface MessageVocabulary {
   light: string
   dark: string
   language: string
+  joinDiscord: string
   cancel: string
   confirm: string
   viewOnly: string
@@ -55,8 +59,33 @@ export interface MessageVocabulary {
   empty: string
 }
 
+// Worktree language belongs to this application, not to the SDK comparison vocabulary.
+const WORKTREE_MAIN_BRANCH: Readonly<Record<Lang, string>> = {
+  'ca-ES': 'Branca principal',
+  'de-DE': 'Hauptbranch',
+  'en-US': 'Main branch',
+  'es-ES': 'Rama principal',
+  'fr-FR': 'Branche principale',
+  'id-ID': 'Cabang utama',
+  'it-IT': 'Ramo principale',
+  'ja-JP': 'メインブランチ',
+  'ko-KR': '메인 브랜치',
+  'pl-PL': 'Gałąź główna',
+  'pt-BR': 'Branch principal',
+  'ru-RU': 'Основная ветка',
+  'sk-SK': 'Hlavná vetva',
+  'vi-VN': 'Nhánh chính',
+  'zh-CN': '主分支',
+  'zh-HK': '主分支',
+  'zh-TW': '主分支'
+}
+
 /** Build a structurally complete shell table from locale-owned vocabulary, without English fallback. */
-export function messagesFromVocabulary(v: MessageVocabulary): Messages {
+export function messagesFromVocabulary(
+  v: MessageVocabulary,
+  locale: Lang,
+  translateComparison: UnitComparisonTranslate
+): Messages {
   const failure = (action: string, error: string): string => `${action} ${v.failed}: ${error}`
   const ago = (n: number, unit: string): string => `${n} ${unit}`
   return {
@@ -75,10 +104,7 @@ export function messagesFromVocabulary(v: MessageVocabulary): Messages {
       loadFailed: (error) => failure(v.load, error),
       previewComputeFailed: `${v.preview} ${v.failed}`,
       previewUnitUnrenderable: `${v.preview}: ${v.cannot}`,
-      previewLoadFailed: (error) => failure(v.preview, error),
-      worktreeReadOnly: `${v.viewOnly} · ${v.aiAssistant} ${v.modification}. ${v.editing}: ${v.cannot}.`,
-      mergePreviewReadOnly: `${v.viewOnly} · ${v.preview}. ${v.editing}: ${v.cannot}.`,
-      currentVersionReadOnly: `${v.currentVersion} · ${v.viewOnly}. ${v.continue} ${v.editing}.`
+      previewLoadFailed: (error) => failure(v.preview, error)
     },
     toast: {
       worktreeGone: `${v.modification}: ${v.no} · ${v.currentVersion}`,
@@ -126,13 +152,22 @@ export function messagesFromVocabulary(v: MessageVocabulary): Messages {
       divergedShowingOriginal: `${v.latestChanged} · ${v.modification}`,
       segPreview: v.preview,
       segOriginal: v.modification,
-      readOnlyPreview: `${v.viewOnly} · ${v.preview}`,
       viewOnly: v.viewOnly,
       editable: v.editable,
       editingPending: (n) => `${v.editing} · ${n} ${v.awaiting}`,
       lockedPending: (n) => `${v.locked} · ${n} ${v.awaiting}`,
       stopEditing: `${v.stop} ${v.editing}`,
-      editAnyway: `${v.continue} ${v.editing}`
+      editAnyway: `${v.continue} ${v.editing}`,
+      segView: v.viewOnly,
+      segDiff: v.compare,
+      comparisonSource: `${comparisonTerm(translateComparison, 'left')} · ${comparisonTerm(translateComparison, 'source')}`,
+      trunk: WORKTREE_MAIN_BRANCH[locale],
+      refreshComparison: `${v.modification} · ${v.updated}`
+    },
+    diff: {
+      comparisonFailed: comparisonTerm(translateComparison, 'comparisonFailed'),
+      incompletePage: comparisonTerm(translateComparison, 'incompletePage'),
+      revision: (revision) => `${comparisonTerm(translateComparison, 'revision')} ${revision}`
     },
     settings: {
       title: v.settings,
@@ -142,6 +177,9 @@ export function messagesFromVocabulary(v: MessageVocabulary): Messages {
       language: v.language,
       loadingLanguage: `${v.loading} ${v.language}…`,
       languageLoadFailed: `${v.language} ${v.failed}`
+    },
+    community: {
+      joinDiscord: v.joinDiscord
     },
     modal: {
       cancel: v.cancel,

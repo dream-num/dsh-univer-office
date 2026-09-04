@@ -9,15 +9,8 @@ export function persistSidebarCollapsed(collapsed: boolean): void {
   }
 }
 
-/** Resolve an explicit URL default before the stored Sidebar choice. */
+/** Resolve a stored Sidebar choice, defaulting to the existing expanded shell. */
 export function resolveSidebarCollapsed(): boolean {
-  const requested = new URLSearchParams(location.search).get('sidebar')
-  if (requested === 'collapsed') {
-    return true
-  }
-  if (requested === 'expanded') {
-    return false
-  }
   try {
     return localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'
   } catch {

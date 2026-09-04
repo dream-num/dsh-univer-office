@@ -26,6 +26,7 @@ export interface GatewayKeyRuntimeConfigInput {
 
 /** collaboration-client 需要的各 base URL。 */
 export interface RuntimeConfigUrls {
+  historyListServerUrl: string
   snapshotServerUrl: string
   collabSubmitChangesetUrl: string
   collabWebSocketUrl: string
@@ -58,6 +59,8 @@ export function buildRuntimeConfig(input: RuntimeConfigInput): RuntimeConfigUrls
   const base = `${baseRoot}${worktreeSeg}`
   const wsBase = `${wsRoot}${worktreeSeg}`
   return {
+    // User-facing History is defined only for authoritative trunk revisions.
+    historyListServerUrl: `${baseRoot}/universer-api/history`,
     snapshotServerUrl: `${base}/universer-api/snapshot`,
     collabSubmitChangesetUrl: `${base}/universer-api/comb`,
     collabWebSocketUrl: `${wsBase}/universer-api/comb/connect`,

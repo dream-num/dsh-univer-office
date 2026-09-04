@@ -12,6 +12,7 @@ interface SegmentedToggleProps<T extends string> {
   options: ReadonlyArray<SegmentedOption<T>>
   onChange: (value: T) => void
   className?: string
+  itemClassName?: string
 }
 
 /** shadcn tabs-list style segmented control over Base UI ToggleGroup + Toggle. */
@@ -19,7 +20,8 @@ export function SegmentedToggle<T extends string>({
   value,
   options,
   onChange,
-  className
+  className,
+  itemClassName
 }: SegmentedToggleProps<T>) {
   return (
     <ToggleGroup
@@ -40,7 +42,8 @@ export function SegmentedToggle<T extends string>({
           aria-label={opt.label}
           data-slot="toggle-group-item"
           className={cn(
-            'cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 data-[pressed]:bg-background data-[pressed]:text-foreground data-[pressed]:shadow-xs'
+            'cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 data-[pressed]:bg-background data-[pressed]:text-foreground data-[pressed]:shadow-xs',
+            itemClassName
           )}
         >
           {opt.label}

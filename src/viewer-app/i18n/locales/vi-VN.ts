@@ -1,9 +1,10 @@
-import { messagesFromVocabulary, type MessageVocabulary } from './from-vocabulary'
+import type { MessageVocabulary } from './from-vocabulary'
 
 const vocabulary = {
   title: 'Trình xem cộng tác',
   file: 'tệp',
   modification: 'thay đổi',
+  compare: 'So sánh',
   currentVersion: 'phiên bản hiện tại',
   aiAssistant: 'trợ lý AI',
   no: 'không có',
@@ -39,6 +40,7 @@ const vocabulary = {
   light: 'Sáng',
   dark: 'Tối',
   language: 'Ngôn ngữ',
+  joinDiscord: 'Tham gia cộng đồng Discord',
   cancel: 'Hủy',
   confirm: 'Xác nhận',
   viewOnly: 'Chỉ xem',
@@ -57,4 +59,4 @@ const vocabulary = {
   empty: 'Chưa mở tệp'
 } satisfies MessageVocabulary
 
-export const VI_VN_MESSAGES = messagesFromVocabulary(vocabulary)
+export default vocabulary

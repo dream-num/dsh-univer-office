@@ -1,5 +1,10 @@
 @import 'tailwindcss' source("..");
 @import 'tw-animate-css';
+@import '@univer/unit-comparison-viewer/styles.css';
+@import '@univerjs-pro/bases-history-ui/lib/index.css';
+@import '@univerjs-pro/boards-history-ui/lib/index.css';
+@import '@univerjs-pro/edit-history-ui/lib/index.css';
+@import '@univerjs-pro/sheets-history-ui/lib/index.css';
 
 /*
  * shadcn/ui design tokens (neutral, light) expressed as Tailwind v4 theme keys.
@@ -31,6 +36,14 @@
   --color-border: #e5e5e5;
   --color-input: #e5e5e5;
   --color-ring: #7182ee;
+  --color-warning: #92400e;
+  --color-warning-muted: #fffbeb;
+  --color-diff-insert: #15803d;
+  --color-diff-insert-muted: #dcfce7;
+  --color-diff-delete: #b91c1c;
+  --color-diff-delete-muted: #fee2e2;
+  --color-diff-update: #1d4ed8;
+  --color-diff-update-muted: #dbeafe;
 
   --color-sidebar: #fafafa;
   --color-sidebar-foreground: #0a0a0a;
@@ -109,6 +122,14 @@
     --color-border: #2e2e2e;
     --color-input: #404040;
     --color-ring: #8190f5;
+    --color-warning: #fcd34d;
+    --color-warning-muted: #422006;
+    --color-diff-insert: #86efac;
+    --color-diff-insert-muted: #14532d;
+    --color-diff-delete: #fca5a5;
+    --color-diff-delete-muted: #7f1d1d;
+    --color-diff-update: #93c5fd;
+    --color-diff-update-muted: #1e3a8a;
     --color-sidebar: #171717;
     --color-sidebar-foreground: #fafafa;
     --color-sidebar-accent: #262626;

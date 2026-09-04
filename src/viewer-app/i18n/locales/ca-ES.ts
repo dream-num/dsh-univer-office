@@ -1,9 +1,10 @@
-import { messagesFromVocabulary, type MessageVocabulary } from './from-vocabulary'
+import type { MessageVocabulary } from './from-vocabulary'
 
 const vocabulary = {
   title: 'Visor col·laboratiu',
   file: 'fitxer',
   modification: 'modificació',
+  compare: 'Comparar',
   currentVersion: 'versió actual',
   aiAssistant: 'assistent d’IA',
   no: 'cap',
@@ -39,6 +40,7 @@ const vocabulary = {
   light: 'Clar',
   dark: 'Fosc',
   language: 'Idioma',
+  joinDiscord: 'Uneix-te a la comunitat de Discord',
   cancel: 'Cancel·la',
   confirm: 'Confirma',
   viewOnly: 'Només lectura',
@@ -57,4 +59,4 @@ const vocabulary = {
   empty: 'No hi ha cap fitxer obert'
 } satisfies MessageVocabulary
 
-export const CA_ES_MESSAGES = messagesFromVocabulary(vocabulary)
+export default vocabulary
