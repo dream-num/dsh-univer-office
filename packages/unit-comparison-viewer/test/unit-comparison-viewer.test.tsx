@@ -11,6 +11,9 @@ import {
   type UnitComparisonViewerValue
 } from '../src/unit-comparison-viewer'
 
+// Preload the lazy Sheet view outside the test timeout, including its Univer dependencies.
+await import('../src/sheet/sheet-comparison-view.js')
+
 const paneState = vi.hoisted(() => ({
   createCalls: [] as Array<Record<string, unknown>>,
   handles: [] as Array<{
@@ -115,7 +118,6 @@ describe('UnitComparisonViewer lifecycle boundary', () => {
 
   it('renders an inline error when both Sheet snapshots are missing', async () => {
     const createUniver = vi.fn(async () => ({ univer: {} as Univer, dispose: vi.fn() }))
-    await import('../src/sheet/sheet-comparison-view.js')
 
     flushSync(() =>
       root.render(renderViewer('cmp-missing-sheet', missingSheetComparison(), createUniver))
