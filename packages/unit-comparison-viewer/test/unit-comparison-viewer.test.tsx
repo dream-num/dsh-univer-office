@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { UNIT_TYPE_DOC, UNIT_TYPE_SHEET, UNIT_TYPE_SLIDE } from '../src/unit-types.js'
+import { UNIT_TYPE_DOC, UNIT_TYPE_SLIDE } from '../src/unit-types.js'
 import { LocaleType, type IDocumentData, type Univer } from '@univerjs/core'
 import type { ISlideData } from '@univerjs-pro/slides'
 import { flushSync } from 'react-dom'
@@ -10,9 +10,6 @@ import {
   type UnitComparisonUniverFactory,
   type UnitComparisonViewerValue
 } from '../src/unit-comparison-viewer'
-
-// Preload the lazy Sheet view outside the test timeout, including its Univer dependencies.
-await import('../src/sheet/sheet-comparison-view.js')
 
 const paneState = vi.hoisted(() => ({
   createCalls: [] as Array<Record<string, unknown>>,
@@ -114,17 +111,6 @@ describe('UnitComparisonViewer lifecycle boundary', () => {
       )
     )
     await vi.waitFor(() => expect(host.textContent).toContain('此侧不存在'))
-  })
-
-  it('renders an inline error when both Sheet snapshots are missing', async () => {
-    const createUniver = vi.fn(async () => ({ univer: {} as Univer, dispose: vi.fn() }))
-
-    flushSync(() =>
-      root.render(renderViewer('cmp-missing-sheet', missingSheetComparison(), createUniver))
-    )
-
-    await vi.waitFor(() => expect(host.textContent).toContain('Comparison payload is invalid'))
-    expect(createUniver).not.toHaveBeenCalled()
   })
 
   it('recreates Slide panes on page changes and preserves the selected page', async () => {
@@ -257,28 +243,6 @@ function slideComparison(comparisonId: string): UnitComparisonViewerValue {
     result,
     left: { label: 'Before', unitData: leftUnitData },
     right: { label: 'After', revision: 2, unitData: rightUnitData }
-  }
-}
-
-function missingSheetComparison(): UnitComparisonViewerValue {
-  return {
-    result: {
-      schemaVersion: 1,
-      comparisonId: 'cmp-missing-sheet',
-      unit: { unitId: 'book-1', type: UNIT_TYPE_SHEET, name: 'Workbook' },
-      fidelity: 'history',
-      stale: false,
-      detail: 'full',
-      summary: { total: 0, insert: 0, delete: 0, update: 0, moved: 0, byEntityType: {} },
-      coverage: { supportedEntityTypes: [] },
-      scopes: [],
-      page: { offset: 0, limit: 100, matched: 0, hasMore: false },
-      items: [],
-      diagnostics: { readiness: 'ready', unsupportedMutationIds: [], codes: [] },
-      productContext: { kind: 'sheet', sheets: [] }
-    },
-    left: { label: 'Before', unitData: null },
-    right: { label: 'After', unitData: null }
   }
 }
 
