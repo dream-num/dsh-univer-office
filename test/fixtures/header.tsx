@@ -2,9 +2,9 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Topbar } from '../ui/app-view.tsx'
-import { LOCALE_MANIFEST, setLang, t, type Lang } from '../i18n/index.ts'
-import '../styles.css'
+import { Topbar } from '../../src/viewer-app/ui/app-view.tsx'
+import { LOCALE_MANIFEST, setLang, t, type Lang } from '../../src/viewer-app/i18n/index.ts'
+import '../../src/viewer-app/styles.css'
 
 /** Production Header with inert, type-checked application callbacks; never opens a document. */
 function Fixture(): ReactElement {

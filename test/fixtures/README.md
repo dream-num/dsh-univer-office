@@ -1,7 +1,7 @@
 # Header browser checks
 
-Run `node scripts/dev-header.mjs` from the repository root and open
-`http://127.0.0.1:5181/fixtures/header.html`.
+Run `node test/dev-header.mjs` from the repository root and open
+`http://127.0.0.1:5181/test/fixtures/header.html`.
 
 The fixture renders the production Topbar with type-checked, inert application callbacks.
 It never opens or changes user documents. Header application data is selected separately from
@@ -21,3 +21,7 @@ in both directions. Segmented controls retain horizontal keyboard navigation and
 The on-page action readout verifies View/Compare, preview selection, submit, merge, and discard.
 Conflict state must disable merge and leave discard available. `test/integration-smoke.mjs`
 retains built-Viewer bounds and centering assertions plus actual comparison wiring checks.
+
+The HTML entry and runner live under `test/`. Production Viewer builds use only
+`src/viewer-app/index.html`; the fixture is not a production entry or packaged page.
+`pnpm typecheck` includes the fixture through `tsconfig.viewer.json`.
