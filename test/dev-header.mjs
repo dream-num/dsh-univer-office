@@ -2,11 +2,14 @@ import { resolve } from 'node:path'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { createEmbedUiMenuSchemaAliases, createPrismComponentEsmPlugin } from './viewer-vite.mjs'
+import {
+  createEmbedUiMenuSchemaAliases,
+  createPrismComponentEsmPlugin
+} from '../scripts/viewer-vite.mjs'
 const viewerRoot = resolve('src/viewer-app')
 const server = await createServer({
   configFile: false,
-  root: viewerRoot,
+  root: resolve('.'),
   define: { 'process.env': '{}' },
   server: { host: '127.0.0.1', port: 5181, strictPort: true },
   resolve: {

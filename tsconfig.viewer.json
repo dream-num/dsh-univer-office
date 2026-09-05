@@ -23,6 +23,7 @@
   "include": [
     "src/viewer-app/**/*.ts",
     "src/viewer-app/**/*.tsx",
+    "test/fixtures/**/*.tsx",
     "src/viewer-support/**/*.ts",
     "src/gateway-app/contract/**/*.ts",
     "packages/unit-comparison-viewer/src/**/*.ts",
