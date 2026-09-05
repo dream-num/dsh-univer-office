@@ -67,7 +67,7 @@ export function createZhCnMessages(): Messages {
     },
     topbar: {
       currentVersion: '当前版本',
-      fallbackWorktreeName: '一处修改',
+      fallbackDocumentName: '文档',
       submitForReview: '提交确认',
       mergeToCurrent: '合入当前版本',
       discard: '丢弃',

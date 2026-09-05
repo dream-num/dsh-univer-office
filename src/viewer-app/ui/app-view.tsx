@@ -56,6 +56,7 @@ import type { App, AppSnapshot } from './app'
 import { relativeTime, summaryText } from './format'
 import { toast } from './modals'
 import { UnitIcon } from './unit-icon'
+import { ResponsiveWorktreeHeader } from './responsive-worktree-header.tsx'
 const SIDEBAR_DRAWER_ID = 'gateway-sidebar-hover-drawer'
 const SIDEBAR_DRAWER_OPEN_DELAY_MS = 120
 const SIDEBAR_DRAWER_CLOSE_DELAY_MS = 200
@@ -671,24 +672,48 @@ function SettingsMenu({
 
 // ---- topbar ----
 
-function Topbar({ app, snap }: { app: App; snap: AppSnapshot }): ReactElement {
+type HeaderApp = Pick<
+  App,
+  | 'univerfileName'
+  | 'pendingWorktreeCount'
+  | 'startTrunkEdit'
+  | 'stopTrunkEdit'
+  | 'topbarUnits'
+  | 'unitBadgeInfo'
+  | 'setComparisonMode'
+  | 'setViewPreview'
+  | 'refreshUnitComparison'
+  | 'doReady'
+  | 'doMerge'
+  | 'doDiscard'
+>
+type HeaderSnapshot = Pick<
+  AppSnapshot,
+  | 'view'
+  | 'selectedUnitId'
+  | 'trunkUnits'
+  | 'worktrees'
+  | 'previews'
+  | 'previewErrors'
+  | 'comparisonMode'
+  | 'comparisonData'
+  | 'viewPreview'
+  | 'trunkEditingOptIn'
+  | 'sidebarCollapsed'
+>
+
+export function Topbar({ app, snap }: { app: HeaderApp; snap: HeaderSnapshot }): ReactElement {
   const leading = snap.sidebarCollapsed ? (
     <span aria-hidden="true" className="sidebar-toggle-spacer size-8 shrink-0" />
   ) : undefined
+  if (snap.view.kind === 'worktree') {
+    return (
+      <WorktreeTitle app={app} snap={snap} worktreeId={snap.view.worktreeId} leading={leading} />
+    )
+  }
   return (
-    <header
-      className={cn(
-        'topbar relative min-h-11 shrink-0 items-center gap-x-4 gap-y-2 border-b border-border bg-background px-4',
-        snap.view.kind === 'worktree'
-          ? 'grid grid-cols-1 py-2 @min-[620px]/workbench:grid-cols-[minmax(0,1fr)_auto] @min-[720px]/workbench:grid-cols-[minmax(0,1fr)_auto_auto] @min-[720px]/workbench:py-1'
-          : 'flex flex-wrap justify-between py-1'
-      )}
-    >
-      {snap.view.kind === 'trunk' ? (
-        <TrunkTitle app={app} snap={snap} leading={leading} />
-      ) : (
-        <WorktreeTitle app={app} snap={snap} worktreeId={snap.view.worktreeId} leading={leading} />
-      )}
+    <header className="topbar relative flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-background px-4 py-1">
+      <TrunkTitle app={app} snap={snap} leading={leading} />
     </header>
   )
 }
@@ -719,8 +744,8 @@ function TrunkTitle({
   snap,
   leading
 }: {
-  app: App
-  snap: AppSnapshot
+  app: HeaderApp
+  snap: HeaderSnapshot
   leading?: ReactNode
 }): ReactElement {
   const unit = snap.trunkUnits.find((u) => u.unitId === snap.selectedUnitId)
@@ -737,7 +762,7 @@ function TrunkTitle({
           </span>
         </div>
       </div>
-      <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
+      <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2">
         {unit === undefined ? (
           <Badge variant="outline">
             <Eye />
@@ -780,8 +805,8 @@ function WorktreeTitle({
   worktreeId,
   leading
 }: {
-  app: App
-  snap: AppSnapshot
+  app: HeaderApp
+  snap: HeaderSnapshot
   worktreeId: string
   leading?: ReactNode
 }): ReactElement {
@@ -793,54 +818,64 @@ function WorktreeTitle({
   const unitBadge =
     worktree !== undefined && unit !== undefined ? app.unitBadgeInfo(worktree, unit) : undefined
   return (
-    <>
-      <div
-        className="flex min-w-0 flex-1 items-center gap-2.5 @min-[620px]/workbench:col-span-2 @min-[720px]/workbench:col-span-1"
-        data-testid="worktree-title"
-      >
-        {leading}
-        <TitleUnitIcon
-          type={unit?.type ?? 2}
-          className="border-amber-200/80 bg-amber-50 text-amber-600"
-        />
-        <div className="flex min-w-0 items-baseline gap-1.5">
-          <span
-            className="min-w-0 truncate text-sm font-semibold"
-            title={worktree?.name || worktreeId || t().topbar.fallbackWorktreeName}
-          >
-            {worktree?.name || worktreeId || t().topbar.fallbackWorktreeName}
-          </span>
-          {unit !== undefined && (
-            <span
-              className="min-w-0 max-w-[40%] shrink-0 truncate text-xs text-muted-foreground"
-              title={unit.name}
+    <ResponsiveWorktreeHeader
+      title={
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          <div data-header-title-row className="flex max-w-full min-w-0 items-center gap-2.5">
+            {leading}
+            <TitleUnitIcon
+              type={unit?.type ?? 2}
+              className="border-amber-200/80 bg-amber-50 text-amber-600"
+            />
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span
+                className="max-w-max flex-[1_0_100px] overflow-hidden text-sm font-semibold"
+                data-header-name
+                title={unit?.name || unit?.unitId || t().topbar.fallbackDocumentName}
+              >
+                <span className="block max-w-[280px] truncate">
+                  {unit?.name || unit?.unitId || t().topbar.fallbackDocumentName}
+                </span>
+              </span>
+              {unitBadge && (
+                <ChangeTag variant={unitBadge.variant} className="min-w-0 shrink wrap-anywhere">
+                  {unitBadge.text}
+                </ChangeTag>
+              )}
+            </div>
+          </div>
+          {previewError !== undefined ? (
+            <Badge
+              variant="warn"
+              title={previewError}
+              className="max-w-full min-w-0 px-2 py-1 text-[11px] leading-4"
             >
-              · {unit.name}
-            </span>
-          )}
+              <TriangleAlert />
+              <span className="min-w-0 [overflow-wrap:anywhere] whitespace-normal">
+                {t().topbar.previewUnavailable}
+              </span>
+            </Badge>
+          ) : preview?.diverged ? (
+            <Badge
+              variant={mergeable ? 'info' : 'danger'}
+              className="max-w-full min-w-0 px-2 py-1 text-[11px] leading-4"
+            >
+              {!mergeable && <TriangleAlert />}
+              <span className="min-w-0 [overflow-wrap:anywhere] whitespace-normal">
+                {mergeable
+                  ? snap.viewPreview
+                    ? t().topbar.divergedShowingPreview
+                    : t().topbar.divergedShowingOriginal
+                  : t().topbar.conflictCount(preview.conflicts?.length ?? 0)}
+              </span>
+            </Badge>
+          ) : null}
         </div>
-        {previewError !== undefined ? (
-          <Badge variant="warn" title={previewError}>
-            <TriangleAlert />
-            {t().topbar.previewUnavailable}
-          </Badge>
-        ) : preview?.diverged ? (
-          <Badge variant={mergeable ? 'info' : 'danger'}>
-            {!mergeable && <TriangleAlert />}
-            {mergeable
-              ? snap.viewPreview
-                ? t().topbar.divergedShowingPreview
-                : t().topbar.divergedShowingOriginal
-              : t().topbar.conflictCount(preview.conflicts.length)}
-          </Badge>
-        ) : (
-          unitBadge && <ChangeTag variant={unitBadge.variant}>{unitBadge.text}</ChangeTag>
-        )}
-      </div>
-      <div className="w-full min-w-0 @min-[720px]/workbench:w-auto" data-testid="view-diff-center">
+      }
+      view={
         <SegmentedToggle
-          className="h-12 w-full bg-muted/80 p-0.5 shadow-xs @min-[620px]/workbench:h-8"
-          itemClassName="h-11 min-w-0 flex-1 basis-0 px-5 py-0 text-[13px] @min-[620px]/workbench:h-7 @min-[620px]/workbench:min-w-[72px] @min-[720px]/workbench:flex-none"
+          className="grid h-auto w-full grid-cols-2 gap-0 rounded-lg bg-muted p-0.5"
+          itemClassName="min-h-7 min-w-0 whitespace-normal px-3.5 py-1 text-[13px] [overflow-wrap:anywhere]"
           value={snap.comparisonMode ? 'diff' : 'view'}
           options={[
             { value: 'view', label: t().topbar.segView },
@@ -848,23 +883,12 @@ function WorktreeTitle({
           ]}
           onChange={(value) => void app.setComparisonMode(value === 'diff')}
         />
-      </div>
-      <div
-        className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 empty:hidden @min-[620px]/workbench:w-auto @min-[620px]/workbench:flex-nowrap @min-[620px]/workbench:justify-end @min-[620px]/workbench:justify-self-end"
-        data-testid="worktree-actions"
-      >
-        {snap.comparisonMode && (
-          <>
-            {snap.comparisonData?.response.stale && (
-              <Button variant="outline" size="sm" onClick={() => void app.refreshUnitComparison()}>
-                <RefreshCw />
-                {t().topbar.refreshComparison}
-              </Button>
-            )}
-          </>
-        )}
-        {preview?.diverged && (
+      }
+      preview={
+        preview?.diverged ? (
           <SegmentedToggle
+            className="grid h-auto w-full grid-cols-2 gap-0 rounded-lg bg-muted p-0.5"
+            itemClassName="min-h-7 min-w-0 whitespace-normal px-3.5 py-1 text-[13px] [overflow-wrap:anywhere]"
             value={snap.viewPreview ? 'preview' : 'original'}
             options={[
               { value: 'preview', label: t().topbar.segPreview },
@@ -872,47 +896,66 @@ function WorktreeTitle({
             ]}
             onChange={(v) => app.setViewPreview(v === 'preview')}
           />
-        )}
-        {worktree?.status === 'draft' && (
-          <Button
-            size="sm"
-            className="h-11 min-w-0 flex-1 whitespace-normal @min-[620px]/workbench:h-8 @min-[620px]/workbench:flex-none @min-[620px]/workbench:whitespace-nowrap"
-            onClick={() => void app.doReady(worktreeId)}
-          >
-            <CircleCheck />
-            {t().topbar.submitForReview}
-          </Button>
-        )}
-        {worktree?.status === 'ready' && (
-          <Button
-            size="sm"
-            className="h-11 min-w-0 flex-1 whitespace-normal @min-[620px]/workbench:h-8 @min-[620px]/workbench:flex-none @min-[620px]/workbench:whitespace-nowrap"
-            disabled={preview !== undefined && !mergeable}
-            onClick={() => {
-              if (preview !== undefined && !mergeable) {
-                toast(t().toast.conflictsCannotMerge)
-                return
-              }
-              void app.doMerge(worktreeId)
-            }}
-          >
-            <GitMerge />
-            {t().topbar.mergeToCurrent}
-          </Button>
-        )}
-        {(worktree?.status === 'draft' || worktree?.status === 'ready') && (
-          <Button
-            variant="destructiveGhost"
-            size="sm"
-            className="h-11 @min-[620px]/workbench:h-8"
-            onClick={() => void app.doDiscard(worktreeId)}
-          >
-            <Trash2 />
-            {t().topbar.discard}
-          </Button>
-        )}
-      </div>
-    </>
+        ) : undefined
+      }
+      actions={
+        <>
+          {snap.comparisonMode && (
+            <>
+              {snap.comparisonData?.response.stale && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-auto min-h-8 max-w-full py-1.5 leading-4 whitespace-normal"
+                  onClick={() => void app.refreshUnitComparison()}
+                >
+                  <RefreshCw />
+                  <span className="min-w-0 wrap-anywhere">{t().topbar.refreshComparison}</span>
+                </Button>
+              )}
+            </>
+          )}
+          {worktree?.status === 'draft' && (
+            <Button
+              size="sm"
+              className="h-auto min-h-8 max-w-full py-1.5 leading-4 whitespace-normal"
+              onClick={() => void app.doReady(worktreeId)}
+            >
+              <CircleCheck />
+              <span className="min-w-0 wrap-anywhere">{t().topbar.submitForReview}</span>
+            </Button>
+          )}
+          {worktree?.status === 'ready' && (
+            <Button
+              size="sm"
+              className="h-auto min-h-8 max-w-full py-1.5 leading-4 whitespace-normal"
+              disabled={preview !== undefined && !mergeable}
+              onClick={() => {
+                if (preview !== undefined && !mergeable) {
+                  toast(t().toast.conflictsCannotMerge)
+                  return
+                }
+                void app.doMerge(worktreeId)
+              }}
+            >
+              <GitMerge />
+              <span className="min-w-0 wrap-anywhere">{t().topbar.mergeToCurrent}</span>
+            </Button>
+          )}
+          {(worktree?.status === 'draft' || worktree?.status === 'ready') && (
+            <Button
+              variant="destructiveGhost"
+              size="sm"
+              className="h-auto min-h-8 max-w-full py-1.5 leading-4 whitespace-normal"
+              onClick={() => void app.doDiscard(worktreeId)}
+            >
+              <Trash2 />
+              <span className="min-w-0 wrap-anywhere">{t().topbar.discard}</span>
+            </Button>
+          )}
+        </>
+      }
+    />
   )
 }
 

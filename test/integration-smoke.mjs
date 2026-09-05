@@ -876,36 +876,22 @@ async function verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey,
           (element) => getComputedStyle(element).display === 'none'
         )
     )
-    const compactLayout = await measureWorktreeTopbar(page)
-    if (
-      compactLayout.height > 64 ||
-      Math.abs(compactLayout.titleTop - compactLayout.switcherTop) > 8 ||
-      Math.abs(compactLayout.actionsTop - compactLayout.switcherTop) > 8 ||
-      compactLayout.switcherHeight > 34 ||
-      compactLayout.overflow
-    ) {
-      throw new Error(`800px worktree topbar was not compact: ${JSON.stringify(compactLayout)}`)
-    }
-    await page.setViewport({ width: 680, height: 720, deviceScaleFactor: 1 })
-    const mediumLayout = await measureWorktreeTopbar(page)
-    if (
-      mediumLayout.titleTop >= mediumLayout.switcherTop ||
-      Math.abs(mediumLayout.actionsTop - mediumLayout.switcherTop) > 8 ||
-      mediumLayout.switcherHeight > 34 ||
-      mediumLayout.actionsHeight > 34 ||
-      mediumLayout.overflow
-    ) {
-      throw new Error(`680px worktree topbar was not balanced: ${JSON.stringify(mediumLayout)}`)
-    }
-    await page.setViewport({ width: 560, height: 720, deviceScaleFactor: 1 })
-    const narrowLayout = await measureWorktreeTopbar(page)
-    if (
-      narrowLayout.titleTop >= narrowLayout.switcherTop ||
-      narrowLayout.switcherTop >= narrowLayout.actionsTop ||
-      narrowLayout.switcherWidth < narrowLayout.width - 40 ||
-      narrowLayout.overflow
-    ) {
-      throw new Error(`560px worktree topbar overflowed: ${JSON.stringify(narrowLayout)}`)
+    for (const width of [1440, 1130, 960, 800, 680, 560, 480]) {
+      await page.setViewport({ width, height: 720, deviceScaleFactor: 1 })
+      const layout = await measureWorktreeTopbar(page)
+      if (
+        layout.overflow ||
+        layout.overlap ||
+        layout.previewAboveView ||
+        layout.switcherWidth > 220
+      ) {
+        throw new Error(
+          `${width}px worktree topbar lost its unified flow: ${JSON.stringify(layout)}`
+        )
+      }
+      if (width === 1440 && (layout.height > 64 || Math.abs(layout.centerOffset) > 1)) {
+        throw new Error(`wide worktree topbar was not centered: ${JSON.stringify(layout)}`)
+      }
     }
     await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 })
     await page.click(compareToggle)
@@ -929,7 +915,8 @@ async function verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey,
 }
 
 async function measureWorktreeTopbar(page) {
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
     const topbar = document.querySelector('.topbar')
     const title = document.querySelector('[data-testid="worktree-title"]')
     const switcher = document.querySelector('[data-testid="view-diff-center"]')
@@ -942,13 +929,31 @@ async function measureWorktreeTopbar(page) {
     const switcherRect = switcher.getBoundingClientRect()
     const actionsRect = actions.getBoundingClientRect()
     const outside = (rect) => rect.left < topbarRect.left - 1 || rect.right > topbarRect.right + 1
+    const controls = [...topbar.querySelectorAll('button')].map((element) =>
+      element.getBoundingClientRect()
+    )
+    const preview = topbar.querySelector('[data-header-preview]')?.getBoundingClientRect()
     return {
+      centerOffset:
+        switcherRect.left + switcherRect.width / 2 - topbarRect.left - topbarRect.width / 2,
+      previewAboveView:
+        preview !== undefined &&
+        preview.top + preview.height / 2 < switcherRect.top + switcherRect.height / 2 - 1,
+      overlap: controls.some((a, i) =>
+        controls
+          .slice(i + 1)
+          .some(
+            (b) =>
+              Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
+              Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1
+          )
+      ),
       actionsHeight: actionsRect.height,
       actionsTop: actionsRect.top,
       height: topbarRect.height,
       overflow:
         document.documentElement.scrollWidth > document.documentElement.clientWidth ||
-        [titleRect, switcherRect, actionsRect].some(outside),
+        [titleRect, switcherRect, actionsRect, ...controls].some(outside),
       switcherHeight: switcherRect.height,
       switcherTop: switcherRect.top,
       switcherWidth: switcherRect.width,

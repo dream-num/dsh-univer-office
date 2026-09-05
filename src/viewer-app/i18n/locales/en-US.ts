@@ -65,7 +65,7 @@ function buildEnUsMessages() {
     },
     topbar: {
       currentVersion: 'Current version',
-      fallbackWorktreeName: 'A modification',
+      fallbackDocumentName: 'Document',
       submitForReview: 'Submit for confirmation',
       mergeToCurrent: 'Merge into current version',
       discard: 'Discard',
