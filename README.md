@@ -172,6 +172,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 - **Live Univer window** — changes open automatically in a window you can drag, resize, fold, or maximize. Disable automatic opening under **Settings → Plugins → Plugin configuration → Univer Office** without removing conversation review cards.
 - **Conversation review cards** — each edited `.univer` file has its own full preview card, while deleted temporary files leave no stale cards behind.
 - **Pinned worktree comparison** — use **Compare** in a draft or submitted worktree to compare it with trunk or another active worktree. Both sides are pinned when the comparison opens, changed entities can be navigated, and a refresh control appears if either side advances.
+- **Responsive review Header** — View/Compare stays centered when space permits; controls share a compact row and wrap in order as the window narrows. The title shows the selected document name; long names truncate, and merge-status messages remain visible.
 - **Historical review** — drafts, submitted changes, approvals, and discarded results remain in the conversation, with older cards collapsed by default.
 - **Session isolation** — each DSH session shows only its own windows, cards, and review state.
 - **English and Chinese UI** — the plugin shell and every open Viewer follow the DSH locale.

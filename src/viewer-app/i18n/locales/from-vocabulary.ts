@@ -142,7 +142,7 @@ export function messagesFromVocabulary(
     },
     topbar: {
       currentVersion: v.currentVersion,
-      fallbackWorktreeName: v.modification,
+      fallbackDocumentName: v.file,
       submitForReview: v.submitForReview,
       mergeToCurrent: `${v.merge} · ${v.currentVersion}`,
       discard: v.discard,
