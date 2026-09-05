@@ -819,10 +819,9 @@ function WorktreeTitle({
     worktree !== undefined && unit !== undefined ? app.unitBadgeInfo(worktree, unit) : undefined
   return (
     <ResponsiveWorktreeHeader
-      reserveSidebarToggle={snap.sidebarCollapsed}
       title={
         <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5">
-          <div className="flex max-w-full min-w-0 items-center gap-2.5">
+          <div data-header-title-row className="flex max-w-full min-w-0 items-center gap-2.5">
             {leading}
             <TitleUnitIcon
               type={unit?.type ?? 2}
