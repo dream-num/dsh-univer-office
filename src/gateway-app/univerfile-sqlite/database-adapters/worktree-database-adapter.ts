@@ -19,6 +19,7 @@ import type {
   RecordUnitMergeResultResult,
   SaveWorktreeUnitMergeArtifactInput,
   SaveWorktreeUnitMergeArtifactResult,
+  SetWorktreeUnitRemovedDatabaseInput,
   StartMergeResult,
   WorktreeAggregateRecord,
   WorktreeRevisionRange,
@@ -545,6 +546,14 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
         artifact: decode<WorktreeUnitMergeArtifact>(encode(input.artifact))
       }
     })
+  }
+
+  async setUnitRemoved(
+    _context: DatabaseContext,
+    _input: SetWorktreeUnitRemovedDatabaseInput
+  ): Promise<never> {
+    this._assertOpen()
+    throw invalidRequest('Reversible Worktree Unit removal is not supported by Univerfile')
   }
 
   async commitDraftChangeset(
@@ -1410,6 +1419,9 @@ function validateMergeResult(result: WorktreeUnitMergeResult): void {
     return
   }
   if (result.status === 'unchanged') return
+  if (result.status === 'removed') {
+    throw invalidRequest('Reversible Worktree Unit removal is not supported by Univerfile')
+  }
   if (!result.error.code || !result.error.message || typeof result.error.retryable !== 'boolean') {
     throw invalidRequest('Merge error must be stable and serializable')
   }

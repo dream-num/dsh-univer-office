@@ -118,6 +118,35 @@ try {
   if (typeof unitId !== 'string')
     throw new Error(`create Unit failed: ${JSON.stringify(createdUnit)}`)
 
+  const beforeUnsupportedRemoval = await service.status({ ...scoped, worktreeId })
+  await Promise.all(
+    [true, false].map(async (removed) => {
+      const response = await fetch(
+        `${origin}/uf/${Buffer.from(file).toString('base64url')}/universer-api/worktrees/${encodeURIComponent(worktreeId)}/units/${encodeURIComponent(unitId)}/removal`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ removed })
+        }
+      )
+      const body = await response.json()
+      if (
+        response.status !== 400 ||
+        body.error?.code !== 'INVALID_REQUEST' ||
+        body.error?.message !== 'Reversible Worktree Unit removal is not supported by Univerfile'
+      ) {
+        throw new Error(`unsupported removal must reject explicitly: ${JSON.stringify(body)}`)
+      }
+    })
+  )
+  const afterUnsupportedRemoval = await service.status({ ...scoped, worktreeId })
+  if (
+    JSON.stringify(afterUnsupportedRemoval.result) !==
+    JSON.stringify(beforeUnsupportedRemoval.result)
+  ) {
+    throw new Error('unsupported removal must preserve existing Worktree state')
+  }
+
   const temporary = await service.unit({
     ...scoped,
     action: 'create',
