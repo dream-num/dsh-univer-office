@@ -13,7 +13,7 @@ Use the structured `univer_*` tools whenever the task creates, reads, changes, c
 - New `.univer`: call `univer_new`, then `univer_worktree` with `action: "create"`.
 - Office source (`.xlsx`, `.csv`, `.tsv`, `.docx`, `.pptx`): create the target `.univer` and draft worktree, then call `univer_import`.
 - Before authoring content, load the matching Unit skill: `univer-sheet`, `univer-doc`, `univer-slide`, `univer-base`, or `univer-board`.
-- For an Embed, also load `univer-embed`. For formulas that read another Unit, also load `univer-cross-unit-formula`.
+- For an Embed or a Chart backed by another Unit's data, also load `univer-embed`. For formulas that read another Unit, also load `univer-cross-unit-formula`.
 
 ## Mental model
 
