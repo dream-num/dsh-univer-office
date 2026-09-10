@@ -29,7 +29,7 @@ Keep the receive time inside its intended activation/lifetime and leave room bef
 position the new participant header at the receive time and bind to its facing header edge; do not bind to a
 lifeline below the header. For `destroy`, end the receiving lifeline at the receive time and verify the cross there.
 The insertion helper does not reposition participants or truncate their lifelines. Prepare those native elements
-first, inspect the installed lifecycle validation, and verify endpoint readback and rendered evidence rather than assuming
+first, inspect the installed lifecycle validation, and verify endpoint readback and export rather than assuming
 that a supported message-type string implements all of its semantics.
 
 When fragments or activations matter, include their semantic scope in the spec rather than guessing it during

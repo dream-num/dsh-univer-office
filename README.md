@@ -179,14 +179,12 @@ DSH selects these tools automatically; you normally do not need to call them man
 - **Import, export, and print** — the current version can import Office files, export supported content, and print from the Univer Ribbon. Draft and review previews do not allow import or export; Board provides print only.
 - **Version history for all five Unit types** — current Sheet, Doc, Slide, Base, and Board views show time-grouped history. Read-only views can inspect versions, while editable views can restore one explicitly.
 
-The bundled Board skill loads focused references for diagram semantics, mind maps, native content, connector labels, and routing as needed. Chart references and Base authoring guidance use the installed Facade API.
-
 ## Requirements and current limits
 
 - DeepSeek Harness and Node.js `>=22.19.0`.
 - Some Slide layout checks and SVG text measurement require a local Chrome/Chromium executable. Set `UNIVER_RENDER_BROWSER` to use a specific browser path.
 - Slide master pages, layout pages, and speaker notes are outside the current editing scope.
-- Board file export is not supported. Native mind maps, tables, Ink, and diagram helpers depend on the installed SDK and host runtime; the Board skill checks availability before authoring.
+- Board mind maps, tables, ink, advanced editing, and file export are not yet supported.
 
 ## Configuration
 
