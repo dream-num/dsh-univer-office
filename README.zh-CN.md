@@ -179,12 +179,14 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 - **导入、导出与打印**：当前版本可通过 Univer Ribbon 导入 Office 文件、导出受支持的内容并打印。草稿和审阅预览不开放导入导出；Board 仅提供打印。
 - **五类 Unit 版本历史**：当前版本的 Sheet、Doc、Slide、Base 和 Board 均可查看按时间聚合的历史。只读视图可以查看版本，可编辑视图可以显式恢复。
 
+内置 Board skill 按需加载图表语义、思维导图、原生内容、连接线标签和路由参考文档。Chart 引用和 Base 创作指引以已安装的 Facade API 为准。
+
 ## 要求与限制
 
 - DeepSeek Harness，以及 Node.js `>=22.19.0`。
 - 部分 Slide 布局检查和 SVG 文字度量需要本机 Chrome/Chromium；也可以通过 `UNIVER_RENDER_BROWSER` 指定浏览器路径。
 - Slide 的母版、版式页和演讲者备注不在当前编辑范围内。
-- Board 的思维导图、表格、墨迹和高级编辑，以及 Board 文件导出尚未开放。
+- Board 暂不支持文件导出。原生思维导图、表格、墨迹和图表辅助 API 取决于已安装 SDK 与宿主运行时；Board skill 会在创作前检查可用性。
 
 ## 配置
 

@@ -1,4 +1,7 @@
-import { readFile } from 'node:fs/promises'
+import assert from 'node:assert/strict'
+import { dirname, join, resolve as resolvePath, relative } from 'node:path'
+import { prepareContentExecutionProgram } from '@univer-cli/content-execution'
+import { readFile, readdir } from 'node:fs/promises'
 import { Context } from '@deepseek-ai/cordis'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
 import { apply } from '../lib/index.js'
@@ -87,17 +90,19 @@ if (
 }
 
 const board = await ctx.skills.get('univer-board')
-if (
-  board === undefined ||
-  !board.content.includes('Pass one or more exact IDs in `elementIds`') ||
-  !board.content.includes('arrangeElementsInLayers') ||
-  !board.content.includes('start: { elementId: source.getId() }') ||
-  !board.content.includes('connector-terminal-direction-reversed') ||
-  !board.content.includes('connector-excessive-detour') ||
-  !board.content.includes('## Connector animation') ||
-  board.content.includes('fromElementId')
-) {
-  throw new Error('bundled Board skill is missing current inspection and connector guidance')
+assert.ok(board)
+assert.equal(board.resourceBase?.kind, 'directory')
+const boardFiles = await readLinkedReferences(board.resourceBase.path, board.content)
+assert.deepEqual(
+  [...boardFiles.keys()].toSorted(),
+  (await readdir(join(board.resourceBase.path, 'references')))
+    .map((name) => `references/${name}`)
+    .toSorted()
+)
+assert.equal(boardFiles.size, 10)
+const boardContent = [board.content, ...boardFiles.values()].join('\n')
+for (const code of base.content.matchAll(/```js\n([\s\S]*?)```/g)) {
+  prepareContentExecutionProgram({ code: code[1], unitId: 'base-example', unitType: 'base' })
 }
 
 for (const unit of ['univer-base', 'univer-board', 'univer-doc', 'univer-sheet', 'univer-slide']) {
@@ -147,11 +152,15 @@ for (const contract of chartContracts) {
   if (
     skill === undefined ||
     contract.stale.some((api) => skill.content.includes(api)) ||
-    !skill.content.includes(contract.owner) ||
-    !skill.content.includes(contract.insert) ||
-    !skill.content.includes(contract.read) ||
-    !skill.content.includes('chart.setDataSource(values)') ||
-    !skill.content.includes('await chart.remove()')
+    !(contract.name === 'univer-board' ? boardContent : skill.content).includes(contract.owner) ||
+    !(contract.name === 'univer-board' ? boardContent : skill.content).includes(contract.insert) ||
+    !(contract.name === 'univer-board' ? boardContent : skill.content).includes(contract.read) ||
+    !(contract.name === 'univer-board' ? boardContent : skill.content).includes(
+      'chart.setDataSource(values)'
+    ) ||
+    !(contract.name === 'univer-board' ? boardContent : skill.content).includes(
+      'await chart.remove()'
+    )
   ) {
     throw new Error(`bundled Chart skill uses a stale Facade contract: ${contract.name}`)
   }
@@ -165,3 +174,21 @@ for (const topic of ['univer-embed', 'univer-cross-unit-formula']) {
 }
 
 console.log('skills smoke OK (eight lazy bundled Univer skills)')
+
+async function readLinkedReferences(root, entrypoint) {
+  const files = new Map()
+  async function visit(content, directory) {
+    for (const match of content.matchAll(/\]\(([^)]+\.md)\)/g)) {
+      if (/^[a-z]+:/i.test(match[1])) continue
+      const path = resolvePath(directory, match[1])
+      const name = relative(root, path)
+      assert.ok(!name.startsWith('..'), `reference escapes skill: ${name}`)
+      if (files.has(name)) continue
+      const text = await readFile(path, 'utf8')
+      files.set(name, text)
+      await visit(text, dirname(path))
+    }
+  }
+  await visit(entrypoint, root)
+  return files
+}
