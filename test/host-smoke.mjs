@@ -93,7 +93,8 @@ await writeFile(CODE_FILE, 'return { ok: true }\n')
 const REAL_FILE = await realpath(FILE)
 const LOCKED_DIRECTORY = join(WORKSPACE, 'locked')
 const LOCKED_FILE = join(LOCKED_DIRECTORY, 'locked.univer')
-const canEnforcePermissionDenied = process.platform !== 'win32'
+// Root bypasses DAC checks, so a chmod(0) directory cannot deny anything.
+const canEnforcePermissionDenied = process.platform !== 'win32' && (process.getuid?.() ?? 0) !== 0
 await mkdir(LOCKED_DIRECTORY)
 await writeFile(LOCKED_FILE, '')
 if (canEnforcePermissionDenied) await chmod(LOCKED_DIRECTORY, 0)

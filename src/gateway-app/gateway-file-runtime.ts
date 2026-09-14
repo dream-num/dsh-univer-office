@@ -27,6 +27,7 @@ import {
   type UniverfileSQLiteWorktreeDatabaseAdapter
 } from './univerfile-sqlite'
 import { reconcileUniverfileHistory } from './history/reconcile-history.js'
+import { createSdkCollabLogger } from './sdk-logger.js'
 
 export interface GatewayFileRuntimeOptions {
   /** `.univer` SQLite filename, or `:memory:` for tests. */
@@ -76,18 +77,21 @@ export class GatewayFileRuntime {
       this.assetStore = this._univerfile.assetStore
 
       this.trunkService = new UniverCollabService({
-        dbAdapter: this.trunkAdapter
+        dbAdapter: this.trunkAdapter,
+        logger: createSdkCollabLogger()
       })
       this.worktreeService = new UniverCollabWorktreeService({
         trunk: {
           service: this.trunkService,
           dbAdapter: this.trunkAdapter
         },
-        dbAdapter: this.worktreeAdapter
+        dbAdapter: this.worktreeAdapter,
+        logger: createSdkCollabLogger()
       })
       this.historyService = new UniverHistoryService({
         collabService: this.trunkService,
-        dbAdapter: this.historyAdapter
+        dbAdapter: this.historyAdapter,
+        logger: createSdkCollabLogger()
       })
       this._historyAttachment = this.historyService.attach(this.trunkService)
       this.historyReady = reconcileUniverfileHistory({

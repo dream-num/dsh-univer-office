@@ -21,12 +21,14 @@ pnpm run lint:fix
 pnpm run typecheck
 pnpm run format:check
 pnpm run format
+pnpm run update:univer-sdk --sdk_version <exact-version>
 ```
 
 - Treat `oxlint.config.ts` as project policy. Fix lint errors instead of weakening rules; change rule severity only when the task explicitly targets lint policy.
 - `lint:fix` and `format` mutate files. Run them only when their full write scope is intended and reviewed.
 - `format` and `format:check` are repository-wide. Do not create unrelated formatting churn. For a narrow change, check supported files directly with `pnpm exec oxfmt --check <files>`.
 - `pnpm run build` builds Host/Client, Worker, Gateway, Render Machine, and Viewer. Use `build:lib`, `build:worker`, `build:gateway`, `build:render`, or `build:viewer` for a narrower build.
+- `pnpm run update:univer-sdk` re-pins the Univer SDK cohort to one exact version in every manifest, leaves self-versioned and transitive binding packages untouched, and drops SDK entries from `pnpm-workspace.yaml` overrides; run `pnpm install` and the full build afterwards.
 - Smoke tests consume `lib/` and `artifacts/`. Always build the affected target from the current source before running its smoke test.
 
 Choose the narrowest validation that proves the change:

@@ -1,19 +1,15 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { ConversationNodeDefinition } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import { UNIVER_SETTINGS_NAMESPACE, type UniverSettings } from '../shared/settings.ts'
-import {
-  CombinedSnapshotPreviewCard,
-  SplitSnapshotPreviewCard
-} from './components/preview-card.tsx'
+import { PreviewCard } from './components/preview-card.tsx'
 import { UniverSettingsCard } from './components/settings-card.tsx'
-import { CombinedSnapshotUniverDock, SplitSnapshotUniverDock } from './components/univer-dock.tsx'
+import { UniverDock } from './components/univer-dock.tsx'
 import { selectUniverTurn, univerTurnDefinition } from './conversation/univer-turn-definition.ts'
-import { registerConversationDefinition } from './dsh-compat.ts'
 import { en, UNIVER_LOCALE_NAMESPACE, zh } from './locales/index.ts'
 import { LivePreviewPreference } from './settings/live-preview-preference.ts'
 import { settingsStyles } from './styles/settings.ts'
@@ -22,23 +18,26 @@ import { viewerLocaleOf, type ViewerLocale } from './viewer-locale.ts'
 
 export const inject = ['slots', 'locale', 'conversation']
 
+interface UiConversationEvents {
+  register(definition: ConversationNodeDefinition): () => void
+}
+
 /** Register the DSH browser projections for Univer files and worktrees. */
 export function apply(ctx: ClientContext): void {
   const getViewerLocale = (): ViewerLocale => viewerLocaleOf(ctx.locale.getSnapshot().active)
   const livePreview = new LivePreviewPreference()
   injectStyles('dsh-univer-office/styles', worktreeStyles)
   injectStyles('dsh-univer-office/settings-styles', settingsStyles)
-  const conversationApi = registerConversationDefinition(ctx, univerTurnDefinition)
-  // The runtime probe selects the legacy prop shape before registration; these
-  // assertions bridge that unavailable historical type into the alpha.4 build.
-  const PreviewCard =
-    conversationApi === 'split'
-      ? SplitSnapshotPreviewCard
-      : (CombinedSnapshotPreviewCard as typeof SplitSnapshotPreviewCard)
-  const UniverDock =
-    conversationApi === 'split'
-      ? SplitSnapshotUniverDock
-      : (CombinedSnapshotUniverDock as typeof SplitSnapshotUniverDock)
+  const uiConversation = ctx.get('uiConversation') as { events: UiConversationEvents } | undefined
+  if (uiConversation === undefined) {
+    throw new Error('dsh-univer-office: active DSH Client exposes no uiConversation service')
+  }
+  // A reload on the same fiber must tolerate re-registering the definition.
+  try {
+    uiConversation.events.register(univerTurnDefinition)
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes('already registered')) throw error
+  }
   ctx.effect(() => ctx.locale.register(UNIVER_LOCALE_NAMESPACE, { zh, en }), 'univer: dictionaries')
   ctx.effect(
     () =>

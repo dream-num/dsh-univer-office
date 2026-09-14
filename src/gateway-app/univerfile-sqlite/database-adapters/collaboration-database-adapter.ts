@@ -1,7 +1,6 @@
 import type Database from 'libsql'
 import {
   CollabError,
-  type ChangesetRange,
   type CommitChangesetInput,
   type CommitChangesetResult,
   type CreateUnitDatabaseInput,
@@ -55,11 +54,6 @@ interface PayloadRow {
 
 interface SchemaVersionRow {
   readonly version: number
-}
-
-interface ChangesetReadRow {
-  readonly head_revision: number
-  readonly payload_json: string | null
 }
 
 interface ColumnRow {
@@ -216,40 +210,35 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   async getChangesets(
     _context: DatabaseContext,
     unitID: string,
-    range: { readonly from: number; readonly to: number }
-  ): Promise<ChangesetRange> {
+    range: { readonly from: number; readonly to?: number }
+  ): Promise<readonly IChangeset[] | null> {
     this._assertOpen()
-    if (range.from < 0 || range.to < 0) {
+    if (range.from < 0 || (range.to !== undefined && range.to < 0)) {
       throw invalidRequest('Changeset range revisions cannot be negative')
     }
 
+    const unit = this._database
+      .prepare(
+        `SELECT head_revision
+         FROM collaboration_units
+         WHERE unit_id = ? AND soft_deleted_at_ms IS NULL`
+      )
+      .get(unitID) as { readonly head_revision: number } | undefined
+    if (unit === undefined) return null
+    const to =
+      range.to === undefined || range.to === 0
+        ? unit.head_revision
+        : Math.min(range.to, unit.head_revision)
+    if (to <= range.from) return []
     const rows = this._database
       .prepare(
-        `SELECT collaboration_units.head_revision,
-                collaboration_changesets.payload_json
-         FROM collaboration_units
-         LEFT JOIN collaboration_changesets
-           ON collaboration_changesets.unit_id = collaboration_units.unit_id
-          AND collaboration_changesets.revision > ?
-          AND collaboration_changesets.revision <= CASE
-            WHEN ? = 0 THEN collaboration_units.head_revision
-            ELSE MIN(?, collaboration_units.head_revision)
-          END
-         WHERE collaboration_units.unit_id = ?
-           AND collaboration_units.soft_deleted_at_ms IS NULL
-         ORDER BY collaboration_changesets.revision ASC`
+        `SELECT payload_json
+         FROM collaboration_changesets
+         WHERE unit_id = ? AND revision > ? AND revision <= ?
+         ORDER BY revision ASC`
       )
-      .all(range.from, range.to, range.to, unitID) as unknown as ChangesetReadRow[]
-    const head = rows[0]
-    if (!head) {
-      return { changesets: [], latestRevision: 0 }
-    }
-    return {
-      changesets: rows.flatMap((row) =>
-        row.payload_json ? [decode<IChangeset>(row.payload_json)] : []
-      ),
-      latestRevision: head.head_revision
-    }
+      .all(unitID, range.from, to) as unknown as PayloadRow[]
+    return rows.map((row) => decode<IChangeset>(row.payload_json))
   }
 
   async getSubmission(

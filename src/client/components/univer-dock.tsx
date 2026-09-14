@@ -21,43 +21,14 @@ interface UniverDockShared extends PropsLocale<'univer'>, ViewerLocaleInjected {
 
 export type UniverDockProps = PropsRuntime<'conversation.input.dock'> & UniverDockShared
 
-interface LegacyUniverDockProps extends UniverDockShared {
-  readonly sessionId: SessionId
-  readonly session:
-    | {
-        readonly running: boolean
-        readonly chat: { readonly timeline: ConversationTimelineSnapshot }
-      }
-    | undefined
-  readonly useSessions: <Selected>(
-    selector: (snapshot: {
-      readonly byId: Readonly<Record<string, { readonly cwd?: string }>>
-    }) => Selected
-  ) => Selected
-}
-
 interface OpenWindow {
   readonly file: string
   readonly worktreeId: string | null
   readonly preferredUnitId: string | null
 }
 
-/** DSH 0.1.1-rc.2 adapter: Chat remains nested in the input owner's Session snapshot. */
-export function CombinedSnapshotUniverDock(props: LegacyUniverDockProps): React.ReactElement {
-  const cwd = props.useSessions((state) => state.byId[props.sessionId]?.cwd)
-  return (
-    <UniverSessionDock
-      key={props.sessionId}
-      {...props}
-      timeline={props.session?.chat.timeline}
-      cwd={cwd}
-      running={props.session?.running === true}
-    />
-  )
-}
-
-/** DSH 0.1.2-alpha.1 adapter: Chat owns its independently selected snapshot. */
-export function SplitSnapshotUniverDock(props: UniverDockProps): React.ReactElement {
+/** Float one live Worktree window per file opened during the running Turn. */
+export function UniverDock(props: UniverDockProps): React.ReactElement {
   const timeline = props.useChat((snapshot: ChatSnapshot) => snapshot.timeline)
   const cwd = props.useSessions((state: SessionListState) => state.byId[props.sessionId]?.cwd)
   return (
@@ -139,8 +110,8 @@ function UniverSessionDock(
   if (!props.running || !livePreviewEnabled) return <></>
   const windows = Object.values(open)
   if (windows.length === 0) return <></>
-  // DSH 0.1.2-alpha.1 renders the input dock inside a translucent, non-draggable
-  // container. Portaling avoids inheriting that container's opacity and hit-testing.
+  // The input dock renders inside a translucent, non-draggable container.
+  // Portaling avoids inheriting that container's opacity and hit-testing.
   return createPortal(
     <div className="uvf_root">
       {windows.map((target, stackIndex) => (

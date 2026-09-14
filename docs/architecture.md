@@ -255,6 +255,7 @@ bundled skill provider -> DSH skill registry
 7. Render Machine browser page 使用与 runtime 精确同版本的 `@univer-cli/univer-render-page` 提供页面协议与 render operations，并注入本仓库与 Viewer 共享的 Univer composition；Viewer、render preset 和 IMPORTRANGE plugin 是本仓库的普通源码。仓库不提交上游源码快照目录或预构建 Viewer。
 8. Skill Provider 只负责发现与加载包内 Markdown，不调用 Service，也不复制工具 schema。
 9. 所有 Cordis 注册通过 effect 生命周期撤销；插件卸载后不得遗留路由、工具、Skill provider、定时器或子进程。
+10. `@univerjs/`、`@univerjs-pro/`、`@univer-cli/` 前缀的 SDK 依赖是一个跨应用兼容契约，用 `pnpm update:univer-sdk --sdk_version <精确版本>` 统一升级为同一精确版本，升级后 pnpm-workspace.yaml `overrides` 不得残留任何 SDK 条目。`@univerjs/icons`、`@univerjs-pro/cli-assets`、`@univerjs-pro/doc-typst-native-binding` 按自身发布节奏声明精确版本。`@univerjs-pro/engine-formula-rust-binding` 与 `@univerjs-pro/exchange-node-binding` 是上游依赖树中的传递绑定包：它们作为发布物的运行时依赖显式声明，但精确版本必须镜像拉入它们的 SDK wrapper 的声明，源码不直接 import，只经 wrapper 包使用；构建脚本动态读取解析后的实际版本，不写死版本号。
 
 ## 6. Service Definition
 
@@ -287,7 +288,7 @@ Gateway Supervisor 只负责：
 
 Unit 的导入、检查、执行和导出由 Unit Content Adapter 启动一次性 Unit Content Worker。Worker 连接 Gateway Supervisor 提供的同一个 Gateway，操作完成或取消后退出，不拥有独立持久状态。Gateway 的 worktree 控制面直接提供 Unit 创建与移除端点，并通过 collaboration service 与 lifecycle event 完成操作。写操作只能针对显式 draft worktree；Gateway 是提交结果和 revision 的唯一依据。
 
-Gateway 通过 SDK `register(router)` 注册 HTTP/WebSocket Endpoint，连接跟踪保留路由参数，并在打开失败或关闭时释放记录。Worktree Unit 删除保留应用现有流程；SDK 的可撤销移除接口 `setUnitRemoved` 在本地 Adapter 中明确返回 `INVALID_REQUEST`，不写入移除状态或改变文件格式。
+Gateway 通过 SDK `register(router)` 注册 HTTP/WebSocket Endpoint，连接跟踪保留路由参数，并在打开失败或关闭时释放记录。Worktree Unit 删除保留应用现有流程；SDK 的可撤销移除接口 `setUnitRemoved` 在本地 Adapter 中明确返回 `INVALID_REQUEST`，不写入移除状态或改变文件格式。Gateway 为 SDK collaboration service 注入 `ILogger`：warn/error 始终写入 Gateway stderr，debug/info 仅在 `UNIVER_DSH_GATEWAY_DEBUG=1` 时输出；SDK 内部失败若没有该 logger 只会表现为不可诊断的通用 500。数据库 Adapter 遵循 SDK 的快照读取契约（`getChangesets`/`getDraftChangesets` 返回裸 changeset 数组，`null` 表示 Unit 不存在）。
 
 Viewer Ribbon 的交互式导入导出使用 Gateway 中逐 `.univer` 隔离的 Universer exchange 协议：`source=1` 上传、异步 import/export task、sign-url 与 artifact content。该协议只挂在 trunk 路径；导入在当前 `.univer` trunk 创建新 Unit 并发布结构化 `unit_added` 事件，导出从 trunk head 物化快照。临时 artifact 和 task 有界、可过期，并随文件 runtime 一起释放。嵌入资源继续使用 `source=3` 且按 Unit/worktree 授权，两类文件协议不得混用。
 

@@ -20,29 +20,8 @@ interface PreviewCardShared extends PropsLocale<'univer'>, ViewerLocaleInjected 
 
 export type PreviewCardProps = PropsRuntime<'conversation.chat.turnTail'> & PreviewCardShared
 
-interface LegacyPreviewCardProps extends PreviewCardShared {
-  readonly sessionId: SessionId
-  readonly useSession: <Selected>(
-    selector: (snapshot: {
-      readonly chat: { readonly timeline: ConversationTimelineSnapshot }
-    }) => Selected
-  ) => Selected
-  readonly useSessions: <Selected>(
-    selector: (snapshot: {
-      readonly byId: Readonly<Record<string, { readonly cwd?: string }>>
-    }) => Selected
-  ) => Selected
-}
-
-/** DSH 0.1.1-rc.2 adapter: Chat remains nested in the Session snapshot. */
-export function CombinedSnapshotPreviewCard(props: LegacyPreviewCardProps): React.ReactElement {
-  const timeline = props.useSession((snapshot) => snapshot.chat.timeline)
-  const cwd = props.useSessions((state) => state.byId[props.sessionId]?.cwd)
-  return <PreviewCardContent {...props} timeline={timeline} cwd={cwd} />
-}
-
-/** DSH 0.1.2-alpha.1 adapter: Chat owns its independently selected snapshot. */
-export function SplitSnapshotPreviewCard(props: PreviewCardProps): React.ReactElement {
+/** Render one unified Univer card for every file touched during the owning Turn. */
+export function PreviewCard(props: PreviewCardProps): React.ReactElement {
   const timeline = props.useChat((snapshot: ChatSnapshot) => snapshot.timeline)
   const cwd = props.useSessions((state: SessionListState) => state.byId[props.sessionId]?.cwd)
   return <PreviewCardContent {...props} timeline={timeline} cwd={cwd} />

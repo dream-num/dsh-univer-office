@@ -4,8 +4,7 @@
 // link) → click-to-maximize / fold / drag / dismiss → ready + session end
 // closes the window and embeds the merge panel → merged panel shows trunk.
 //
-//   node test/client-smoke.mjs combined
-//   node test/client-smoke.mjs split
+//   node test/client-smoke.mjs
 import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { join, dirname, isAbsolute } from 'node:path'
@@ -18,12 +17,6 @@ const packageRoot = process.env.UNIVER_PLUGIN_ROOT
 if (packageRoot !== undefined && !isAbsolute(packageRoot))
   throw new Error('UNIVER_PLUGIN_ROOT must be absolute')
 const root = packageRoot ?? dirname(here)
-const conversationApi = process.argv[2] ?? 'combined'
-if (conversationApi !== 'combined' && conversationApi !== 'split') {
-  throw new Error(
-    `expected Client conversation API "combined" or "split", received "${conversationApi}"`
-  )
-}
 // jsdom/react/react-dom come from this repo's devDependencies.
 const repoRequire = createRequire(import.meta.url)
 const { JSDOM } = repoRequire('jsdom')
@@ -313,10 +306,7 @@ const fakeCtx = {
     }
   },
   get(name) {
-    if (name === 'uiConversation')
-      return conversationApi === 'split' ? { events: conversationEventRegistry } : undefined
-    if (name === 'conversationEvents')
-      return conversationApi === 'combined' ? conversationEventRegistry : undefined
+    if (name === 'uiConversation') return { events: conversationEventRegistry }
     throw new Error(`unexpected ctx.get("${name}")`)
   }
 }
@@ -341,11 +331,9 @@ if ('id' in tailEntry.options) throw new Error('chain entries must not declare a
 if (localeDicts === null || localeDicts.ns !== 'univer')
   throw new Error('locale dictionaries not registered')
 if (conversationDefinition === null || conversationDefinition.kind !== 'univerTurn')
-  throw new Error(`${conversationApi} Conversation definition not registered`)
+  throw new Error('Conversation definition not registered')
 if (pluginExports.inject.join(',') !== 'slots,locale,conversation')
-  throw new Error(
-    'Client must depend only on Conversation services shared by DSH 0.1.1-rc.2 and 0.1.2-alpha.1'
-  )
+  throw new Error('Client must depend only on Conversation services of the supported DSH line')
 if (
   dockEntry.options.locale !== 'univer' ||
   tailEntry.options.locale !== 'univer' ||
@@ -586,18 +574,11 @@ const sessionWithFiles = (files, running, turns = new Map()) => ({
     }
   }
 })
-const runtimeProps = (session) =>
-  conversationApi === 'split'
-    ? {
-        session: { sessionId: session.sessionId, running: session.running },
-        useSession: (selector) =>
-          selector({ sessionId: session.sessionId, running: session.running }),
-        useChat: (selector) => selector(session.chat)
-      }
-    : {
-        session,
-        useSession: (selector) => selector(session)
-      }
+const runtimeProps = (session) => ({
+  session: { sessionId: session.sessionId, running: session.running },
+  useSession: (selector) => selector({ sessionId: session.sessionId, running: session.running }),
+  useChat: (selector) => selector(session.chat)
+})
 const rootEl = document.createElement('div')
 document.body.appendChild(rootEl)
 const reactRoot = createRoot(rootEl)
@@ -1406,4 +1387,4 @@ await waitFor('targets 清空后全部关闭', () => q('.uvf_win') === null && q
 reactRoot.unmount()
 reviewRoot.unmount()
 server.close()
-console.log(`client smoke OK (${conversationApi} Conversation API)`)
+console.log('client smoke OK (uiConversation Conversation API)')
