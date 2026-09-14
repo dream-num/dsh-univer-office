@@ -285,6 +285,12 @@ Gateway Supervisor 只负责：
 - 提供 Gateway origin 与 Viewer origin；
 - 在所属 Cordis fiber 结束时终止插件启动的进程。
 
+Provider 使用 Gateway Supervisor 返回的 loopback origin 访问 Gateway。浏览器 Viewer URL
+默认使用同一个 origin；部署方也可通过 `viewerBaseUrl` 配置一个由反向代理暴露的绝对
+HTTP(S) origin。该配置只改变 Host 生成的浏览器 URL，不改变 Gateway 的监听地址、健康检查、
+Worker 连接或其他 Host 内部请求。反向代理必须把该 origin 的 HTTP 与 WebSocket 请求完整转发到
+插件实际启动的 Gateway，并负责实施与 DSH 等价的访问控制；Gateway 本身不校验 DSH Session。
+
 Unit 的导入、检查、执行和导出由 Unit Content Adapter 启动一次性 Unit Content Worker。Worker 连接 Gateway Supervisor 提供的同一个 Gateway，操作完成或取消后退出，不拥有独立持久状态。Gateway 的 worktree 控制面直接提供 Unit 创建与移除端点，并通过 collaboration service 与 lifecycle event 完成操作。写操作只能针对显式 draft worktree；Gateway 是提交结果和 revision 的唯一依据。
 
 Gateway 通过 SDK `register(router)` 注册 HTTP/WebSocket Endpoint，连接跟踪保留路由参数，并在打开失败或关闭时释放记录。Worktree Unit 删除保留应用现有流程；SDK 的可撤销移除接口 `setUnitRemoved` 在本地 Adapter 中明确返回 `INVALID_REQUEST`，不写入移除状态或改变文件格式。

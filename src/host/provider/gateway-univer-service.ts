@@ -494,13 +494,14 @@ export class GatewayUniverService extends UniverService {
         'GATEWAY_UNAVAILABLE'
       )
     const gateway = status.gateway
+    const viewerBaseUrl = this.config.viewerBaseUrl ?? gateway
     const listing = await new GatewayFileApi(
       new GatewayClient(gateway, this.config.gatewayRequestTimeoutMs)
     ).listWorktrees(file)
     const records = mapWorktrees(listing)
     const entries = await Promise.all(
       records.map(async (record): Promise<WorktreeState> => {
-        const base = `${gateway}/?file=${encodeURIComponent(fileKeyOf(file))}`
+        const base = `${viewerBaseUrl}/?file=${encodeURIComponent(fileKeyOf(file))}`
         const worktree = encodeURIComponent(record.worktreeId)
         const openUrl = `${base}&worktree=${worktree}`
         const worktreeUrl = `${base}&worktree=${worktree}&mode=embedded&scope=worktree`
@@ -535,7 +536,7 @@ export class GatewayUniverService extends UniverService {
       file,
       gateway,
       gatewayRunning: true,
-      viewerUrl: `${gateway}/?file=${encodeURIComponent(fileKeyOf(file))}`,
+      viewerUrl: `${viewerBaseUrl}/?file=${encodeURIComponent(fileKeyOf(file))}`,
       worktrees: entries
     }
   }

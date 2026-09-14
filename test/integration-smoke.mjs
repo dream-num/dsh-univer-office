@@ -50,9 +50,10 @@ await writeFile(
 
 const { foreign, occupiedPort, availablePort } = await occupyPortWithFreeSuccessor()
 const origin = `http://127.0.0.1:${availablePort}`
+const viewerBaseUrl = 'https://office.example.test'
 const service = new GatewayUniverService(
   new Context(),
-  resolveConfig({ gatewayPort: occupiedPort, tools: false })
+  resolveConfig({ gatewayPort: occupiedPort, viewerBaseUrl, tools: false })
 )
 const scoped = { workspace, file }
 
@@ -106,6 +107,18 @@ try {
     throw new Error(`create worktree failed: ${JSON.stringify(worktree)}`)
   }
   const worktreeId = worktree.worktreeId
+  const projected = await service.fileState(scoped)
+  const projectedWorktree = projected.worktrees.find((entry) => entry.worktreeId === worktreeId)
+  const viewerFileKey = encodeURIComponent(Buffer.from(file).toString('base64url'))
+  if (
+    projected.gateway !== origin ||
+    projected.viewerUrl !== `${viewerBaseUrl}/?file=${viewerFileKey}` ||
+    projectedWorktree?.openUrl !==
+      `${viewerBaseUrl}/?file=${viewerFileKey}&worktree=${encodeURIComponent(worktreeId)}` ||
+    !projectedWorktree?.worktreeUrl?.startsWith(`${viewerBaseUrl}/?`)
+  ) {
+    throw new Error(`custom Viewer base URL was not projected: ${JSON.stringify(projected)}`)
+  }
 
   const createdUnit = await service.unit({
     ...scoped,

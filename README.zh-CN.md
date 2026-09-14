@@ -193,6 +193,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | 字段 | 默认值 | 说明 |
 | --- | --- | --- |
 | `gatewayPort` | `9080` | 本地服务起始端口；被占用时逐次加一 |
+| `viewerBaseUrl` | Gateway 本地 origin | 浏览器可见的 HTTP(S) origin；其反向代理需把 HTTP 与 WebSocket 流量转发到 Gateway |
 | `autoStartGateway` | `true` | 首次访问时自动启动服务 |
 | `gatewayStartupTimeoutMs` | `10000` | 服务启动超时 |
 | `gatewayRequestTimeoutMs` | `3000` | 状态读取超时 |
@@ -208,6 +209,8 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `tools` | `true` | 启用 Agent 编辑能力 |
 | `skills` | `true` | 启用内置任务指引 |
 | `telemetry` | `true` | 发送匿名产品遥测 |
+
+远程服务器部署 DSH 时可设置 `viewerBaseUrl`。它只改变发给浏览器的 Viewer URL；Host 工具和 Worker 仍通过 loopback 访问 Gateway。该值必须是绝对 HTTP(S) origin，不能包含凭据、路径、查询或 fragment。反向代理需要把这个 origin 的 HTTP 与 WebSocket 流量转发到 Gateway 实际监听端口；Gateway 不校验 DSH Session，因此还必须把访问限制在与 DSH 相同的可信用户范围内。
 
 ## 遥测
 

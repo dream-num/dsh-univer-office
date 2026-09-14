@@ -16,6 +16,14 @@ const { createUniverRouter, resolveConfig } = UniverPlugin
 const defaultConfig = resolveConfig()
 if (defaultConfig.gatewayPort !== 9080)
   throw new Error(`default Gateway port must be 9080: ${JSON.stringify(defaultConfig)}`)
+if (defaultConfig.viewerBaseUrl !== null)
+  throw new Error(`default Viewer base URL must use the Gateway: ${JSON.stringify(defaultConfig)}`)
+const customViewerConfig = resolveConfig({ viewerBaseUrl: 'https://office.example.test:8443/' })
+if (customViewerConfig.viewerBaseUrl !== 'https://office.example.test:8443') {
+  throw new Error(
+    `custom Viewer base URL was not normalized: ${JSON.stringify(customViewerConfig)}`
+  )
+}
 if (defaultConfig.screenshotMaxPages !== 30 || defaultConfig.screenshotMaxPixels !== 16_777_216) {
   throw new Error(`default screenshot limits drifted: ${JSON.stringify(defaultConfig)}`)
 }
@@ -45,7 +53,10 @@ try {
 for (const invalid of [
   { screenshotMaxPages: 0 },
   { printPdfOperationTimeoutMs: 0 },
-  { resourceCacheRoot: 'relative/cache' }
+  { resourceCacheRoot: 'relative/cache' },
+  { viewerBaseUrl: 'ftp://office.example.test' },
+  { viewerBaseUrl: 'https://office.example.test/viewer' },
+  { viewerBaseUrl: 'https://user:secret@office.example.test' }
 ]) {
   try {
     resolveConfig(invalid)

@@ -193,6 +193,7 @@ The defaults are designed for local use: the service starts at port `9080`. If t
 | Field | Default | Purpose |
 | --- | --- | --- |
 | `gatewayPort` | `9080` | Initial loopback service port; occupied ports advance by one |
+| `viewerBaseUrl` | Gateway loopback origin | Browser-visible HTTP(S) origin whose reverse proxy forwards HTTP and WebSocket traffic to the Gateway |
 | `autoStartGateway` | `true` | Start the service on first use |
 | `gatewayStartupTimeoutMs` | `10000` | Service startup timeout |
 | `gatewayRequestTimeoutMs` | `3000` | State-read timeout |
@@ -208,6 +209,8 @@ The defaults are designed for local use: the service starts at port `9080`. If t
 | `tools` | `true` | Enable agent editing capabilities |
 | `skills` | `true` | Enable bundled task guidance |
 | `telemetry` | `true` | Send anonymous product telemetry |
+
+`viewerBaseUrl` is useful when DSH runs on a remote server. It changes only the Viewer URLs sent to the browser; Host tools and workers continue to use the loopback Gateway. The value must be an absolute HTTP(S) origin without credentials, a path, query, or fragment. Configure the reverse proxy to forward the origin's HTTP and WebSocket traffic to the actual Gateway port, and restrict access to the same trusted users as DSH because the Gateway does not enforce DSH session authentication.
 
 ## Telemetry
 

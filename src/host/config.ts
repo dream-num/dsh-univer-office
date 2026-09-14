@@ -6,6 +6,8 @@ import { resolveDshHome } from './dsh-home.ts'
 export interface Config {
   /** Initial loopback port used by the bundled Gateway; occupied ports advance by one. */
   gatewayPort?: number
+  /** Browser-visible HTTP(S) origin that proxies the bundled Gateway. */
+  viewerBaseUrl?: string
   /** Start the bundled Gateway when file state is first requested. */
   autoStartGateway?: boolean
   /** Maximum time allowed for the bundled Gateway to become healthy. */
@@ -47,6 +49,7 @@ export interface Config {
 /** Fully resolved configuration used by the implementation. */
 export interface ResolvedConfig {
   readonly gatewayPort: number
+  readonly viewerBaseUrl: string | null
   readonly autoStartGateway: boolean
   readonly gatewayStartupTimeoutMs: number
   readonly gatewayRequestTimeoutMs: number
@@ -70,6 +73,7 @@ export interface ResolvedConfig {
 /** Cordis configuration schema. */
 export const Config: z<Config> = z.object({
   gatewayPort: z.natural().max(65535).default(9080),
+  viewerBaseUrl: z.string(),
   autoStartGateway: z.boolean().default(true),
   gatewayStartupTimeoutMs: z.natural().default(10_000),
   gatewayRequestTimeoutMs: z.natural().default(3_000),
@@ -94,6 +98,7 @@ export const Config: z<Config> = z.object({
 export function resolveConfig(config: Config = {}): ResolvedConfig {
   const resolved: ResolvedConfig = {
     gatewayPort: config.gatewayPort ?? 9080,
+    viewerBaseUrl: resolveViewerBaseUrl(config.viewerBaseUrl),
     autoStartGateway: config.autoStartGateway ?? true,
     gatewayStartupTimeoutMs: config.gatewayStartupTimeoutMs ?? 10_000,
     gatewayRequestTimeoutMs: config.gatewayRequestTimeoutMs ?? 3_000,
@@ -139,6 +144,27 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
       throw new Error(`univer: ${name} must be a positive integer`)
   }
   return resolved
+}
+
+function resolveViewerBaseUrl(configured: string | undefined): string | null {
+  if (configured === undefined) return null
+  let url: URL
+  try {
+    url = new URL(configured.trim())
+  } catch {
+    throw new Error('univer: viewerBaseUrl must be an absolute HTTP(S) origin')
+  }
+  if (
+    (url.protocol !== 'http:' && url.protocol !== 'https:') ||
+    url.username.length > 0 ||
+    url.password.length > 0 ||
+    url.pathname !== '/' ||
+    url.search.length > 0 ||
+    url.hash.length > 0
+  ) {
+    throw new Error('univer: viewerBaseUrl must be an absolute HTTP(S) origin')
+  }
+  return url.origin
 }
 
 function resolveResourceCacheRoot(configured: string | undefined): string {
