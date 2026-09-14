@@ -11,12 +11,15 @@
 //     one exact version everywhere; they upgrade as a single compatible family.
 //   - Self-versioned packages follow their own release cadence and are left
 //     untouched, though their declarations must stay exact versions.
-//   - Transitive binding packages are never re-pinned here: their versions must
-//     mirror the declaration in the SDK wrapper that pulls them in.
+//   - Transitive binding packages must not be declared anywhere in this
+//     repository: their SDK wrappers own the versions, and the published
+//     manifest receives them at packaging time from the resolved wrapper
+//     declaration (scripts/inject-runtime-bindings.mjs). Any declaration found
+//     here is removed.
 //   - SDK overrides exist only while tracking a dev build; after an insiders,
 //     alpha, beta, rc, or latest upgrade the overrides must be empty.
 //
-// The script only edits manifests; run `pnpm install` afterwards to refresh
+// The script edits manifests only; run `pnpm install` afterwards to refresh
 // the lockfile and node_modules.
 
 import { readFile, readdir, writeFile } from 'node:fs/promises'
@@ -35,8 +38,7 @@ const selfVersioned = new Set([
   '@univerjs-pro/doc-typst-native-binding'
 ])
 
-// Pulled in through the SDK dependency tree; their version mirrors the wrapper
-// declaration, so cohort unification must not touch them.
+// Pulled in — and versioned — exclusively by their SDK wrappers.
 const transitiveBindings = new Set([
   '@univerjs-pro/engine-formula-rust-binding',
   '@univerjs-pro/exchange-node-binding'
@@ -88,20 +90,26 @@ async function rePinManifest(manifestPath, sdkVersion) {
   const source = await readFile(manifestPath, 'utf8')
   const manifest = JSON.parse(source)
   let changed = 0
+  let removedBindings = 0
   for (const section of dependencySections) {
     const entries = manifest[section]
     if (entries === null || typeof entries !== 'object' || Array.isArray(entries)) continue
-    for (const [name, specifier] of Object.entries(entries)) {
-      if (isSdkDependency(name) && specifier !== sdkVersion) {
+    for (const name of Object.keys(entries)) {
+      if (transitiveBindings.has(name)) {
+        delete entries[name]
+        removedBindings++
+        continue
+      }
+      if (isSdkDependency(name) && entries[name] !== sdkVersion) {
         entries[name] = sdkVersion
         changed++
       }
     }
   }
-  if (changed > 0) {
+  if (changed > 0 || removedBindings > 0) {
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
   }
-  return { manifestPath, changed }
+  return { changed, removedBindings }
 }
 
 // Line-based edit: pnpm-workspace.yaml has no SDK overrides today, and the
@@ -147,18 +155,23 @@ async function removeSdkOverrides() {
 
 const sdkVersion = parseSdkVersion()
 let pinned = 0
+let removedBindings = 0
 for (const manifestPath of await collectManifests()) {
-  const { changed } = await rePinManifest(manifestPath, sdkVersion)
+  const { changed, removedBindings: removedHere } = await rePinManifest(manifestPath, sdkVersion)
   pinned += changed
+  removedBindings += removedHere
   console.log(
     `${manifestPath}: ${changed} SDK ${changed === 1 ? 'entry' : 'entries'} → ${sdkVersion}`
   )
+  for (let index = 0; index < removedHere; index += 1) {
+    console.log(`${manifestPath}: removed a transitive binding declaration (the wrapper owns it)`)
+  }
 }
 const removedOverrides = await removeSdkOverrides()
 for (const name of removedOverrides) {
   console.log(`pnpm-workspace.yaml: removed SDK override ${name}`)
 }
-if (pinned === 0 && removedOverrides.length === 0) {
+if (pinned === 0 && removedBindings === 0 && removedOverrides.length === 0) {
   console.log(`SDK cohort already pinned to ${sdkVersion}; nothing to change.`)
 }
 console.log('Next: pnpm install, then build and run the affected smoke tests.')

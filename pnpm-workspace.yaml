@@ -1,6 +1,14 @@
 packages:
   - 'packages/*'
 
+# The bindings install transitively through their declared wrappers; hoisting
+# them to the workspace root keeps them resolvable for the name-based build
+# scripts and the NODE_PATH-spawned Gateway/Worker artifacts, whose bundles
+# embed the wrapper code instead of resolving through a wrapper package.
+publicHoistPattern:
+  - '@univerjs-pro/engine-formula-rust-binding'
+  - '@univerjs-pro/exchange-node-binding'
+
 allowBuilds:
   esbuild: false
   protobufjs: false

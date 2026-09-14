@@ -91,8 +91,6 @@
   "dependencies": {
     "@puppeteer/browsers": "^3.2.0",
     "@univerjs-pro/cli-assets": "0.1.0",
-    "@univerjs-pro/engine-formula-rust-binding": "1.0.0-insiders.20260910-22fe9c7",
-    "@univerjs-pro/exchange-node-binding": "0.1.2",
     "libsql": "^0.5.29",
     "puppeteer-core": "^25.7.0"
   },

@@ -14,12 +14,6 @@ importers:
       '@univerjs-pro/cli-assets':
         specifier: 0.1.0
         version: 0.1.0
-      '@univerjs-pro/engine-formula-rust-binding':
-        specifier: 1.0.0-insiders.20260910-22fe9c7
-        version: 1.0.0-insiders.20260910-22fe9c7
-      '@univerjs-pro/exchange-node-binding':
-        specifier: 0.1.2
-        version: 0.1.2
       libsql:
         specifier: ^0.5.29
         version: 0.5.29

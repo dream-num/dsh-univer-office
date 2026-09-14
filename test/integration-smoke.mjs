@@ -2,7 +2,7 @@ import { mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promis
 import { createServer as createHttpServer } from 'node:http'
 import { createServer as createNetServer } from 'node:net'
 import { tmpdir } from 'node:os'
-import { isAbsolute, join } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { launch } from 'puppeteer-core'
 
@@ -16,17 +16,64 @@ const manifestPath =
     ? new URL('../package.json', import.meta.url)
     : join(packageRoot, 'package.json')
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
-if (manifest.dependencies?.['@univerjs-pro/exchange-node'] !== undefined) {
-  throw new Error(
-    'published package must bundle @univerjs-pro/exchange-node instead of installing it at runtime'
-  )
-}
 const gatewayArtifact =
   packageRoot === undefined
     ? new URL('../artifacts/gateway.cjs', import.meta.url)
     : join(packageRoot, 'artifacts', 'gateway.cjs')
 if ((await readFile(gatewayArtifact, 'utf8')).includes('require("@univerjs-pro/exchange-node")')) {
   throw new Error('bundled Gateway must not require @univerjs-pro/exchange-node at runtime')
+}
+// Release manifest gate: the repository manifests never declare the native
+// bindings (their wrappers own the versions); the published dist manifest
+// receives them at packaging time from scripts/inject-runtime-bindings.mjs.
+// Verifying against an installed package therefore asserts the opposite — the
+// published manifest must install the bindings as direct dependencies, because
+// pnpm consumers cannot resolve transitive dependencies from the plugin bundles.
+{
+  const bindingNames = [
+    '@univerjs-pro/engine-formula-rust-binding',
+    '@univerjs-pro/exchange-node-binding'
+  ]
+  const declaredBindings = bindingNames.filter(
+    (binding) =>
+      manifest.dependencies?.[binding] !== undefined ||
+      manifest.devDependencies?.[binding] !== undefined ||
+      manifest.peerDependencies?.[binding] !== undefined
+  )
+  if (packageRoot === undefined && declaredBindings.length > 0) {
+    throw new Error(
+      `transitive bindings must not be declared in the repository manifest: ${declaredBindings.join(', ')}`
+    )
+  }
+  if (packageRoot !== undefined && declaredBindings.length !== bindingNames.length) {
+    throw new Error(
+      `published manifest must install the native bindings as direct dependencies: ${bindingNames.join(', ')}`
+    )
+  }
+  const { createRequire } = await import('node:module')
+  const repoRequire = createRequire(manifestPath)
+  for (const binding of bindingNames) {
+    let cursor = dirname(repoRequire.resolve(binding))
+    let installed
+    for (;;) {
+      try {
+        installed = JSON.parse(await readFile(join(cursor, 'package.json'), 'utf8'))
+        break
+      } catch {
+        const parent = dirname(cursor)
+        if (parent === cursor) throw new Error(`package manifest not found for ${binding}`)
+        cursor = parent
+      }
+    }
+    if (
+      installed.name !== binding ||
+      !/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(installed.version ?? '')
+    ) {
+      throw new Error(
+        `resolved ${binding} to an unexpected package: ${installed.name}@${installed.version}`
+      )
+    }
+  }
 }
 const entry =
   packageRoot === undefined

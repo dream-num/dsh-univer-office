@@ -28,7 +28,7 @@ pnpm run update:univer-sdk --sdk_version <exact-version>
 - `lint:fix` and `format` mutate files. Run them only when their full write scope is intended and reviewed.
 - `format` and `format:check` are repository-wide. Do not create unrelated formatting churn. For a narrow change, check supported files directly with `pnpm exec oxfmt --check <files>`.
 - `pnpm run build` builds Host/Client, Worker, Gateway, Render Machine, and Viewer. Use `build:lib`, `build:worker`, `build:gateway`, `build:render`, or `build:viewer` for a narrower build.
-- `pnpm run update:univer-sdk` re-pins the Univer SDK cohort to one exact version in every manifest, leaves self-versioned and transitive binding packages untouched, and drops SDK entries from `pnpm-workspace.yaml` overrides; run `pnpm install` and the full build afterwards.
+- `pnpm run update:univer-sdk` re-pins the Univer SDK cohort to one exact version in every manifest, leaves self-versioned packages untouched, strips any transitive binding declarations (the wrappers own those versions), and drops SDK entries from `pnpm-workspace.yaml` overrides; run `pnpm install` and the full build afterwards.
 - Smoke tests consume `lib/` and `artifacts/`. Always build the affected target from the current source before running its smoke test.
 
 Choose the narrowest validation that proves the change:

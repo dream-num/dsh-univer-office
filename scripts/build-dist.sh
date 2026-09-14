@@ -30,10 +30,16 @@ node "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR"
 mkdir -p "$PKG_DIR/scripts"
 cp "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR/scripts/"
 cp "$ROOT/package.json" "$ROOT/README.md" "$ROOT/README.zh-CN.md" "$ROOT/cordis.patch.yml" "$ROOT/LICENSE" "$PKG_DIR/"
+# The repository manifests never declare the native bindings (their wrappers own
+# the versions); the published manifest installs them as direct dependencies
+# with the versions resolved from the installed tree, because dsh consumers use
+# pnpm and transitive dependencies are not resolvable from the plugin bundles.
+node "$ROOT/scripts/inject-runtime-bindings.mjs" "$PKG_DIR/package.json"
 
-# 2. npm tarball (univer-office-<version>.tgz) from the package manifest.
-rm -f "$DIST"/univer-office-*.tgz
-(cd "$ROOT" && npm pack --pack-destination "$DIST" >/dev/null)
+# 2. npm tarball from the assembled package directory, so the published
+#    manifest carries the injected native binding dependencies.
+rm -f "$DIST"/dsh-univer-office-*.tgz
+(cd "$PKG_DIR" && npm pack --pack-destination "$DIST" --ignore-scripts >/dev/null)
 
 # 3. End-user zip: package contents (installed via `dsh plugin add`).
 rm -f "$ROOT/univer-dsh-plugin.zip"

@@ -1,4 +1,3 @@
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 /** Bundled Gateway executable in the published package. */
@@ -18,13 +17,11 @@ export const RENDER_MACHINE_ROOT = fileURLToPath(
 )
 
 // The worker and gateway resolve their native dependencies (@univerjs-pro/exchange-node-binding,
-// engine-formula-rust-binding, libsql) through this plugin's own node_modules,
-// which npm populates from the declared runtime dependencies. This mirrors the
-// univer-cli model: binaries come from the registry instead of being copied into this package.
-const require = createRequire(import.meta.url)
+// engine-formula-rust-binding, libsql) through this plugin's own node_modules. The bindings are
+// never declared anywhere in this repository — the published manifest declares their wrappers
+// (@univerjs-pro/engine-formula-rust, @univerjs-pro/exchange-node) at the SDK baseline and npm
+// installs the bindings transitively, while the dev workspace hoists them via publicHoistPattern
+// because the bundles embed the wrapper code instead of resolving through a wrapper package.
 
 /** This plugin's node_modules root — the NODE_PATH for spawned worker/gateway processes. */
 export const PLUGIN_NODE_MODULES = fileURLToPath(new URL('../../node_modules/', import.meta.url))
-
-/** Native formula binding package root, resolved from the plugin's dependencies. */
-export const FORMULA_BINDING_ROOT = require.resolve('@univerjs-pro/engine-formula-rust-binding')

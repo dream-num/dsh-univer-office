@@ -255,7 +255,7 @@ bundled skill provider -> DSH skill registry
 7. Render Machine browser page 使用与 runtime 精确同版本的 `@univer-cli/univer-render-page` 提供页面协议与 render operations，并注入本仓库与 Viewer 共享的 Univer composition；Viewer、render preset 和 IMPORTRANGE plugin 是本仓库的普通源码。仓库不提交上游源码快照目录或预构建 Viewer。
 8. Skill Provider 只负责发现与加载包内 Markdown，不调用 Service，也不复制工具 schema。
 9. 所有 Cordis 注册通过 effect 生命周期撤销；插件卸载后不得遗留路由、工具、Skill provider、定时器或子进程。
-10. `@univerjs/`、`@univerjs-pro/`、`@univer-cli/` 前缀的 SDK 依赖是一个跨应用兼容契约，用 `pnpm update:univer-sdk --sdk_version <精确版本>` 统一升级为同一精确版本，升级后 pnpm-workspace.yaml `overrides` 不得残留任何 SDK 条目。`@univerjs/icons`、`@univerjs-pro/cli-assets`、`@univerjs-pro/doc-typst-native-binding` 按自身发布节奏声明精确版本。`@univerjs-pro/engine-formula-rust-binding` 与 `@univerjs-pro/exchange-node-binding` 是上游依赖树中的传递绑定包：它们作为发布物的运行时依赖显式声明，但精确版本必须镜像拉入它们的 SDK wrapper 的声明，源码不直接 import，只经 wrapper 包使用；构建脚本动态读取解析后的实际版本，不写死版本号。
+10. `@univerjs/`、`@univerjs-pro/`、`@univer-cli/` 前缀的 SDK 依赖是一个跨应用兼容契约，用 `pnpm update:univer-sdk --sdk_version <精确版本>` 统一升级为同一精确版本，升级后 pnpm-workspace.yaml `overrides` 不得残留任何 SDK 条目。`@univerjs/icons`、`@univerjs-pro/cli-assets`、`@univerjs-pro/doc-typst-native-binding` 按自身发布节奏声明精确版本。`@univerjs-pro/engine-formula-rust-binding` 与 `@univerjs-pro/exchange-node-binding` 是上游依赖树中的传递绑定包：本仓库任何 package.json 都不得声明它们，源码也不直接 import；bundle 内联两个 wrapper 的代码，绑定包保持 external。发布物以 dsh 的 pnpm 安装为前提（隔离布局下插件 bundle 无法解析传递依赖），因此打包时由 `scripts/inject-runtime-bindings.mjs` 把绑定包按安装树解析到的实际版本写入 dist manifest 的 dependencies，并与 pnpm store 中 wrapper 的声明交叉校验；该差异由打包生成，不入库。构建与发布脚本一律按包名操作、动态读取解析后的实际版本，不写死版本号。开发工作区用 pnpm `publicHoistPattern` 把绑定包提升到根 `node_modules`：bundle 内联了 wrapper 代码，运行时 `require(binding)` 从仓库根解析。integration smoke 对仓库 manifest 断言零绑定包声明，对已安装包断言绑定包已作为直接依赖注入。
 
 ## 6. Service Definition
 
