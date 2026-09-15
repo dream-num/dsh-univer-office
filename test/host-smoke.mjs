@@ -206,6 +206,10 @@ try {
   const gated = await json('/univer-api/status')
   if (gated.response.status !== 401 || gated.body.code !== 'UNAUTHORIZED')
     throw new Error(`connection trust fence must gate /univer-api: ${JSON.stringify(gated.body)}`)
+  gateRejection = 403
+  const forbidden = await json('/univer-api/status')
+  if (forbidden.response.status !== 403 || forbidden.body.code !== 'FORBIDDEN')
+    throw new Error(`fence 403 must stay distinct from 401: ${JSON.stringify(forbidden.body)}`)
   gateRejection = undefined
   if (calls[1]?.[1]?.file !== REAL_FILE)
     throw new Error('state route did not pass the validated file')

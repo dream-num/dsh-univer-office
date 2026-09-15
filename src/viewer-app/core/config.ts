@@ -109,10 +109,12 @@ export function isProxyServedViewer(): boolean {
 export function resolveWebSocketUrl(url: string): string {
   if (!isProxyServedViewer()) return url
   const target = new URL(url, location.origin)
-  const tunnel = new URL(VIEWER_WS_TUNNEL, target.origin)
+  // Anchor the tunnel on the serving origin: the endpoint URL must never make the browser
+  // dial a foreign (e.g. loopback) host even if a runtime config ever returns absolute URLs.
+  const tunnel = new URL(VIEWER_WS_TUNNEL, location.origin)
   tunnel.searchParams.set('target', `${target.pathname}${target.search}`)
-  if (target.protocol === 'ws:') tunnel.protocol = 'ws:'
-  else if (target.protocol === 'wss:') tunnel.protocol = 'wss:'
+  if (target.protocol === 'wss:') tunnel.protocol = 'wss:'
+  else if (target.protocol === 'ws:') tunnel.protocol = 'ws:'
   return tunnel.toString()
 }
 

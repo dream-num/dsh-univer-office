@@ -21,8 +21,8 @@ export function createUniverRouter(
     if (rejection !== undefined) {
       sendJson(response, rejection, {
         ok: false,
-        code: 'UNAUTHORIZED',
-        message: 'browser authentication is required'
+        code: rejection === 403 ? 'FORBIDDEN' : 'UNAUTHORIZED',
+        message: 'DSH browser authentication is required'
       })
       return
     }

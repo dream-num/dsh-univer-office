@@ -71,15 +71,21 @@ DSH WebServer 的 upgrade 注册只支持精确路径，而 Gateway 的 WS 端�
 
 ## 失败模式
 
-- Gateway 不可用（含自动启动失败）：代理返回 502，原因写日志；不改变 Supervisor 生命周期语义。
-- 范围拒绝：文档 403（iframe 显示错误），`/uf` 与 WS upgrade 403。
+- Gateway 不可用（含自动启动失败）：代理返回 502。
+- 范围拒绝：文档 403（iframe 显示错误），`/uf` 与 WS upgrade 403；cookie 中含畸形段时按空范围
+  处理（fail-closed），不会抛入调用方。
 - 隧道上游连接失败：销毁两侧 socket；帧在 upstream OPEN 前缓冲不丢弃；close/error 双向传播；
-  插件 unload 时关闭全部桥接连接（quiescence）。
-- 非法 target（非 `/uf/` 开头）、无效 fileKey、非 GET/HEAD 的静态请求：400/403/404 拒绝。
+  插件 unload 时关闭全部桥接连接（quiescence）。桥接每 5 分钟复检一次绑定的会话，全部失效
+  即关闭（会话结束后的存活上界为一个复检周期）。
+- 非法 target（非 `/uf/` 开头）或无效 fileKey：403。静态面的非 GET/HEAD 请求由代理原样转发、
+  由 Gateway 静态处理器拒绝。
+- 已知限制：两个标签页并发首开不同会话的 Viewer 时，cookie 以最后写入者为准，被逐出方的后续
+  `/uf` 请求会 403，刷新该标签页即恢复。
 
 ## 测试
 
 - `test/host-smoke.mjs`：配置面（`viewerBaseUrl` 不存在、投影为相对路径）。
 - `test/integration-smoke.mjs`：真实 Gateway + 真实路由 handler：connection 门 401/放行、
-  文档 200 + Set-Cookie、范围外文件 403、`/uf` GET 200 / 无 cookie 403、WS 隧道
-  open + 事件帧到达、unload 后桥接清空。
+  文档 200 + Set-Cookie、范围外文件 403、畸形 cookie fail-closed、`/uf` GET 200 / 无 cookie 403、
+  WS 隧道 open + 事件帧到达、dispose 后隧道客户端被关闭。connection 门以桩注入（真实 fence 的
+  trustedHosts/cookie 语义由 DSH 侧保证）。

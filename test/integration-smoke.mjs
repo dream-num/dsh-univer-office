@@ -266,6 +266,12 @@ try {
     if (foreignApi.status !== 403) {
       throw new Error(`/uf outside the bound session scope must be refused: ${foreignApi.status}`)
     }
+    const malformedApi = await fetch(`${ufBase}/worktrees`, {
+      headers: { cookie: 'univer-viewer-sessions=%zz' }
+    })
+    if (malformedApi.status !== 403) {
+      throw new Error(`malformed scope cookie must fail closed: ${malformedApi.status}`)
+    }
     const scopedApi = await fetch(`${ufBase}/worktrees`, { headers: { cookie: scopeCookie } })
     if (!scopedApi.ok) {
       throw new Error(`scoped /uf request failed: ${scopedApi.status} ${await scopedApi.text()}`)
@@ -328,6 +334,44 @@ try {
     })
     if (refusedTunnel !== 403) {
       throw new Error(`tunnel without a bound session must be refused: ${String(refusedTunnel)}`)
+    }
+    const malformedTunnel = await new Promise((resolve) => {
+      const client = new WebSocket(
+        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`,
+        { headers: { cookie: 'univer-viewer-sessions=%zz' } }
+      )
+      client.on('unexpected-response', (_req, response) => resolve(response.statusCode))
+      client.on('open', () => {
+        client.terminate()
+        resolve('opened')
+      })
+      client.on('error', () => resolve('error'))
+    })
+    if (malformedTunnel !== 403) {
+      throw new Error(`tunnel with a malformed cookie must fail closed: ${String(malformedTunnel)}`)
+    }
+
+    const disposedClosed = await new Promise((resolve, reject) => {
+      const client = new WebSocket(
+        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`,
+        { headers: { cookie: scopeCookie } }
+      )
+      const timer = setTimeout(() => {
+        client.terminate()
+        reject(new Error('tunnel client was not closed by proxy.dispose()'))
+      }, 10_000)
+      client.on('open', () => proxy.dispose())
+      client.on('close', () => {
+        clearTimeout(timer)
+        resolve('closed')
+      })
+      client.on('error', (error) => {
+        clearTimeout(timer)
+        reject(error)
+      })
+    })
+    if (disposedClosed !== 'closed') {
+      throw new Error(`dispose did not close live bridges: ${String(disposedClosed)}`)
     }
     await service.worktreeAction({
       ...scoped,

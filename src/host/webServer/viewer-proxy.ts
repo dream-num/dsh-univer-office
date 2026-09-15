@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import http from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocket, WebSocketServer } from 'ws'
-import type { SessionStore } from '@deepseek-ai/dsh-session'
+import { SessionId, type SessionStore } from '@deepseek-ai/dsh-session'
 import { VIEWER_BASE, VIEWER_SESSION_COOKIE, VIEWER_WS_TUNNEL } from '../../shared/wire/viewer.ts'
 import { resolveAuthorizedFile } from './session-scope.ts'
 
@@ -30,6 +30,8 @@ export interface ViewerProxy {
 /** Upper bound on sessions remembered per browser so scope checking stays a constant small set. */
 const MAX_SCOPED_SESSIONS = 8
 const COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
+/** How often a live tunnel re-checks that its authorizing sessions still exist. */
+const SESSION_REVALIDATE_MS = 5 * 60 * 1000
 
 function reject(res: ServerResponse, status: 401 | 403 | 404 | 502): void {
   res.writeHead(status, { 'content-type': 'text/plain; charset=utf-8' })
@@ -84,7 +86,8 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
 
   const upgradeHandler = (req: IncomingMessage, socket: Duplex, head: Buffer): void => {
     const fail = (status: 401 | 403): void => {
-      socket.write(`HTTP/1.1 ${String(status)} status\r\nconnection: close\r\n\r\n`)
+      const reason = status === 401 ? 'unauthorized' : 'forbidden'
+      socket.write(`HTTP/1.1 ${String(status)} ${reason}\r\nconnection: close\r\n\r\n`)
       socket.destroy()
     }
     const rejection = connection.requestRejection(req)
@@ -117,7 +120,7 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
     void (async () => {
       for (const sessionId of sessionIds) {
         if (await isFileInSessionScope(decodeFileKey(fileKey), sessionId, sessions)) {
-          bridgeTunnel(req, socket, head, target, gatewayOrigin)
+          bridgeTunnel(req, socket, head, target, gatewayOrigin, sessionIds)
           return
         }
       }
@@ -130,7 +133,8 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
     socket: Duplex,
     head: Buffer,
     target: string,
-    resolveOrigin: () => Promise<string>
+    resolveOrigin: () => Promise<string>,
+    sessionIds: readonly string[]
   ): void => {
     void (async () => {
       const upstreamUrl = new URL(target, rewriteLoopback(await resolveOrigin()))
@@ -146,9 +150,16 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
                 upstreamUrl,
                 protocols.split(',').map((protocol) => protocol.trim())
               )
+        // A tunnel must not outlive the sessions that authorized it; revalidate periodically
+        // and close when none of the bound sessions is live any more.
+        const revalidate = setInterval(() => {
+          const alive = sessionIds.some((id) => sessions.get(SessionId(id)) !== undefined)
+          if (!alive) close()
+        }, SESSION_REVALIDATE_MS)
         const close = (): void => {
           if (closed) return
           closed = true
+          clearInterval(revalidate)
           bridges.delete(close)
           try {
             client.close()
@@ -182,7 +193,10 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
     })
   }
 
+  let disposed = false
   const dispose = (): void => {
+    if (disposed) return
+    disposed = true
     // Deleting the current entry while a Set is being iterated is safe.
     for (const close of bridges) close()
     wss.close()
@@ -314,14 +328,22 @@ function parseRequestCookies(rawCookies: string | undefined): Map<string, string
   return cookies
 }
 
-/** Read the session ids this browser is currently scoped to (empty when unbound). */
+/** Read the session ids this browser is currently scoped to (empty when unbound or malformed). */
 function readScopeCookie(req: IncomingMessage): string[] {
   const raw = parseRequestCookies(req.headers.cookie).get(VIEWER_SESSION_COOKIE)
   if (raw === undefined || raw.length === 0) return []
-  return raw
-    .split(',')
-    .map((id) => decodeURIComponent(id))
-    .filter((id) => id.length > 0)
+  const ids: string[] = []
+  for (const segment of raw.split(',')) {
+    // A malformed segment must fail closed (empty scope), never throw into the caller:
+    // the upgrade path has no error boundary above it.
+    try {
+      const id = decodeURIComponent(segment)
+      if (id.length > 0) ids.push(id)
+    } catch {
+      /* malformed percent-encoding; skip the segment */
+    }
+  }
+  return ids
 }
 
 /** Bind this browser to the session's scope, keeping the most recent bounded set of sessions. */
