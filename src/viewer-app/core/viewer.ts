@@ -61,6 +61,7 @@ import {
   UNIT_TYPE_SLIDE,
   type UnitType
 } from '@univer/collab-gateway-contract'
+import { isProxyServedViewer, resolveWebSocketUrl } from './config'
 import {
   blockLocalEditingCommands,
   enforceSheetViewerReadOnlyPermissions,
@@ -130,6 +131,10 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
           ...(opts.worktreeId === undefined ? {} : { worktreeId: opts.worktreeId })
         }
   )
+  if (isProxyServedViewer()) {
+    // The comb WebSocket dials the DSH same-origin tunnel; every HTTP /uf URL is already proxied.
+    urls.collabWebSocketUrl = resolveWebSocketUrl(urls.collabWebSocketUrl)
+  }
 
   const univer = new Univer({
     locale: opts.locale,

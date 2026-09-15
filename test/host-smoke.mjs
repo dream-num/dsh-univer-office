@@ -16,12 +16,9 @@ const { createUniverRouter, resolveConfig } = UniverPlugin
 const defaultConfig = resolveConfig()
 if (defaultConfig.gatewayPort !== 9080)
   throw new Error(`default Gateway port must be 9080: ${JSON.stringify(defaultConfig)}`)
-if (defaultConfig.viewerBaseUrl !== null)
-  throw new Error(`default Viewer base URL must use the Gateway: ${JSON.stringify(defaultConfig)}`)
-const customViewerConfig = resolveConfig({ viewerBaseUrl: 'https://office.example.test:8443/' })
-if (customViewerConfig.viewerBaseUrl !== 'https://office.example.test:8443') {
+if ('viewerBaseUrl' in defaultConfig) {
   throw new Error(
-    `custom Viewer base URL was not normalized: ${JSON.stringify(customViewerConfig)}`
+    'viewerBaseUrl was removed: the Viewer is served on the DSH origin (same-origin proxy)'
   )
 }
 if (defaultConfig.screenshotMaxPages !== 30 || defaultConfig.screenshotMaxPixels !== 16_777_216) {
@@ -53,10 +50,7 @@ try {
 for (const invalid of [
   { screenshotMaxPages: 0 },
   { printPdfOperationTimeoutMs: 0 },
-  { resourceCacheRoot: 'relative/cache' },
-  { viewerBaseUrl: 'ftp://office.example.test' },
-  { viewerBaseUrl: 'https://office.example.test/viewer' },
-  { viewerBaseUrl: 'https://user:secret@office.example.test' }
+  { resourceCacheRoot: 'relative/cache' }
 ]) {
   try {
     resolveConfig(invalid)
@@ -117,18 +111,24 @@ const state = {
   file: FILE,
   gateway: 'http://127.0.0.1:9123',
   gatewayRunning: true,
-  viewerUrl: 'http://127.0.0.1:9123/?file=KEY',
+  viewerUrl: '/univer-viewer/?file=KEY',
   worktrees: [
     {
       worktreeId: WORKTREE,
       name: 'host smoke',
       status: 'ready',
       units: [{ unitId: 'unit-1', name: 'Sheet 1', type: 'sheet', kind: 'modified' }],
-      openUrl: 'http://127.0.0.1:9123/?file=KEY&worktree=wt-host-smoke',
-      worktreeUrl: 'http://127.0.0.1:9123/?file=KEY&worktree=wt-host-smoke&scope=worktree',
-      mergeUrl: 'http://127.0.0.1:9123/?file=KEY&worktree=wt-host-smoke&scope=mergePreview'
+      openUrl: '/univer-viewer/?file=KEY&worktree=wt-host-smoke',
+      worktreeUrl: '/univer-viewer/?file=KEY&worktree=wt-host-smoke&mode=embedded&scope=worktree',
+      mergeUrl: '/univer-viewer/?file=KEY&worktree=wt-host-smoke&mode=embedded&scope=mergePreview'
     }
   ]
+}
+let gateRejection
+const connection = {
+  requestRejection() {
+    return gateRejection
+  }
 }
 const service = {
   async gatewayStatus() {
@@ -156,7 +156,7 @@ const sessions = {
   }
 }
 
-const server = createServer(createUniverRouter(service, sessions))
+const server = createServer(createUniverRouter(service, sessions, connection))
 await new Promise((resolve, reject) => {
   server.once('error', reject)
   server.listen(0, '127.0.0.1', resolve)
@@ -196,11 +196,17 @@ try {
   )
   if (
     fileState.response.status !== 200 ||
-    fileState.body.viewerUrl !== state.viewerUrl ||
-    fileState.body.worktrees?.[0]?.openUrl !== state.worktrees[0].openUrl
+    fileState.body.viewerUrl !== `${state.viewerUrl}&sessionId=${SESSION}` ||
+    fileState.body.worktrees?.[0]?.openUrl !== `${state.worktrees[0].openUrl}&sessionId=${SESSION}`
   ) {
-    throw new Error(`state route failed: ${JSON.stringify(fileState.body)}`)
+    throw new Error(`state route failed to scope projected URLs: ${JSON.stringify(fileState.body)}`)
   }
+
+  gateRejection = 401
+  const gated = await json('/univer-api/status')
+  if (gated.response.status !== 401 || gated.body.code !== 'UNAUTHORIZED')
+    throw new Error(`connection trust fence must gate /univer-api: ${JSON.stringify(gated.body)}`)
+  gateRejection = undefined
   if (calls[1]?.[1]?.file !== REAL_FILE)
     throw new Error('state route did not pass the validated file')
 

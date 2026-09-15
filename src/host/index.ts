@@ -13,6 +13,7 @@ export type { UniverConfig }
 export { GatewayUniverService } from './provider/gateway-univer-service.ts'
 export { UniverService } from './service/univer-service.ts'
 export { createUniverRouter } from './webServer/router.ts'
+export { createViewerProxy, type ConnectionTrust } from './webServer/viewer-proxy.ts'
 export {
   captureTelemetry,
   parseTelemetryState,
@@ -27,6 +28,7 @@ export type {
 export * from '../shared/wire/actions.ts'
 export * from '../shared/wire/state.ts'
 export * from '../shared/wire/status.ts'
+export * from '../shared/wire/viewer.ts'
 
 export const name = 'dsh-univer-office'
 

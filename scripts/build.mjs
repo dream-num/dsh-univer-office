@@ -62,7 +62,12 @@ if (target === 'all' || target === 'lib') {
     target: 'node22',
     format: 'esm',
     sourcemap: false,
-    legalComments: 'none'
+    legalComments: 'none',
+    // Bundled CJS dependencies (the WS relay uses `ws`) require bare Node builtins
+    // (`events`, `stream`); ESM output has no ambient `require`, so provide one.
+    banner: {
+      js: "import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);"
+    }
   })
 
   // Browser half: react stays external (the DSH client runtime provides it);
@@ -217,6 +222,10 @@ if (target === 'all' || target === 'viewer') {
   await buildVite({
     configFile: false,
     root: viewerRoot,
+    // One base on every origin: the Gateway mounts the same prefix, and the DSH
+    // same-origin proxy forwards `/univer-viewer/*` verbatim (see
+    // docs/viewer-same-origin-deployment.md).
+    base: '/univer-viewer/',
     build: {
       target: 'esnext',
       outDir: viewerOut,
@@ -250,7 +259,12 @@ if (target === 'all' || target === 'viewer') {
 
 async function assertViewerRibbonUtilityOrder(viewerOut) {
   const html = await readFile(resolve(viewerOut, 'index.html'), 'utf8')
-  const cssPaths = [...html.matchAll(/href="([^"]+\.css)"/g)].map((match) => match[1])
+  const viewerBase = '/univer-viewer/'
+  const cssPaths = [...html.matchAll(/href="([^"]+\.css)"/g)]
+    .map((match) => match[1])
+    .map((href) =>
+      href.startsWith(viewerBase) ? href.slice(viewerBase.length) : href.replace(/^\/+/, '')
+    )
   if (cssPaths.length === 0) throw new Error('viewer build produced no linked CSS')
   const css = (
     await Promise.all(

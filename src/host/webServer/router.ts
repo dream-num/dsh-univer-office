@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
 import { UniverError } from '../service/errors.ts'
 import type { UniverService } from '../service/univer-service.ts'
+import type { ConnectionTrust } from './viewer-proxy.ts'
 import { gatewayStartRoute } from './routes/gateway.ts'
 import { stateRoute } from './routes/state.ts'
 import { statusRoute } from './routes/status.ts'
@@ -9,9 +10,22 @@ import { worktreeActionRoute } from './routes/worktree-action.ts'
 
 const MAX_BODY_BYTES = 64 * 1024
 
-/** Create the `/univer-api` HTTP dispatcher. */
-export function createUniverRouter(service: UniverService, sessions: SessionStore) {
+/** Create the `/univer-api` HTTP dispatcher behind the DSH connection trust fence. */
+export function createUniverRouter(
+  service: UniverService,
+  sessions: SessionStore,
+  connection: ConnectionTrust
+) {
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
+    const rejection = connection.requestRejection(request)
+    if (rejection !== undefined) {
+      sendJson(response, rejection, {
+        ok: false,
+        code: 'UNAUTHORIZED',
+        message: 'browser authentication is required'
+      })
+      return
+    }
     try {
       const url = new URL(request.url ?? '/', 'http://localhost')
       if (request.method === 'GET' && url.pathname === '/univer-api/status') {

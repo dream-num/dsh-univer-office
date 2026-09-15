@@ -23,7 +23,12 @@ import {
   type Appearance
 } from '../appearance'
 import type { AppConfig, AppContentScope, AppMode, WriteLocationOptions } from '../core/config'
-import { gatewayFileEndpointFromKey, ufPrefix, writeLocation } from '../core/config'
+import {
+  gatewayFileEndpointFromKey,
+  resolveWebSocketUrl,
+  ufPrefix,
+  writeLocation
+} from '../core/config'
 import { type EventChannel, openEventChannel } from '../core/events'
 import { loadViewerLocale } from '../core/locales/generated/load'
 import {
@@ -782,7 +787,7 @@ export class App {
 
   private subscribeUniverfile(): void {
     this.univerfileEvents?.close()
-    const url = `${ufPrefix(this.cfg)}/events`
+    const url = resolveWebSocketUrl(`${ufPrefix(this.cfg)}/events`)
     this.univerfileEvents = openEventChannel(url, {
       worktree: (e) => this.onWorktreeEvent(e.worktree),
       // Trunk units must stay current regardless of the active view: the sidebar "Files"
@@ -807,7 +812,7 @@ export class App {
 
   private subscribeWorktree(worktreeId: string): void {
     this.worktreeEvents?.close()
-    const url = `${ufPrefix(this.cfg)}/worktrees/${worktreeId}/events`
+    const url = resolveWebSocketUrl(`${ufPrefix(this.cfg)}/worktrees/${worktreeId}/events`)
     this.worktreeEvents = openEventChannel(url, {
       reset: () => {
         toast(t().toast.agentReset)

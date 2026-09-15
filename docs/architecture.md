@@ -283,14 +283,19 @@ Gateway Supervisor 只负责：
 - 选择并验证监听端口；
 - 启动随包发布、由 `src/gateway-app` 构建的 Gateway；
 - 等待健康检查成功；
-- 提供 Gateway origin 与 Viewer origin；
+- 提供 Gateway origin；
 - 在所属 Cordis fiber 结束时终止插件启动的进程。
 
-Provider 使用 Gateway Supervisor 返回的 loopback origin 访问 Gateway。浏览器 Viewer URL
-默认使用同一个 origin；部署方也可通过 `viewerBaseUrl` 配置一个由反向代理暴露的绝对
-HTTP(S) origin。该配置只改变 Host 生成的浏览器 URL，不改变 Gateway 的监听地址、健康检查、
-Worker 连接或其他 Host 内部请求。反向代理必须把该 origin 的 HTTP 与 WebSocket 请求完整转发到
-插件实际启动的 Gateway，并负责实施与 DSH 等价的访问控制；Gateway 本身不校验 DSH Session。
+Provider 与 Worker 使用 Gateway Supervisor 返回的 loopback origin 访问 Gateway。浏览器可见的
+Viewer 面由插件挂载在 DSH WebServer origin 上：`/univer-viewer` 前缀承载 Viewer 文档与静态
+资源，`/uf` 前缀承载 Gateway 领域 API，`/univer-viewer/ws` 是 WebSocket 隧道（`?target=` 携带
+动态上游路径，因 DSH upgrade 注册只支持精确路径）。代理逐请求先通过 DSH `connection` 服务的
+信任门（Host/Origin fence 与浏览器鉴权），再执行既有会话范围检查：Viewer 文档请求解码 fileKey
+并验证其落在指定 live session 的 `cwd` 内，然后以 HttpOnly cookie 把浏览器绑定到该会话范围；
+`/uf` 与隧道请求逐请求按 cookie 中的会话重复该校验。`computeFileState` 投影同源相对路径
+`/univer-viewer/?file=<key>`，`/univer-api/state` 在路由层为每个投影 URL 追加 sessionId。
+Gateway 本身始终只监听 loopback，不对外暴露。完整契约见
+`docs/viewer-same-origin-deployment.md`。
 
 Unit 的导入、检查、执行和导出由 Unit Content Adapter 启动一次性 Unit Content Worker。Worker 连接 Gateway Supervisor 提供的同一个 Gateway，操作完成或取消后退出，不拥有独立持久状态。Gateway 的 worktree 控制面直接提供 Unit 创建与移除端点，并通过 collaboration service 与 lifecycle event 完成操作。写操作只能针对显式 draft worktree；Gateway 是提交结果和 revision 的唯一依据。
 

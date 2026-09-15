@@ -4,6 +4,7 @@ import type { ResolvedConfig } from '../config.ts'
 import type { WorktreeActionResult } from '../../shared/wire/actions.ts'
 import type { FileState, WorktreeState, ChangedUnit } from '../../shared/wire/state.ts'
 import type { EnsureGatewayResult, GatewayStatus } from '../../shared/wire/status.ts'
+import { VIEWER_BASE } from '../../shared/wire/viewer.ts'
 import { GatewayClient, gatewayErrorMessage } from '../adapters/gateway/client.ts'
 import { GatewayFileApi, fileKeyOf } from '../adapters/gateway/file-api.ts'
 import { GatewayWorktreeApi } from '../adapters/gateway/worktree-api.ts'
@@ -494,14 +495,13 @@ export class GatewayUniverService extends UniverService {
         'GATEWAY_UNAVAILABLE'
       )
     const gateway = status.gateway
-    const viewerBaseUrl = this.config.viewerBaseUrl ?? gateway
     const listing = await new GatewayFileApi(
       new GatewayClient(gateway, this.config.gatewayRequestTimeoutMs)
     ).listWorktrees(file)
     const records = mapWorktrees(listing)
     const entries = await Promise.all(
       records.map(async (record): Promise<WorktreeState> => {
-        const base = `${viewerBaseUrl}/?file=${encodeURIComponent(fileKeyOf(file))}`
+        const base = `${VIEWER_BASE}/?file=${encodeURIComponent(fileKeyOf(file))}`
         const worktree = encodeURIComponent(record.worktreeId)
         const openUrl = `${base}&worktree=${worktree}`
         const worktreeUrl = `${base}&worktree=${worktree}&mode=embedded&scope=worktree`
@@ -536,7 +536,7 @@ export class GatewayUniverService extends UniverService {
       file,
       gateway,
       gatewayRunning: true,
-      viewerUrl: `${viewerBaseUrl}/?file=${encodeURIComponent(fileKeyOf(file))}`,
+      viewerUrl: `${VIEWER_BASE}/?file=${encodeURIComponent(fileKeyOf(file))}`,
       worktrees: entries
     }
   }

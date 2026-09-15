@@ -3,6 +3,7 @@ import { stat } from 'node:fs/promises'
 import http from 'node:http'
 import { resolve } from 'node:path'
 import sirv from 'sirv'
+import { VIEWER_BASE } from '../shared/wire/viewer.js'
 import { createRequestListener } from './transport/http.js'
 import { attachGatewayWebSockets } from './transport/ws.js'
 import type { UniverfileManagerOptions } from './univerfile-manager.js'
@@ -85,7 +86,14 @@ function createGatewayRequestListener(
   const serveViewAsset =
     viewAssetsRoot === undefined ? undefined : createViewAssetHandler(viewAssetsRoot)
   return (req, res): void => {
-    const pathname = new URL(req.url ?? '/', 'http://localhost').pathname
+    const url = new URL(req.url ?? '/', 'http://localhost')
+    let pathname = url.pathname
+    // The Viewer is mounted under one base on every origin (direct Gateway access and the
+    // same-origin DSH proxy alike), so one build serves both without path rewriting.
+    if (pathname === VIEWER_BASE || pathname.startsWith(`${VIEWER_BASE}/`)) {
+      pathname = pathname.slice(VIEWER_BASE.length) || '/'
+      req.url = `${pathname}${url.search}`
+    }
     if (isGatewayApiPath(pathname) || (req.method ?? 'GET') === 'OPTIONS') {
       apiRequestListener(req, res)
       return

@@ -15,7 +15,8 @@ export function viewerLocaleOf(locale: LocaleId): ViewerLocale {
 
 /** Add the active Viewer locale without reconstructing the Host-owned target. */
 export function localizeViewerUrl(url: string, locale: ViewerLocale): string {
-  const target = new URL(url)
+  // Host-projected Viewer targets are same-origin relative paths.
+  const target = new URL(url, window.location.origin)
   target.searchParams.set('lang', locale)
   return target.toString()
 }

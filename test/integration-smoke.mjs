@@ -99,10 +99,9 @@ await writeFile(
 
 const { foreign, occupiedPort, availablePort } = await occupyPortWithFreeSuccessor()
 const origin = `http://127.0.0.1:${availablePort}`
-const viewerBaseUrl = 'https://office.example.test'
 const service = new GatewayUniverService(
   new Context(),
-  resolveConfig({ gatewayPort: occupiedPort, viewerBaseUrl, tools: false })
+  resolveConfig({ gatewayPort: occupiedPort, tools: false })
 )
 const scoped = { workspace, file }
 
@@ -161,12 +160,12 @@ try {
   const viewerFileKey = encodeURIComponent(Buffer.from(file).toString('base64url'))
   if (
     projected.gateway !== origin ||
-    projected.viewerUrl !== `${viewerBaseUrl}/?file=${viewerFileKey}` ||
+    projected.viewerUrl !== `/univer-viewer/?file=${viewerFileKey}` ||
     projectedWorktree?.openUrl !==
-      `${viewerBaseUrl}/?file=${viewerFileKey}&worktree=${encodeURIComponent(worktreeId)}` ||
-    !projectedWorktree?.worktreeUrl?.startsWith(`${viewerBaseUrl}/?`)
+      `/univer-viewer/?file=${viewerFileKey}&worktree=${encodeURIComponent(worktreeId)}` ||
+    !projectedWorktree?.worktreeUrl?.startsWith('/univer-viewer/?')
   ) {
-    throw new Error(`custom Viewer base URL was not projected: ${JSON.stringify(projected)}`)
+    throw new Error(`Viewer targets were not projected same-origin: ${JSON.stringify(projected)}`)
   }
 
   const createdUnit = await service.unit({
@@ -179,6 +178,166 @@ try {
   const unitId = createdUnit.result?.unitId
   if (typeof unitId !== 'string')
     throw new Error(`create Unit failed: ${JSON.stringify(createdUnit)}`)
+
+  // ---- same-origin Viewer proxy (docs/viewer-same-origin-deployment.md) ----
+  const PROXY_SESSION = 'integration-smoke-session'
+  const proxyFileKey = Buffer.from(file).toString('base64url')
+  let gateRejection
+  const proxy = univerPlugin.createViewerProxy({
+    gatewayOrigin: async () => {
+      const started = await service.ensureGateway()
+      if (!started.ok) throw new Error(started.reason)
+      return started.gateway
+    },
+    sessions: {
+      get: (id) => (id === PROXY_SESSION ? { header: { cwd: workspace } } : undefined)
+    },
+    connection: { requestRejection: () => gateRejection }
+  })
+  const proxyServer = createHttpServer((req, res) => void proxy.httpHandler(req, res))
+  proxyServer.on('upgrade', proxy.upgradeHandler)
+  await new Promise((resolve, reject) => {
+    proxyServer.once('error', reject)
+    proxyServer.listen(0, '127.0.0.1', resolve)
+  })
+  const proxyOrigin = `http://127.0.0.1:${proxyServer.address().port}`
+  try {
+    const viewerMount = await fetch(`${origin}/univer-viewer/`)
+    if (!viewerMount.ok || !(await viewerMount.text()).includes('<html')) {
+      throw new Error('Gateway must mount the Viewer under the shared base for direct access')
+    }
+
+    gateRejection = 401
+    const gatedDocument = await fetch(
+      `${proxyOrigin}/univer-viewer/?file=${proxyFileKey}&sessionId=${PROXY_SESSION}`
+    )
+    if (gatedDocument.status !== 401) {
+      throw new Error(`connection fence must gate the Viewer proxy: ${gatedDocument.status}`)
+    }
+    gateRejection = undefined
+
+    const unscopedDocument = await fetch(`${proxyOrigin}/univer-viewer/?file=${proxyFileKey}`)
+    if (unscopedDocument.status !== 403) {
+      throw new Error(
+        `Viewer document without a session must be refused: ${unscopedDocument.status}`
+      )
+    }
+    const foreignDocument = await fetch(
+      `${proxyOrigin}/univer-viewer/?file=${proxyFileKey}&sessionId=foreign-session`
+    )
+    if (foreignDocument.status !== 403) {
+      throw new Error(
+        `Viewer document outside the session scope must be refused: ${foreignDocument.status}`
+      )
+    }
+
+    const document = await fetch(
+      `${proxyOrigin}/univer-viewer/?file=${proxyFileKey}&sessionId=${PROXY_SESSION}`
+    )
+    const documentHtml = await document.text()
+    if (!document.ok || !documentHtml.includes('<html')) {
+      throw new Error(`scoped Viewer document was not proxied: ${document.status}`)
+    }
+    const scopeCookie = (document.headers.get('set-cookie') ?? '').split(';')[0]
+    if (!scopeCookie.startsWith('univer-viewer-sessions=')) {
+      throw new Error(
+        `Viewer document did not bind the session scope: ${document.headers.get('set-cookie')}`
+      )
+    }
+    const scopedAsset = documentHtml.match(/\/univer-viewer\/assets\/[^"']+\.css/u)?.[0]
+    if (scopedAsset === undefined) {
+      throw new Error(
+        `built Viewer must reference assets under the shared base: ${documentHtml.slice(0, 400)}`
+      )
+    }
+    const assetResponse = await fetch(`${proxyOrigin}${scopedAsset}`)
+    if (!assetResponse.ok) {
+      throw new Error(`Viewer assets were not proxied under the base: ${scopedAsset}`)
+    }
+
+    const ufBase = `${proxyOrigin}/uf/${proxyFileKey}`
+    const unscopedApi = await fetch(`${ufBase}/worktrees`)
+    if (unscopedApi.status !== 403) {
+      throw new Error(`/uf without a bound session must be refused: ${unscopedApi.status}`)
+    }
+    const foreignApi = await fetch(`${ufBase}/worktrees`, {
+      headers: { cookie: 'univer-viewer-sessions=foreign-session' }
+    })
+    if (foreignApi.status !== 403) {
+      throw new Error(`/uf outside the bound session scope must be refused: ${foreignApi.status}`)
+    }
+    const scopedApi = await fetch(`${ufBase}/worktrees`, { headers: { cookie: scopeCookie } })
+    if (!scopedApi.ok) {
+      throw new Error(`scoped /uf request failed: ${scopedApi.status} ${await scopedApi.text()}`)
+    }
+
+    const { WebSocket } = await import('ws')
+    const tunnelFrame = await new Promise((resolve, reject) => {
+      const client = new WebSocket(
+        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`,
+        { headers: { cookie: scopeCookie } }
+      )
+      const timer = setTimeout(() => {
+        client.terminate()
+        reject(new Error('tunneled lifecycle events channel never opened'))
+      }, 10_000)
+      client.on('unexpected-response', (_req, response) => {
+        clearTimeout(timer)
+        reject(new Error(`tunnel upgrade was refused: ${response.statusCode}`))
+      })
+      client.on('error', (error) => {
+        clearTimeout(timer)
+        reject(error)
+      })
+      client.on('open', () => {
+        // Let the Gateway finish registering the socket in its event hub before triggering.
+        setTimeout(() => {
+          service
+            .worktree({ ...scoped, action: 'create', name: 'proxy event smoke' })
+            .then(() => undefined)
+            .catch((error) => {
+              clearTimeout(timer)
+              reject(error)
+            })
+        }, 100)
+      })
+      client.on('message', (data) => {
+        const event = JSON.parse(String(data))
+        if (event.type !== 'worktree') return
+        clearTimeout(timer)
+        client.close()
+        resolve(event)
+      })
+    })
+    const tunneledWorktreeId = tunnelFrame.worktree?.worktreeId
+    if (typeof tunneledWorktreeId !== 'string') {
+      throw new Error(`tunneled lifecycle frame was malformed: ${JSON.stringify(tunnelFrame)}`)
+    }
+    const refusedTunnel = await new Promise((resolve) => {
+      const client = new WebSocket(
+        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`
+      )
+      client.on('unexpected-response', (_req, response) => {
+        resolve(response.statusCode)
+      })
+      client.on('open', () => {
+        client.terminate()
+        resolve('opened')
+      })
+      client.on('error', () => resolve('error'))
+    })
+    if (refusedTunnel !== 403) {
+      throw new Error(`tunnel without a bound session must be refused: ${String(refusedTunnel)}`)
+    }
+    await service.worktreeAction({
+      ...scoped,
+      action: 'discard',
+      worktreeId: tunneledWorktreeId
+    })
+  } finally {
+    proxy.dispose()
+    await closeServer(proxyServer)
+  }
 
   const beforeUnsupportedRemoval = await service.status({ ...scoped, worktreeId })
   await Promise.all(

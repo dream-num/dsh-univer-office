@@ -193,7 +193,6 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | 字段 | 默认值 | 说明 |
 | --- | --- | --- |
 | `gatewayPort` | `9080` | 本地服务起始端口；被占用时逐次加一 |
-| `viewerBaseUrl` | Gateway 本地 origin | 浏览器可见的 HTTP(S) origin；其反向代理需把 HTTP 与 WebSocket 流量转发到 Gateway |
 | `autoStartGateway` | `true` | 首次访问时自动启动服务 |
 | `gatewayStartupTimeoutMs` | `10000` | 服务启动超时 |
 | `gatewayRequestTimeoutMs` | `3000` | 状态读取超时 |
@@ -210,7 +209,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `skills` | `true` | 启用内置任务指引 |
 | `telemetry` | `true` | 发送匿名产品遥测 |
 
-远程服务器部署 DSH 时可设置 `viewerBaseUrl`。它只改变发给浏览器的 Viewer URL；Host 工具和 Worker 仍通过 loopback 访问 Gateway。该值必须是绝对 HTTP(S) origin，不能包含凭据、路径、查询或 fragment。反向代理需要把这个 origin 的 HTTP 与 WebSocket 流量转发到 Gateway 实际监听端口；Gateway 不校验 DSH Session，因此还必须把访问限制在与 DSH 相同的可信用户范围内。
+Viewer 页面、HTTP API 与 WebSocket 协作流量由插件直接挂载在 DSH WebServer origin 上（`/univer-viewer/...` 与 `/uf/...`），远程部署沿用现有 DSH 访问入口即可，无需额外反向代理配置。每个浏览器请求先通过 `connection` 服务完成 DSH 浏览器鉴权，再限定到指定 live session 的范围；Gateway 始终只监听 loopback，不对外暴露。（原 `viewerBaseUrl` 配置已随本次变更移除，保留时会被忽略。）
 
 ## 遥测
 

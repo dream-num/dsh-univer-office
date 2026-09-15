@@ -1,4 +1,5 @@
 import { encodeUniverfile } from '@univer/collab-gateway-contract'
+import { VIEWER_BASE, VIEWER_WS_TUNNEL } from '../../shared/wire/viewer'
 
 /** Server origin + the .univer being viewed (passed to WorktreeControlClient / viewer). */
 export interface AppConfig {
@@ -60,6 +61,8 @@ export function readLocation(): AppLocation {
  */
 export function writeLocation(loc: WriteLocationOptions): void {
   const p = new URLSearchParams()
+  // Carried through address-bar rewrites so a refresh re-authorizes the same session scope.
+  const sessionId = new URLSearchParams(location.search).get('sessionId')
   if (loc.gatewayFileKey !== undefined) {
     p.set('file', loc.gatewayFileKey)
   } else {
@@ -83,7 +86,34 @@ export function writeLocation(loc: WriteLocationOptions): void {
   if (loc.lang !== undefined) {
     p.set('lang', loc.lang)
   }
+  if (sessionId !== null) {
+    p.set('sessionId', sessionId)
+  }
   history.replaceState(null, '', `${location.pathname}?${p.toString()}`)
+}
+
+/**
+ * True when this document is served by the DSH same-origin proxy (`/univer-viewer/...`) rather
+ * than directly by the Gateway; only then do WebSocket endpoints need the exact-path tunnel.
+ */
+export function isProxyServedViewer(): boolean {
+  const pathname = location.pathname
+  return pathname === VIEWER_BASE || pathname.startsWith(`${VIEWER_BASE}/`)
+}
+
+/**
+ * Rewrite a WebSocket endpoint through the fixed same-origin tunnel (`?target=<path>`) when
+ * proxy-served: DSH upgrades register exact paths only, while the Gateway's `/uf/...` endpoints
+ * are file-scoped and dynamic. The input protocol family (http/ws, relative) is preserved.
+ */
+export function resolveWebSocketUrl(url: string): string {
+  if (!isProxyServedViewer()) return url
+  const target = new URL(url, location.origin)
+  const tunnel = new URL(VIEWER_WS_TUNNEL, target.origin)
+  tunnel.searchParams.set('target', `${target.pathname}${target.search}`)
+  if (target.protocol === 'ws:') tunnel.protocol = 'ws:'
+  else if (target.protocol === 'wss:') tunnel.protocol = 'wss:'
+  return tunnel.toString()
 }
 
 /** Gateway file endpoint prefix for the configured target, including lifecycle WebSocket URLs. */
