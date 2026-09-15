@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
 import { createServer as createNetServer } from 'node:net'
@@ -79,7 +80,8 @@ const entry =
   packageRoot === undefined
     ? new URL('../lib/index.js', import.meta.url).href
     : pathToFileURL(join(packageRoot, 'lib', 'index.js')).href
-const { GatewayUniverService, resolveConfig } = await import(entry)
+const univerPlugin = await import(entry)
+const { GatewayUniverService, resolveConfig } = univerPlugin
 const scratch = await mkdtemp(join(tmpdir(), 'dsh-univer-integration-smoke-'))
 const workspace = await realpath(scratch)
 const file = join(workspace, 'smoke.univer')
@@ -293,6 +295,118 @@ try {
   for (const image of screenshot.result.images) {
     if ((await stat(image.path)).size === 0)
       throw new Error(`screenshot produced an empty file: ${image.path}`)
+  }
+
+  // Tool-level screenshot: the durable attachment ref must describe the stored
+  // object. A normalizing attachment store re-encodes the renderer's PNG, so
+  // every field of `image` must come from the store's reference — a ref that
+  // claims the renderer's mediaType makes session replay fail permanently
+  // with ATTACHMENT_CORRUPT (issue #67).
+  const attachmentRefs = []
+  const screenshotToolContext = new Context()
+  try {
+    const { ToolCallId } = await import('@deepseek-ai/dsh-llm/brand')
+    const [{ default: SystemPrompt }, { default: ToolRuntime }] = await Promise.all([
+      import('@deepseek-ai/dsh-system-prompt'),
+      import('@deepseek-ai/dsh-tools')
+    ])
+    await screenshotToolContext.plugin(SystemPrompt)
+    await screenshotToolContext.plugin(ToolRuntime)
+    screenshotToolContext.provide('attachments', {
+      imageLimits: {
+        mediaTypes: ['image/png'],
+        maxImageBytes: 64 * 1024 * 1024,
+        maxMessageImageBytes: 128 * 1024 * 1024
+      },
+      // Simulate a normalizing store: the durable object is re-encoded, so the
+      // reference describes a WebP object with store-probed dimensions that
+      // differ from the renderer's declared PNG facts.
+      async saveImages(inputs) {
+        return inputs.map((input) => {
+          const ref = {
+            attachmentId: `sha256:${createHash('sha256').update(input.data).digest('hex')}`,
+            mediaType: 'image/webp',
+            bytes: input.data.byteLength,
+            width: 1234,
+            height: 567,
+            name: input.name
+          }
+          attachmentRefs.push(ref)
+          return ref
+        })
+      }
+    })
+    screenshotToolContext.provide('llm', {
+      async resolveModelInfo() {
+        return { inputModalities: ['image'] }
+      }
+    })
+    await screenshotToolContext.plugin(univerPlugin, {
+      gatewayPort: availablePort,
+      skills: false
+    })
+    const screenshotOwner = {
+      ctx: screenshotToolContext,
+      options: { provider: 'integration-smoke', model: 'vision' },
+      session: {
+        header: { cwd: workspace },
+        requestHeader() {
+          return { config: { provider: 'integration-smoke', model: 'vision' } }
+        }
+      }
+    }
+    const toolScreenshot = await screenshotToolContext.tools.execute({
+      signal: new AbortController().signal,
+      callId: ToolCallId('integration-smoke-screenshot'),
+      name: 'univer_screenshot',
+      arguments: {
+        file,
+        unitId: slideUnitId,
+        worktreeId,
+        output: 'screenshots-tool',
+        pages: [1]
+      },
+      agent: screenshotOwner
+    })
+    if (toolScreenshot.isError) {
+      throw new Error(`tool-level screenshot failed: ${JSON.stringify(toolScreenshot)}`)
+    }
+    const payload = JSON.parse(
+      toolScreenshot.content
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join('')
+    )
+    const imageBlocks = toolScreenshot.content.filter((block) => block.type === 'image')
+    const [toolImage, ref] = [payload.result.images[0], attachmentRefs[0]]
+    const sameRef = (candidate) =>
+      candidate !== undefined &&
+      candidate.attachmentId === ref.attachmentId &&
+      candidate.mediaType === ref.mediaType &&
+      candidate.bytes === ref.bytes &&
+      candidate.width === ref.width &&
+      candidate.height === ref.height &&
+      candidate.name === ref.name
+    if (toolImage === undefined || ref === undefined || !sameRef(toolImage.image)) {
+      throw new Error(
+        `screenshot tool must persist the attachment reference verbatim: ${JSON.stringify({ toolImage, ref })}`
+      )
+    }
+    if (toolImage.mediaType !== 'image/png') {
+      throw new Error(
+        `outer screenshot facts must stay the renderer's declaration: ${JSON.stringify(toolImage)}`
+      )
+    }
+    if (
+      imageBlocks.length !== payload.result.images.length ||
+      imageBlocks.some((block) => !sameRef(block.attachment))
+    ) {
+      throw new Error(
+        `model-visible image blocks must carry the same durable reference: ${JSON.stringify(imageBlocks)}`
+      )
+    }
+  } finally {
+    await screenshotToolContext.fiber.dispose()
   }
 
   const printed = await service.printUnitPdf({

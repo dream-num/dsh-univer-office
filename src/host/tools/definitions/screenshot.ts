@@ -1,6 +1,11 @@
 import { Buffer } from 'node:buffer'
 import type { Context } from '@deepseek-ai/cordis'
-import { AttachmentError, AttachmentId, type ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import {
+  AttachmentError,
+  AttachmentId,
+  type ImageAttachmentRef,
+  type ImageMediaType
+} from '@deepseek-ai/dsh-attachment'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { JsonValue, ScreenshotTarget } from '../../service/types.ts'
@@ -9,6 +14,9 @@ import { UniverError } from '../../service/errors.ts'
 import { operationTitle } from '../presentation.ts'
 import { existingToolFile, newToolPath } from '../workspace.ts'
 
+// The outer layer carries the renderer's declared PNG facts; the inner `image`
+// ref is persisted verbatim from the attachment service and must keep the full
+// media-type union, because the store may re-encode the render before storing it.
 type ScreenshotToolImage = {
   path: string
   name: string
@@ -18,7 +26,7 @@ type ScreenshotToolImage = {
   metadata: JsonValue
   image: {
     attachmentId: string
-    mediaType: 'image/png'
+    mediaType: ImageMediaType
     bytes: number
     width: number
     height: number
@@ -206,7 +214,7 @@ export function screenshotTool(ctx: Context, timeoutMs: number) {
           metadata: item.metadata,
           image: {
             attachmentId: ref.attachmentId,
-            mediaType: item.mediaType,
+            mediaType: ref.mediaType,
             bytes: ref.bytes,
             width: ref.width,
             height: ref.height,
