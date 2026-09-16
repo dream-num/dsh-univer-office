@@ -24,6 +24,12 @@ export interface Config {
   screenshotMaxPages?: number
   /** Maximum pixel count for each rendered screenshot image. */
   screenshotMaxPixels?: number
+  /**
+   * Browser executable used by all browser-backed render operations. When unset,
+   * the render runtime auto-detects Chrome/Chromium (and Edge on macOS); this
+   * option overrides every other detection step, including `UNIVER_RENDER_BROWSER`.
+   */
+  browserExecutablePath?: string
   /** Persistent cache directory for downloaded resource-library SVGs. */
   resourceCacheRoot?: string
   /** Maximum time allowed for one resource-library download. */
@@ -56,6 +62,7 @@ export interface ResolvedConfig {
   readonly printPdfOperationTimeoutMs: number
   readonly screenshotMaxPages: number
   readonly screenshotMaxPixels: number
+  readonly browserExecutablePath?: string
   readonly resourceCacheRoot: string
   readonly resourceDownloadTimeoutMs: number
   readonly resourceOperationTimeoutMs: number
@@ -79,6 +86,7 @@ export const Config: z<Config> = z.object({
   printPdfOperationTimeoutMs: z.natural().default(120_000),
   screenshotMaxPages: z.natural().default(30),
   screenshotMaxPixels: z.natural().default(16_777_216),
+  browserExecutablePath: z.string(),
   resourceCacheRoot: z.string(),
   resourceDownloadTimeoutMs: z.natural().default(15_000),
   resourceOperationTimeoutMs: z.natural().default(120_000),
@@ -92,6 +100,7 @@ export const Config: z<Config> = z.object({
 
 /** Apply defaults and reject configuration that cannot run. */
 export function resolveConfig(config: Config = {}): ResolvedConfig {
+  const browserExecutablePath = resolveBrowserExecutablePath(config.browserExecutablePath)
   const resolved: ResolvedConfig = {
     gatewayPort: config.gatewayPort ?? 9080,
     autoStartGateway: config.autoStartGateway ?? true,
@@ -103,6 +112,7 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     printPdfOperationTimeoutMs: config.printPdfOperationTimeoutMs ?? 120_000,
     screenshotMaxPages: config.screenshotMaxPages ?? 30,
     screenshotMaxPixels: config.screenshotMaxPixels ?? 16_777_216,
+    ...(browserExecutablePath === undefined ? {} : { browserExecutablePath }),
     resourceCacheRoot: resolveResourceCacheRoot(config.resourceCacheRoot),
     resourceDownloadTimeoutMs: config.resourceDownloadTimeoutMs ?? 15_000,
     resourceOperationTimeoutMs: config.resourceOperationTimeoutMs ?? 120_000,
@@ -149,4 +159,14 @@ function resolveResourceCacheRoot(configured: string | undefined): string {
     return resolve(configured)
   }
   return join(resolveDshHome(), 'cache', 'dsh-univer-office', 'resources')
+}
+
+/** A relative browser path would silently depend on the Host process working directory. */
+function resolveBrowserExecutablePath(configured: string | undefined): string | undefined {
+  if (configured === undefined) return undefined
+  const trimmed = configured.trim()
+  if (trimmed.length === 0 || !isAbsolute(trimmed)) {
+    throw new Error('univer: browserExecutablePath must be a non-empty absolute path')
+  }
+  return resolve(trimmed)
 }

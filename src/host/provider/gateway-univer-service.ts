@@ -70,7 +70,7 @@ export class GatewayUniverService extends UniverService {
       config.gatewayRequestTimeoutMs,
       config.gatewayMutationTimeoutMs
     )
-    this.render = new RenderOperations()
+    this.render = new RenderOperations(config.browserExecutablePath)
     this.renderSources = new RenderSourceOperations(
       this.unitContent,
       config.gatewayRequestTimeoutMs

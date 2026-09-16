@@ -30,6 +30,9 @@ if (defaultConfig.printPdfOperationTimeoutMs !== 120_000) {
 if (!defaultConfig.resourceCacheRoot.endsWith(join('cache', 'dsh-univer-office', 'resources'))) {
   throw new Error(`default resource cache root drifted: ${defaultConfig.resourceCacheRoot}`)
 }
+if ('browserExecutablePath' in defaultConfig) {
+  throw new Error('browserExecutablePath must stay unset so the render runtime auto-detects')
+}
 const hostBundle = await readFile(new URL('../lib/index.js', import.meta.url), 'utf8')
 if (!hostBundle.includes('ELECTRON_RUN_AS_NODE')) {
   throw new Error(
@@ -50,7 +53,9 @@ try {
 for (const invalid of [
   { screenshotMaxPages: 0 },
   { printPdfOperationTimeoutMs: 0 },
-  { resourceCacheRoot: 'relative/cache' }
+  { resourceCacheRoot: 'relative/cache' },
+  { browserExecutablePath: 'msedge.exe' },
+  { browserExecutablePath: '  ' }
 ]) {
   try {
     resolveConfig(invalid)
@@ -59,6 +64,13 @@ for (const invalid of [
     const key = Object.keys(invalid)[0]
     if (!(error instanceof Error) || !error.message.includes(key)) throw error
   }
+}
+const configuredBrowserPath = join(tmpdir(), 'msedge.exe')
+if (
+  resolveConfig({ browserExecutablePath: configuredBrowserPath }).browserExecutablePath !==
+  configuredBrowserPath
+) {
+  throw new Error('browserExecutablePath must pass through to the resolved config')
 }
 
 class MemorySettings extends SettingsProvider {

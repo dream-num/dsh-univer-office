@@ -182,7 +182,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 ## 要求与限制
 
 - DeepSeek Harness，以及 Node.js `>=22.19.0`。
-- 部分 Slide 布局检查和 SVG 文字度量需要本机 Chrome/Chromium；也可以通过 `UNIVER_RENDER_BROWSER` 指定浏览器路径。
+- 截图、PDF 打印、Slide 布局检查和 SVG 文字度量需要本机 Chromium 系浏览器。Chrome/Chromium 与 Microsoft Edge 会被自动探测；也可以通过 `browserExecutablePath` 配置项或 `UNIVER_RENDER_BROWSER` 环境变量指定浏览器可执行文件路径（例如 Windows 上的 Edge）。
 - Slide 的母版、版式页和演讲者备注不在当前编辑范围内。
 - Board 的思维导图、表格、墨迹和高级编辑，以及 Board 文件导出尚未开放。
 
@@ -202,6 +202,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `printPdfOperationTimeoutMs` | `120000` | 一次浏览器 PDF 打印操作的总超时 |
 | `screenshotMaxPages` | `30` | 一次 Doc 或 Slide 截图最多渲染的页数 |
 | `screenshotMaxPixels` | `16777216` | 每张截图允许的最大像素数 |
+| `browserExecutablePath` | 自动探测 | 截图、PDF 打印和 Slide 检查使用的浏览器可执行文件；设置后优先于 `UNIVER_RENDER_BROWSER` |
 | `resourceCacheRoot` | `$DSH_HOME/cache/dsh-univer-office/resources` | 下载 SVG 资源的持久缓存目录；未设置 `DSH_HOME` 时使用 `~/.dsh` |
 | `resourceDownloadTimeoutMs` | `15000` | 单个 SVG 资源下载超时 |
 | `resourceOperationTimeoutMs` | `120000` | 一次资源库工具操作的总超时 |

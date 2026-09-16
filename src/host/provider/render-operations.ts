@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { readFileSync, realpathSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
-import { basename, dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path'
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import {
   compileSvgToFacade,
   isSvgFacadeError,
@@ -25,6 +25,7 @@ import {
 import {
   createUniverRenderRuntime,
   isUniverRenderError,
+  resolveUniverRenderBrowser,
   UNIVER_RENDER_BROWSER_ENV_VAR,
   type UniverRenderRuntime,
   type UniverRenderUnit,
@@ -66,6 +67,8 @@ export interface CompiledSvgProgram {
 
 /** Browser-backed layout and authoring operations owned by the Service Provider. */
 export class RenderOperations {
+  constructor(private readonly browserExecutablePath?: string) {}
+
   /** Print one Unit snapshot to an authorized PDF output path. */
   async printPdf(input: {
     readonly source: UniverRenderUnit
@@ -199,16 +202,42 @@ export class RenderOperations {
 
   private async openRuntime(signal?: AbortSignal): Promise<MachineRuntime> {
     try {
+      const browserExecutablePath = await resolveBrowserExecutablePath(this.browserExecutablePath)
       return await createUniverRenderRuntime({
         renderPageRoot: RENDER_MACHINE_ROOT,
         env: process.env,
         license: process.env.UNIVER_LICENSE?.trim() || UNIVER_LICENSE,
+        ...(browserExecutablePath === undefined ? {} : { browserExecutablePath }),
         ...(signal === undefined ? {} : { signal })
       })
     } catch (error) {
       throw renderError(error)
     }
   }
+}
+
+/**
+ * Resolve the browser executable handed to the render runtime. An explicit
+ * configuration wins; otherwise the runtime resolves by itself, except on
+ * Windows, where its system probe only knows Chrome and the bundled fallback
+ * below also offers the per-user Edge installation (issue #64). Returning
+ * `undefined` keeps the runtime's own resolution order, including
+ * `UNIVER_RENDER_BROWSER` and the puppeteer download cache.
+ */
+async function resolveBrowserExecutablePath(
+  configured: string | undefined
+): Promise<string | undefined> {
+  if (configured !== undefined) return configured
+  if (process.platform !== 'win32') return undefined
+  const resolved = await resolveUniverRenderBrowser({ env: process.env })
+  if (resolved.status !== 'missing') return undefined
+  const programFiles = process.env.ProgramFiles ?? 'C:\\Program Files'
+  const programFilesX86 = process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)'
+  const edgeCandidates = [
+    join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+    join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe')
+  ]
+  return edgeCandidates.find((candidate) => existsSync(candidate))
 }
 
 function captureInput(
@@ -481,7 +510,7 @@ function renderError(error: unknown): Error {
   if (isUniverRenderError(error)) {
     const message =
       error.code === 'BROWSER_UNAVAILABLE'
-        ? `${error.message}; install Chrome/Chromium or set ${UNIVER_RENDER_BROWSER_ENV_VAR}`
+        ? `${error.message}; install Chrome/Chromium/Edge, set ${UNIVER_RENDER_BROWSER_ENV_VAR}, or configure browserExecutablePath`
         : error.message
     return new UniverError(message, `UNIVER_RENDER_${error.code}`, { cause: error })
   }

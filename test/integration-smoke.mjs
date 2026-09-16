@@ -513,6 +513,76 @@ try {
       throw new Error(`screenshot produced an empty file: ${image.path}`)
   }
 
+  // Config override: browserExecutablePath must reach the render runtime, so an
+  // explicitly configured browser captures exactly like auto-detection (issue #64).
+  const explicitBrowser = await resolveUniverRenderBrowser()
+  if (explicitBrowser.status !== 'found') {
+    throw new Error(
+      `explicit-browser screenshot had no browser: ${JSON.stringify(explicitBrowser)}`
+    )
+  }
+  const explicitService = new GatewayUniverService(
+    new Context(),
+    resolveConfig({
+      gatewayPort: occupiedPort,
+      tools: false,
+      browserExecutablePath: explicitBrowser.executablePath
+    })
+  )
+  const explicitFile = join(workspace, 'explicit-browser.univer')
+  try {
+    const explicitCreated = await explicitService.newFile({ workspace, file: explicitFile })
+    if (!explicitCreated.ok || explicitCreated.result?.created !== true) {
+      throw new Error(`explicit-browser file creation failed: ${JSON.stringify(explicitCreated)}`)
+    }
+    const explicitWorktree = await explicitService.worktree({
+      workspace,
+      file: explicitFile,
+      action: 'create',
+      name: 'explicit browser'
+    })
+    const explicitWorktreeId = explicitWorktree.result?.worktreeId
+    if (typeof explicitWorktreeId !== 'string') {
+      throw new Error(`explicit-browser worktree failed: ${JSON.stringify(explicitWorktree)}`)
+    }
+    const explicitUnit = await explicitService.unit({
+      workspace,
+      file: explicitFile,
+      action: 'create',
+      worktreeId: explicitWorktreeId,
+      kind: 'sheet',
+      name: 'Explicit'
+    })
+    const explicitUnitId = explicitUnit.result?.unitId
+    if (typeof explicitUnitId !== 'string') {
+      throw new Error(`explicit-browser Unit failed: ${JSON.stringify(explicitUnit)}`)
+    }
+    const explicitScreenshot = await explicitService.screenshotUnit({
+      workspace,
+      file: explicitFile,
+      worktreeId: explicitWorktreeId,
+      unitId: explicitUnitId,
+      output: join(workspace, 'explicit-screenshots'),
+      outputWorkspace: workspace,
+      target: { kind: 'unit-viewport', scale: 1 }
+    })
+    if (
+      explicitScreenshot.operation !== 'screenshot' ||
+      explicitScreenshot.result.images.length < 1 ||
+      explicitScreenshot.result.images.some(
+        (image) => image.mediaType !== 'image/png' || image.data.length === 0
+      )
+    ) {
+      throw new Error(`explicit-browser screenshot failed: ${JSON.stringify(explicitScreenshot)}`)
+    }
+    for (const image of explicitScreenshot.result.images) {
+      if ((await stat(image.path)).size === 0)
+        throw new Error(`explicit-browser screenshot produced an empty file: ${image.path}`)
+    }
+  } finally {
+    await explicitService.dispose()
+  }
+
   // Tool-level screenshot: the durable attachment ref must describe the stored
   // object. A normalizing attachment store re-encodes the renderer's PNG, so
   // every field of `image` must come from the store's reference — a ref that

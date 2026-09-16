@@ -182,7 +182,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 ## Requirements and current limits
 
 - DeepSeek Harness and Node.js `>=22.19.0`.
-- Some Slide layout checks and SVG text measurement require a local Chrome/Chromium executable. Set `UNIVER_RENDER_BROWSER` to use a specific browser path.
+- Screenshots, PDF printing, Slide layout checks, and SVG text measurement need a local Chromium-family browser. Chrome/Chromium and Microsoft Edge are detected automatically; set the `browserExecutablePath` option or the `UNIVER_RENDER_BROWSER` environment variable to point at a specific executable (for example Edge on Windows).
 - Slide master pages, layout pages, and speaker notes are outside the current editing scope.
 - Board mind maps, tables, ink, advanced editing, and file export are not yet supported.
 
@@ -202,6 +202,7 @@ The defaults are designed for local use: the service starts at port `9080`. If t
 | `printPdfOperationTimeoutMs` | `120000` | Overall timeout for one browser PDF print operation |
 | `screenshotMaxPages` | `30` | Maximum Doc or Slide pages rendered by one screenshot call |
 | `screenshotMaxPixels` | `16777216` | Maximum pixel count for each screenshot image |
+| `browserExecutablePath` | auto-detected | Browser executable for screenshots, PDF printing, and Slide checks; takes precedence over `UNIVER_RENDER_BROWSER` |
 | `resourceCacheRoot` | `$DSH_HOME/cache/dsh-univer-office/resources` | Persistent downloaded-SVG cache; falls back to `~/.dsh` when `DSH_HOME` is unset |
 | `resourceDownloadTimeoutMs` | `15000` | Timeout for one SVG resource download |
 | `resourceOperationTimeoutMs` | `120000` | Overall timeout for one resource-library tool operation |
