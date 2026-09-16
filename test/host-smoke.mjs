@@ -11,7 +11,7 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import * as UniverPlugin from '../lib/index.js'
 
-const { createUniverRouter, resolveConfig } = UniverPlugin
+const { createUniverRouter, edgeBrowserCandidatePaths, resolveConfig } = UniverPlugin
 
 const defaultConfig = resolveConfig()
 if (defaultConfig.gatewayPort !== 9080)
@@ -71,6 +71,40 @@ if (
   configuredBrowserPath
 ) {
   throw new Error('browserExecutablePath must pass through to the resolved config')
+}
+// The Windows Edge fallback is unreachable on this platform, so its candidate
+// list is asserted directly: per-machine installs first, a per-user install
+// only when the profile directory is known.
+const defaultEdgeCandidates = [
+  join('C:\\Program Files (x86)', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+  join('C:\\Program Files', 'Microsoft', 'Edge', 'Application', 'msedge.exe')
+]
+if (edgeBrowserCandidatePaths({}).join('|') !== defaultEdgeCandidates.join('|')) {
+  throw new Error(
+    `default Edge candidates drifted: ${JSON.stringify(edgeBrowserCandidatePaths({}))}`
+  )
+}
+const localAppData = 'C:\\Users\\tester\\AppData\\Local'
+const perUserEdge = join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe')
+const edgeCandidates = edgeBrowserCandidatePaths({
+  ProgramFiles: 'D:\\Program Files',
+  'ProgramFiles(x86)': 'D:\\Program Files (x86)',
+  LOCALAPPDATA: localAppData
+})
+if (
+  edgeCandidates.length !== 3 ||
+  edgeCandidates[0] !==
+    join('D:\\Program Files (x86)', 'Microsoft', 'Edge', 'Application', 'msedge.exe') ||
+  edgeCandidates[1] !==
+    join('D:\\Program Files', 'Microsoft', 'Edge', 'Application', 'msedge.exe') ||
+  edgeCandidates[2] !== perUserEdge
+) {
+  throw new Error(
+    `per-user Edge candidate missing or out of order: ${JSON.stringify(edgeCandidates)}`
+  )
+}
+if (edgeBrowserCandidatePaths({ LOCALAPPDATA: '  ' }).length !== 2) {
+  throw new Error('a blank LOCALAPPDATA must not add a per-user Edge candidate')
 }
 
 class MemorySettings extends SettingsProvider {

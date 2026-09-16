@@ -219,9 +219,9 @@ export class RenderOperations {
 /**
  * Resolve the browser executable handed to the render runtime. An explicit
  * configuration wins; otherwise the runtime resolves by itself, except on
- * Windows, where its system probe only knows Chrome and the bundled fallback
- * below also offers the per-user Edge installation (issue #64). Returning
- * `undefined` keeps the runtime's own resolution order, including
+ * Windows, where its system probe only knows Chrome and the fallback below
+ * also offers the per-machine and per-user Edge installations (issue #64).
+ * Returning `undefined` keeps the runtime's own resolution order, including
  * `UNIVER_RENDER_BROWSER` and the puppeteer download cache.
  */
 async function resolveBrowserExecutablePath(
@@ -231,13 +231,27 @@ async function resolveBrowserExecutablePath(
   if (process.platform !== 'win32') return undefined
   const resolved = await resolveUniverRenderBrowser({ env: process.env })
   if (resolved.status !== 'missing') return undefined
-  const programFiles = process.env.ProgramFiles ?? 'C:\\Program Files'
-  const programFilesX86 = process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)'
-  const edgeCandidates = [
+  return edgeBrowserCandidatePaths(process.env).find((candidate) => existsSync(candidate))
+}
+
+/**
+ * Edge executables probed after the runtime reports no browser, per-machine
+ * first and the per-user installation last. The per-user candidate is added
+ * only when `LOCALAPPDATA` is set: a guessed profile path would point into
+ * another account's directory, where an unprivileged install would not live.
+ */
+export function edgeBrowserCandidatePaths(env: NodeJS.ProcessEnv): readonly string[] {
+  const programFiles = env.ProgramFiles ?? 'C:\\Program Files'
+  const programFilesX86 = env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)'
+  const candidates = [
     join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
     join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe')
   ]
-  return edgeCandidates.find((candidate) => existsSync(candidate))
+  const localAppData = env.LOCALAPPDATA?.trim()
+  if (localAppData !== undefined && localAppData.length > 0) {
+    candidates.push(join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe'))
+  }
+  return candidates
 }
 
 function captureInput(
