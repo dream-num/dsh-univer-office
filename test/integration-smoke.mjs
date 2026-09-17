@@ -351,6 +351,72 @@ try {
       throw new Error(`tunnel with a malformed cookie must fail closed: ${String(malformedTunnel)}`)
     }
 
+    // The comb endpoint authenticates each upgrade with a one-time query parameter the client
+    // appends to the tunneled URL, then speaks TEXT frames; the tunnel must relay endpoint
+    // parameters upstream and preserve the frame opcode, or every collab socket dies right
+    // after opening (issue #76). A full HELLO round trip proves both, and the same upgrade
+    // without the parameter is the differential control.
+    const ticketResponse = await fetch(
+      `${ufBase}/worktrees/${tunneledWorktreeId}/universer-api/user/session-ticket`,
+      { headers: { cookie: scopeCookie } }
+    )
+    if (!ticketResponse.ok) {
+      throw new Error(`session ticket request failed: ${ticketResponse.status}`)
+    }
+    const ticketBody = await ticketResponse.json()
+    if (typeof ticketBody.ticket !== 'string' || ticketBody.ticket.length === 0) {
+      throw new Error(`session ticket response carried no ticket: ${JSON.stringify(ticketBody)}`)
+    }
+    const combTunnelBase =
+      `${proxyOrigin}/univer-viewer/ws?target=` +
+      encodeURIComponent(
+        `/uf/${proxyFileKey}/worktrees/${tunneledWorktreeId}/universer-api/comb/connect`
+      )
+    const memberID = await new Promise((resolve, reject) => {
+      const client = new WebSocket(
+        `${combTunnelBase}&sessionTicket=${encodeURIComponent(ticketBody.ticket)}`,
+        { headers: { cookie: scopeCookie } }
+      )
+      const timer = setTimeout(() => {
+        client.terminate()
+        reject(new Error('comb HELLO round trip through the tunnel never completed'))
+      }, 10_000)
+      client.on('open', () => client.send(JSON.stringify({ cmd: 1, routeKey: '' }))) // CombCmd.HELLO
+      client.on('message', (data) => {
+        const response = JSON.parse(String(data))
+        if (response.cmd !== 1) return
+        clearTimeout(timer)
+        client.close()
+        resolve(response.infoRsp?.memberID)
+      })
+      client.on('close', (code) => {
+        clearTimeout(timer)
+        reject(new Error(`comb socket closed before the HELLO response: ${code}`))
+      })
+      client.on('error', (error) => {
+        clearTimeout(timer)
+        reject(error)
+      })
+    })
+    if (typeof memberID !== 'string' || memberID.length === 0) {
+      throw new Error(`comb HELLO through the tunnel carried no memberID: ${String(memberID)}`)
+    }
+    const anonymousHold = await new Promise((resolve) => {
+      const client = new WebSocket(combTunnelBase, { headers: { cookie: scopeCookie } })
+      const timer = setTimeout(() => {
+        client.terminate()
+        resolve('held open')
+      }, 1_500)
+      client.on('close', () => {
+        clearTimeout(timer)
+        resolve('closed')
+      })
+      client.on('error', () => resolve('error'))
+    })
+    if (anonymousHold === 'held open') {
+      throw new Error('comb upgrade without a session ticket must not hold the socket open')
+    }
+
     const disposedClosed = await new Promise((resolve, reject) => {
       const client = new WebSocket(
         `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`,

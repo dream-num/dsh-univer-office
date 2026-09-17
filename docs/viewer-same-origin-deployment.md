@@ -25,7 +25,7 @@ DSH WebServer 上由本插件注册三个路由：
 | --- | --- | --- |
 | `/univer-viewer` | HTTP prefix | Viewer 文档与静态资源，原样转发到 Gateway 同路径 |
 | `/uf` | HTTP prefix | Gateway 领域 API（snapshot/changeset/upload/authz 等），逐请求校验范围后转发 |
-| `/univer-viewer/ws` | 精确路径 upgrade | WebSocket 隧道：`?target=/uf/...` 携带真实上游路径 |
+| `/univer-viewer/ws` | 精确路径 upgrade | WebSocket 隧道：`?target=/uf/...` 携带真实上游路径，外层其余 query 参数（端点协议，如 comb 握手的 `sessionTicket`）逐字转发上游 |
 
 DSH WebServer 的 upgrade 注册只支持精确路径，而 Gateway 的 WS 端点路径是动态的
 （`/uf/<key>[/worktrees/<id>]/universer-api/comb/connect` 与 `/uf/<key>[/worktrees/<id>]/events`），

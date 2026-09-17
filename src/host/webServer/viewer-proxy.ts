@@ -138,9 +138,17 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
   ): void => {
     void (async () => {
       const upstreamUrl = new URL(target, rewriteLoopback(await resolveOrigin()))
+      // `target` is the tunnel's own routing parameter; every other query parameter belongs to
+      // the endpoint protocol — e.g. the SDK comb handshake appends its one-time `sessionTicket`
+      // to the tunneled URL — and must reach the Gateway verbatim, matching the HTTP forward path.
+      for (const [name, value] of new URL(req.url ?? '/', 'http://localhost').searchParams) {
+        if (name !== 'target') {
+          upstreamUrl.searchParams.set(name, value)
+        }
+      }
       wss.handleUpgrade(req, socket, head, (client) => {
         // Frames may arrive before the upstream socket opens; queue them instead of dropping.
-        const pending: Buffer[] = []
+        const pending: { readonly data: Buffer; readonly binary: boolean }[] = []
         let closed = false
         const protocols = headerValue(req.headers['sec-websocket-protocol'])
         const upstream =
@@ -173,17 +181,20 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
           }
         }
         bridges.add(close)
-        client.on('message', (data) => {
-          if (upstream.readyState === WebSocket.OPEN) upstream.send(data)
-          else if (upstream.readyState === WebSocket.CONNECTING) pending.push(toBuffer(data))
+        // The frame opcode must survive the relay: the comb protocol speaks TEXT frames, and a
+        // Gateway that receives one as binary rejects the socket with a 1003 close.
+        client.on('message', (data, binary) => {
+          if (upstream.readyState === WebSocket.OPEN) upstream.send(data, { binary })
+          else if (upstream.readyState === WebSocket.CONNECTING)
+            pending.push({ data: toBuffer(data), binary })
         })
         client.on('close', close)
         client.on('error', close)
         upstream.on('open', () => {
-          for (const frame of pending.splice(0)) upstream.send(frame)
+          for (const frame of pending.splice(0)) upstream.send(frame.data, { binary: frame.binary })
         })
-        upstream.on('message', (data) => {
-          client.send(data)
+        upstream.on('message', (data, binary) => {
+          client.send(data, { binary })
         })
         upstream.on('close', close)
         upstream.on('error', close)
