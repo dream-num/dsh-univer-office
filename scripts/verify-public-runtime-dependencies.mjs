@@ -123,5 +123,5 @@ export async function verifyPublicRuntimeDependencies(
 }
 
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === script) {
-  await verifyPublicRuntimeDependencies()
+  await verifyPublicRuntimeDependencies(process.argv[2])
 }

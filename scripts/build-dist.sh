@@ -35,6 +35,10 @@ cp "$ROOT/package.json" "$ROOT/README.md" "$ROOT/README.zh-CN.md" "$ROOT/cordis.
 # with the versions resolved from the installed tree, because dsh consumers use
 # pnpm and transitive dependencies are not resolvable from the plugin bundles.
 node "$ROOT/scripts/inject-runtime-bindings.mjs" "$PKG_DIR/package.json"
+# The staged manifest is what gets published; prove on the public registry that
+# every runtime dependency it declares — the injected native bindings included —
+# is resolvable, so a release can never ship an uninstallable manifest.
+node "$ROOT/scripts/verify-public-runtime-dependencies.mjs" "$PKG_DIR/package.json"
 
 # 2. npm tarball from the assembled package directory, so the published
 #    manifest carries the injected native binding dependencies.

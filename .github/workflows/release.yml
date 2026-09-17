@@ -115,19 +115,11 @@ jobs:
           fi
           echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - name: Verify public runtime dependencies
-        run: pnpm run verify:public-dependencies
-
-      - name: Build
-        run: pnpm run build
-
       - name: Test
         run: pnpm run test
 
-      - name: Pack and inspect
-        run: |
-          npm pack --dry-run
-          test -f dist/.npmignore || true
+      - name: Build and stage the published package
+        run: bash scripts/build-dist.sh
 
       - name: Publish to npm
         if: ${{ !inputs.dry_run }}
@@ -139,7 +131,7 @@ jobs:
           else
             NPM_TAG="latest"
           fi
-          npm publish --access public --tag "$NPM_TAG"
+          npm publish --access public --tag "$NPM_TAG" ./dist/univer
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
