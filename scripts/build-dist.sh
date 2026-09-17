@@ -30,6 +30,18 @@ node "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR"
 mkdir -p "$PKG_DIR/scripts"
 cp "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR/scripts/"
 cp "$ROOT/package.json" "$ROOT/README.md" "$ROOT/README.zh-CN.md" "$ROOT/cordis.patch.yml" "$ROOT/LICENSE" "$PKG_DIR/"
+# The repository's dev lifecycle hooks cannot run from the staged copy (prepare
+# rebuilds through scripts/ that is not shipped, and some npm versions execute
+# prepare on pack even with --ignore-scripts); no consumer needs them from a
+# registry install either — drop them from the manifest that gets published.
+node -e '
+const manifestPath = process.argv[1]
+const manifest = JSON.parse(require("node:fs").readFileSync(manifestPath, "utf8"))
+for (const hook of ["prepare", "prepublish", "prepublishOnly", "prepack", "postpack"]) {
+  delete manifest.scripts?.[hook]
+}
+require("node:fs").writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n")
+' "$PKG_DIR/package.json"
 # The repository manifests never declare the native bindings (their wrappers own
 # the versions); the published manifest installs them as direct dependencies
 # with the versions resolved from the installed tree, because dsh consumers use
