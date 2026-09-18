@@ -18,8 +18,9 @@ type UniverSettingsCardProps = PropsRuntime<'plugins.bundle.config'> &
 type Draft = { readonly kind: 'set'; readonly value: boolean } | { readonly kind: 'unset' } | null
 
 /**
- * Univer Office configuration contributed to this package's own Plugins page:
- * the one-liner for a summary view and the live-preview form for the page view.
+ * Univer Office configuration contributed to this package's own Plugins page
+ * (DSH 0.1.6-alpha.2+) and to the retired settings.plugin.item slot on older
+ * hosts, which pass no `view` and receive the page form directly.
  */
 export function UniverSettingsCard(props: UniverSettingsCardProps): React.ReactNode {
   const subscribe = React.useCallback(

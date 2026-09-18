@@ -280,7 +280,8 @@ const fakeCtx = {
       if (
         key !== 'conversation.input.dock' &&
         key !== 'conversation.chat.turnTail' &&
-        key !== 'plugins.bundle.config'
+        key !== 'plugins.bundle.config' &&
+        key !== 'settings.plugin.item'
       )
         throw new Error(`unexpected slots.inject("${key}")`)
       return callback()
@@ -1402,5 +1403,79 @@ await waitFor('targets 清空后全部关闭', () => q('.uvf_win') === null && q
 
 reactRoot.unmount()
 reviewRoot.unmount()
+
+// ---- legacy hosts (≤ 0.1.6-alpha.1): chain turnTail + settings.plugin.item ----
+{
+  const legacyEntries = []
+  const legacyInjectKeys = []
+  const legacyCtx = {
+    ...fakeCtx,
+    inject(services, callback) {
+      if (services.join(',') !== 'settingsScope')
+        throw new Error(`unexpected ctx.inject(${JSON.stringify(services)})`)
+      return callback(legacyCtx)
+    },
+    slots: {
+      register(options, Component) {
+        // Hosts up to 0.1.6-alpha.1 reject a chain-slot registration without a selector.
+        if (options.name === 'conversation.chat.turnTail' && options.select === undefined)
+          throw new Error('chain slot "conversation.chat.turnTail" requires options.select')
+        legacyEntries.push({ options, Component })
+        return () => {}
+      },
+      inject(key, callback) {
+        legacyInjectKeys.push(key)
+        if (
+          key !== 'conversation.input.dock' &&
+          key !== 'conversation.chat.turnTail' &&
+          key !== 'plugins.bundle.config' &&
+          key !== 'settings.plugin.item'
+        )
+          throw new Error(`unexpected slots.inject("${key}")`)
+        return callback()
+      }
+    }
+  }
+  pluginExports.apply(legacyCtx)
+  const legacyTail = legacyEntries.find(
+    (entry) => entry.options.name === 'conversation.chat.turnTail'
+  )
+  if (
+    legacyTail === undefined ||
+    typeof legacyTail.options.select !== 'function' ||
+    legacyTail.options.priority !== -10 ||
+    'id' in legacyTail.options
+  )
+    throw new Error('legacy hosts must receive the chain-contract turnTail registration')
+  const legacySettings = legacyEntries.find(
+    (entry) => entry.options.name === 'settings.plugin.item'
+  )
+  if (legacySettings === undefined || legacySettings.options.key !== 'univer-office')
+    throw new Error('legacy hosts must receive the settings.plugin.item registration')
+  for (const key of ['plugins.bundle.config', 'settings.plugin.item']) {
+    if (!legacyInjectKeys.includes(key))
+      throw new Error(`legacy host must probe both settings slots: missing ${key}`)
+  }
+  // The chain host passes {...owner, matched}; the component resolves its own
+  // match from the owner turn and must render the same review cards.
+  const legacyRootEl = document.createElement('div')
+  document.body.appendChild(legacyRootEl)
+  const legacyRoot = createRoot(legacyRootEl)
+  legacyRoot.render(
+    React.createElement(legacyTail.Component, {
+      key: 'legacy',
+      ...tailProps,
+      ...ownerProps(3, [turnFile(DEMO_FILE, WORKTREE)]),
+      matched: { turn: 3, files: [turnFile(DEMO_FILE, WORKTREE)] }
+    })
+  )
+  await waitFor(
+    'chain 契约下预览卡片正常渲染',
+    () => legacyRootEl.querySelector('.uvf_panel') !== null
+  )
+  legacyRoot.unmount()
+  legacyRootEl.remove()
+}
+
 server.close()
 console.log('client smoke OK (uiConversation Conversation API)')
