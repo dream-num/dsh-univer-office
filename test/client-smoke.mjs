@@ -100,6 +100,20 @@ const currentState = () => ({
 const stateRequests = []
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x')
+  if (req.method === 'GET' && url.pathname === '/univer-api/status') {
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(
+      JSON.stringify({
+        gateway: {
+          phase: gatewayPhase,
+          gateway: gatewayPhase === 'running' ? 'http://127.0.0.1:9123' : null,
+          owned: false
+        },
+        unitContent: 'bundled'
+      })
+    )
+    return
+  }
   if (req.method === 'GET' && url.pathname === '/univer-api/state') {
     const file = url.searchParams.get('file')
     if (url.searchParams.get('sessionId') !== 'test-session-id') {
@@ -107,6 +121,11 @@ const server = createServer(async (req, res) => {
       return
     }
     stateRequests.push(file)
+    if (gatewayPhase !== 'running') {
+      res.writeHead(503, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ ok: false, code: 'GATEWAY_UNAVAILABLE', message: 'no gateway' }))
+      return
+    }
     if (file !== null && missingFiles.has(file)) {
       res.writeHead(400, { 'content-type': 'application/json' })
       res.end(
@@ -211,14 +230,28 @@ let localeDicts = null
 let conversationDefinition = null
 let activeLocale = 'zh'
 let localeRevision = 0
+const localeListeners = new Set()
+/** Switch the active locale the way the runtime does: bump the revision and notify. */
+function setActiveLocale(next) {
+  activeLocale = next
+  localeRevision += 1
+  for (const listener of localeListeners) listener()
+}
+/** File viewers the client half registered with the optional sidebar service. */
+const sidebarViewers = []
+/** Native right-Sidebar tab types the client half registered. */
+const nativeTabTypes = []
+/** Gateway phase the fake host reports; a stopped Gateway cannot project Viewer URLs. */
+let gatewayPhase = 'running'
+const SETTINGS_DEFAULTS = { autoOpenLivePreview: true, conversationReviewCards: true }
 let settingsRevision = 0
-let settingsValue = true
+let settingsValue = { ...SETTINGS_DEFAULTS }
 let settingsUser = {}
 const settingsListeners = new Set()
 const makeSettingsSnapshot = () => ({
   status: 'ready',
-  value: { autoOpenLivePreview: settingsValue },
-  base: { autoOpenLivePreview: true },
+  value: { ...settingsValue },
+  base: { ...SETTINGS_DEFAULTS },
   user: settingsUser,
   revision: settingsRevision,
   writable: true,
@@ -236,18 +269,21 @@ const settingsScope = {
     return () => settingsListeners.delete(listener)
   },
   async set(field, value) {
-    if (field !== 'autoOpenLivePreview' || typeof value !== 'boolean')
-      throw new Error('unexpected settings write')
-    settingsValue = value
-    settingsUser = { autoOpenLivePreview: value }
+    if (!Object.hasOwn(SETTINGS_DEFAULTS, field) || typeof value !== 'boolean')
+      throw new Error(`unexpected settings write: ${field}`)
+    settingsValue = { ...settingsValue, [field]: value }
+    settingsUser = { ...settingsUser, [field]: value }
     settingsRevision += 1
     settingsSnapshot = makeSettingsSnapshot()
     for (const listener of settingsListeners) listener()
   },
   async unset(field) {
-    if (field !== 'autoOpenLivePreview') throw new Error('unexpected settings reset')
-    settingsValue = true
-    settingsUser = {}
+    if (!Object.hasOwn(SETTINGS_DEFAULTS, field))
+      throw new Error(`unexpected settings reset: ${field}`)
+    settingsValue = { ...settingsValue, [field]: SETTINGS_DEFAULTS[field] }
+    const nextUser = { ...settingsUser }
+    delete nextUser[field]
+    settingsUser = nextUser
     settingsRevision += 1
     settingsSnapshot = makeSettingsSnapshot()
     for (const listener of settingsListeners) listener()
@@ -261,7 +297,8 @@ const conversationEventRegistry = {
 }
 const fakeCtx = {
   inject(services, callback) {
-    if (services.join(',') !== 'settingsScope')
+    const key = services.join(',')
+    if (key !== 'settingsScope' && key !== 'betterSidebar' && key !== 'sidebarRightTabs')
       throw new Error(`unexpected ctx.inject(${JSON.stringify(services)})`)
     return callback(fakeCtx)
   },
@@ -281,7 +318,8 @@ const fakeCtx = {
         key !== 'conversation.input.dock' &&
         key !== 'conversation.chat.turnTail' &&
         key !== 'plugins.bundle.config' &&
-        key !== 'settings.plugin.item'
+        key !== 'settings.plugin.item' &&
+        key !== 'sidebar.right.pane.tab'
       )
         throw new Error(`unexpected slots.inject("${key}")`)
       return callback()
@@ -304,10 +342,28 @@ const fakeCtx = {
     },
     getSnapshot() {
       return { active: activeLocale, revision: localeRevision }
+    },
+    subscribe(listener) {
+      localeListeners.add(listener)
+      return () => localeListeners.delete(listener)
     }
   },
   get(name) {
     if (name === 'uiConversation') return { events: conversationEventRegistry }
+    if (name === 'sidebarRightTabs')
+      return {
+        register(definition) {
+          nativeTabTypes.push(definition)
+          return () => {}
+        }
+      }
+    if (name === 'betterSidebar')
+      return {
+        registerFileViewer(descriptor) {
+          sidebarViewers.push(descriptor)
+          return () => {}
+        }
+      }
     throw new Error(`unexpected ctx.get("${name}")`)
   }
 }
@@ -357,8 +413,80 @@ if (
   typeof tailInjected.getViewerLocale !== 'function'
 )
   throw new Error('Viewer locale getter missing')
-if (dockInjected.livePreview === undefined || settingsInjected.settings !== settingsScope)
+if (dockInjected.preferences === undefined || settingsInjected.settings !== settingsScope)
   throw new Error('Settings preference injection missing')
+
+// ---- on-demand `.univer` file viewer registration ----
+// A click on the file in the DSH file tree must reach the Viewer with no agent
+// write, so the client half registers a previewer for the `.univer` extension.
+if (sidebarViewers.length !== 1)
+  throw new Error(`expected exactly one sidebar file viewer, got ${sidebarViewers.length}`)
+const fileViewer = sidebarViewers[0]
+if (fileViewer.id !== 'univer-office:univer')
+  throw new Error(`unexpected file viewer id: ${fileViewer.id}`)
+if (fileViewer.exts.join(',') !== 'univer')
+  throw new Error(`file viewer must claim the .univer extension, got ${fileViewer.exts.join(',')}`)
+if (!(fileViewer.priority > 0))
+  throw new Error('file viewer must outrank the sidebar catch-all viewer')
+if (fileViewer.fetchStrategy !== 'none')
+  throw new Error(
+    '.univer is a binary container: a byte-reading strategy would render the download pane instead'
+  )
+if (typeof fileViewer.component !== 'function') throw new Error('file viewer component missing')
+
+// ---- on-demand `.univer` preview as a NATIVE right-Sidebar tab type ----
+// dsh-better-sidebar wins the address claim whenever it is installed, so the
+// registration above only covers hosts that have it. This one covers the rest:
+// without it, a host on DSH's own file tree has no `.univer` preview at all.
+if (nativeTabTypes.length !== 1)
+  throw new Error(`expected exactly one native sidebar tab type, got ${nativeTabTypes.length}`)
+const nativeTab = nativeTabTypes[0]
+if (nativeTab.id !== 'dsh-univer-office') throw new Error(`unexpected tab id: ${nativeTab.id}`)
+if (nativeTab.kind !== 'univer')
+  throw new Error(`the tab kind must be this plugin's own, got ${nativeTab.kind}`)
+if (nativeTab.patterns.join(',') !== '*.univer')
+  throw new Error(`tab type must claim .univer, got ${nativeTab.patterns.join(',')}`)
+if (nativeTab.priority !== 'extension')
+  throw new Error('a third-party tab type claims addresses in the highest band')
+const SESSION_ADDRESS = 'dsh-resource://file/session/test-session-id/预览演示/月度支出表.univer'
+if (nativeTab.canOpen(SESSION_ADDRESS) !== true)
+  throw new Error('a session-scoped file address must be claimable')
+if (nativeTab.canOpen('dsh-resource://file/absolute/home/me/x.univer') !== false)
+  throw new Error('the absolute scope carries no session, so the state route cannot authorize it')
+if (nativeTab.canOpen('dsh-resource://note/session/s1/x.univer') !== false)
+  throw new Error('only file addresses belong to this type')
+if (nativeTab.title(SESSION_ADDRESS) !== '月度支出表.univer')
+  throw new Error(
+    `the chip title must be the decoded basename, got ${nativeTab.title(SESSION_ADDRESS)}`
+  )
+const nativeBodyEntry = slotEntries.find(
+  (entry) => entry.options.name === 'sidebar.right.pane.tab' && entry.options.key === nativeTab.id
+)
+if (nativeBodyEntry === undefined)
+  throw new Error('the native tab body must register under the type id')
+if (typeof nativeBodyEntry.Component !== 'function')
+  throw new Error('native tab body is not a component')
+
+// The mirrored `dsh-resource://file/…` grammar, exercised through the two
+// members the sidebar actually calls rather than by reaching into the parser.
+for (const [address, claimable, title] of [
+  ['dsh-resource://file/session/s1/src/a.univer', true, 'a.univer'],
+  ['dsh-resource://file/session/s1/%E6%9C%88%E5%BA%A6.univer', true, '月度.univer'],
+  ['dsh-resource://file/session/s1/a%20b.univer', true, 'a b.univer'],
+  ['dsh-resource://file/session/s1/a.univer?line=3#frag', true, 'a.univer'],
+  ['dsh-resource://file/session/s1/C:/dir/a.univer', true, 'a.univer'],
+  ['dsh-resource://file/absolute/home/me/a.univer', false, undefined],
+  ['dsh-resource://note/session/s1/a.univer', false, undefined],
+  ['dsh-resource://file/session/s1/%ZZ.univer', false, undefined],
+  ['sidebar://guide', false, undefined],
+  ['/plain/path/a.univer', false, undefined]
+]) {
+  if (nativeTab.canOpen(address) !== claimable)
+    throw new Error(`canOpen(${address}) must be ${claimable}`)
+  if (title !== undefined && nativeTab.title(address) !== title)
+    throw new Error(`title(${address}) must be ${title}, got ${nativeTab.title(address)}`)
+}
+
 // ---- definition pure-accumulator sanity: reads never erase a ready transition ----
 {
   const def = conversationDefinition
@@ -596,7 +724,7 @@ function render(session, remount = true, cwd = SESSION_CWD) {
       ...runtimeProps(session),
       t,
       getViewerLocale: dockInjected.getViewerLocale,
-      livePreview: dockInjected.livePreview,
+      preferences: dockInjected.preferences,
       sessionId: 'test-session-id',
       useSessions: (selector) => selector({ byId: { 'test-session-id': { cwd } } })
     })
@@ -614,6 +742,7 @@ function render(session, remount = true, cwd = SESSION_CWD) {
       openFile: () => {},
       t,
       getViewerLocale: tailInjected.getViewerLocale,
+      preferences: tailInjected.preferences,
       sessionId: 'test-session-id',
       ...runtimeProps(session),
       useSessions: (selector) => selector({ byId: { 'test-session-id': { cwd } } })
@@ -632,6 +761,12 @@ async function waitFor(description, predicate, timeoutMs = 5000) {
 }
 const q = (selector) => document.querySelector(selector)
 const qa = (selector) => Array.from(document.querySelectorAll(selector))
+/** Encode one `/`-separated path the way the file-resource grammar encodes it. */
+const encodeAddressPath = (path) =>
+  path
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
 
 // ---- turn-tail preview: full standalone Viewer, not embedded mode ----
 // List-slot entries (DSH 0.1.6-alpha.2) receive the owner props and resolve
@@ -650,6 +785,7 @@ const tailProps = {
   sessionId: 'test-session-id',
   t,
   getViewerLocale: tailInjected.getViewerLocale,
+  preferences: tailInjected.preferences,
   ...runtimeProps(sessionWithTargets([{ file: DEMO_FILE, worktreeId: WORKTREE }], true)),
   useSessions: (selector) => selector({ byId: { 'test-session-id': { cwd: SESSION_CWD } } })
 }
@@ -670,8 +806,7 @@ await waitFor(
     tailRootEl.querySelector('.uvf_panelFrame')?.getAttribute('src') === ZH_FULL_DEFAULT_UNIT_URL
 )
 const tailFrame = tailRootEl.querySelector('.uvf_panelFrame')
-activeLocale = 'en'
-localeRevision += 1
+setActiveLocale('en')
 tailRoot.render(
   React.createElement(tailEntry.Component, {
     ...tailProps,
@@ -685,8 +820,7 @@ await waitFor(
 )
 if (tailRootEl.querySelector('.uvf_panelFrame') !== tailFrame)
   throw new Error('locale switch must update the existing Viewer iframe')
-activeLocale = 'zh'
-localeRevision += 1
+setActiveLocale('zh')
 tailRoot.render(
   React.createElement(tailEntry.Component, {
     ...tailProps,
@@ -952,7 +1086,10 @@ if (q('.uvf_panel') === null)
   settingsRootEl
     .querySelector('.uvf_settingsSave')
     .dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
-  await waitFor('关闭设置后浮窗消失', () => settingsValue === false && q('.uvf_win') === null)
+  await waitFor(
+    '关闭设置后浮窗消失',
+    () => settingsValue.autoOpenLivePreview === false && q('.uvf_win') === null
+  )
   if (q('.uvf_panel') === null)
     throw new Error('disabling live windows must preserve conversation review cards')
   await waitFor(
@@ -971,7 +1108,7 @@ if (q('.uvf_panel') === null)
     .dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
   await waitFor(
     '重新开启后当前修改恢复浮窗',
-    () => settingsValue === true && q('.uvf_win') !== null
+    () => settingsValue.autoOpenLivePreview === true && q('.uvf_win') !== null
   )
   document
     .querySelectorAll('.uvf_win .uvf_unit')[1]
@@ -984,11 +1121,96 @@ if (q('.uvf_panel') === null)
   settingsRootEl.remove()
 }
 
-// ---- scenario 1b: DSH locale switch updates shell copy and the live Viewer in place ----
+// ---- scenario 1a': Settings card hides conversation review cards independently ----
+// The two switches are independent: hiding cards must leave the live window alone,
+// and the on-demand file-tree preview is a separate surface entirely.
+{
+  const settingsRootEl = document.createElement('section')
+  document.body.appendChild(settingsRootEl)
+  const settingsRoot = createRoot(settingsRootEl)
+  settingsRoot.render(
+    React.createElement(settingsEntry.Component, { t, ...settingsInjected, view: 'page' })
+  )
+  await waitFor(
+    '设置卡片同时提供两个开关',
+    () => settingsRootEl.querySelectorAll('[role=switch]').length === 2
+  )
+  // Every interaction is scoped to the review-card row: scenario 1a left the
+  // live-window field overridden too, so an unscoped query would hit its Reset.
+  const reviewRow = () => settingsRootEl.querySelectorAll('.uvf_settingsField')[1]
+  const reviewSwitch = () => reviewRow().querySelector('[role=switch]')
+  const save = async (description, accepted) => {
+    await waitFor(`${description}: Save 可用`, () => {
+      const button = settingsRootEl.querySelector('.uvf_settingsSave')
+      return button !== null && !button.disabled
+    })
+    settingsRootEl
+      .querySelector('.uvf_settingsSave')
+      .dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+    await waitFor(description, accepted)
+  }
+  if (
+    settingsRootEl
+      .querySelectorAll('.uvf_settingsField')[0]
+      .querySelector('[role=switch]')
+      ?.getAttribute('aria-label') !== t('settings.autoOpenLivePreview')
+  )
+    throw new Error('the live-window switch must stay first')
+  if (reviewSwitch()?.getAttribute('aria-label') !== t('settings.conversationReviewCards'))
+    throw new Error('the review-card switch must be the second row')
+  if (q('.uvf_panel') === null) throw new Error('review cards must start visible')
+  reviewSwitch().dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await waitFor(
+    '关闭审阅卡片进入待保存状态',
+    () => reviewSwitch().getAttribute('aria-checked') === 'false'
+  )
+  await save(
+    '关闭审阅卡片后回合卡片消失',
+    () => settingsValue.conversationReviewCards === false && q('.uvf_panel') === null
+  )
+  if (q('.uvf_win') === null)
+    throw new Error('hiding review cards must leave the live window untouched')
+  reviewRow()
+    .querySelector('.uvf_settingsReset')
+    .dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+  await save(
+    '恢复默认后审阅卡片回来',
+    () => settingsValue.conversationReviewCards === true && q('.uvf_panel') !== null
+  )
+  settingsRoot.unmount()
+  settingsRootEl.remove()
+}
+
+// ---- scenario 1a'': a Host settings schema older than this Client bundle ----
+// The Host half resolves the settings document, so a Client that ships first
+// (a rolling upgrade, or this session's HMR reload) reads a snapshot without
+// the new field. An absent field must keep the surface at its product default
+// instead of reading as "off" and hiding cards the user never turned off.
+//
+// The crafted snapshot keeps the shared field at its current value, so the
+// correct projection is byte-identical to the previous one and nothing
+// re-renders — which is why this settles instead of polling. With the bug the
+// projection changes to `undefined`, the card re-renders and unmounts.
+{
+  settingsSnapshot = {
+    ...settingsSnapshot,
+    value: { autoOpenLivePreview: true },
+    revision: settingsRevision + 1
+  }
+  for (const listener of settingsListeners) listener()
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 250))
+  if (q('.uvf_panel') === null) throw new Error('缺失的设置字段必须沿用产品默认值，而不是隐藏界面')
+  settingsSnapshot = {
+    ...settingsSnapshot,
+    value: { ...settingsValue },
+    revision: settingsRevision
+  }
+  for (const listener of settingsListeners) listener()
+}
+
 {
   const frame = q('.uvf_frame')
-  activeLocale = 'en'
-  localeRevision += 1
+  setActiveLocale('en')
   render(liveDraftSession, false)
   await waitFor(
     '浮窗切换英文',
@@ -1000,8 +1222,7 @@ if (q('.uvf_panel') === null)
     throw new Error('locale switch must preserve the live iframe element')
   if (q('.uvf_frame')?.getAttribute('src') !== EN_SLIDE_UNIT_URL)
     throw new Error('live Viewer must receive en-US after DSH switches to English')
-  activeLocale = 'zh'
-  localeRevision += 1
+  setActiveLocale('zh')
   render(liveDraftSession, false)
   await waitFor(
     '浮窗切回中文',
@@ -1317,8 +1538,7 @@ if (q('[data-panel-action=fold]') === null)
 {
   const frame = q('.uvf_panelFrame')
   const reviewSession = sessionWithTargets([{ file: DEMO_FILE, worktreeId: WORKTREE }], false)
-  activeLocale = 'en'
-  localeRevision += 1
+  setActiveLocale('en')
   render(reviewSession, false)
   await waitFor(
     '审阅卡片切换英文',
@@ -1331,8 +1551,7 @@ if (q('[data-panel-action=fold]') === null)
     throw new Error('locale switch must preserve the compact file and worktree header')
   if (q('.uvf_panelFrame') !== frame)
     throw new Error('locale switch must preserve the review iframe element')
-  activeLocale = 'zh'
-  localeRevision += 1
+  setActiveLocale('zh')
   render(reviewSession, false)
   await waitFor(
     '审阅卡片切回中文',
@@ -1411,7 +1630,8 @@ reviewRoot.unmount()
   const legacyCtx = {
     ...fakeCtx,
     inject(services, callback) {
-      if (services.join(',') !== 'settingsScope')
+      const key = services.join(',')
+      if (key !== 'settingsScope' && key !== 'betterSidebar' && key !== 'sidebarRightTabs')
         throw new Error(`unexpected ctx.inject(${JSON.stringify(services)})`)
       return callback(legacyCtx)
     },
@@ -1429,7 +1649,8 @@ reviewRoot.unmount()
           key !== 'conversation.input.dock' &&
           key !== 'conversation.chat.turnTail' &&
           key !== 'plugins.bundle.config' &&
-          key !== 'settings.plugin.item'
+          key !== 'settings.plugin.item' &&
+          key !== 'sidebar.right.pane.tab'
         )
           throw new Error(`unexpected slots.inject("${key}")`)
         return callback()
@@ -1475,6 +1696,124 @@ reviewRoot.unmount()
   )
   legacyRoot.unmount()
   legacyRootEl.remove()
+}
+
+// ---- on-demand .univer file viewer: click-to-preview with no agent write ----
+{
+  const fileViewerRootEl = document.createElement('div')
+  document.body.appendChild(fileViewerRootEl)
+  const fileViewerRoot = createRoot(fileViewerRootEl)
+  let fileViewerKey = 0
+  const renderFileViewer = () =>
+    fileViewerRoot.render(
+      React.createElement(fileViewer.component, {
+        key: 'fv' + ++fileViewerKey,
+        ctx: fakeCtx,
+        scope: { sessionId: 'test-session-id', cwd: SESSION_CWD },
+        path: DEMO_FILE,
+        title: 'demo.univer',
+        viewerId: fileViewer.id
+      })
+    )
+  const fileChips = () => Array.from(fileViewerRootEl.querySelectorAll('.uvf_unit'))
+  const fileFrameSrc = () => fileViewerRootEl.querySelector('iframe.uvf_frame')?.getAttribute('src')
+  const clickChip = (index) =>
+    fileChips()[index].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+
+  // Opening the file must reach the Viewer with no agent operation: the client
+  // half resolves the Host-projected trunk target on its own.
+  worktrees = [wt('draft')]
+  renderFileViewer()
+  await waitFor('点击文件即按需展示当前版本', () => fileFrameSrc() === withLang(TRUNK_URL, 'zh-CN'))
+  if (fileChips().length !== 2)
+    throw new Error(
+      `an open worktree must be offered as an explicit switch, got ${fileChips().length} chips`
+    )
+  if (fileChips()[0].textContent !== t('dock.currentVersion'))
+    throw new Error('the first scope chip must be the current version')
+  if (fileChips()[1].textContent !== t('dock.draft'))
+    throw new Error('the open worktree chip must carry its lifecycle label')
+
+  // A file opened while an agent is still working must not hide that work.
+  clickChip(1)
+  await waitFor('切换到进行中的 worktree', () => fileFrameSrc() === withLang(VIEW_URL, 'zh-CN'))
+
+  // Labels and the Viewer locale follow a language switch without a remount.
+  setActiveLocale('en')
+  await waitFor(
+    '语言切换后预览标签与 Viewer locale 同步跟随',
+    () =>
+      fileFrameSrc() === withLang(VIEW_URL, 'en-US') &&
+      fileChips()[0].textContent === 'Current version'
+  )
+  setActiveLocale('zh')
+
+  // A ready worktree opens the merge preview, matching the review card's table.
+  worktrees = [wt('ready')]
+  renderFileViewer()
+  await waitFor(
+    'ready worktree 仍默认展示当前版本',
+    () => fileFrameSrc() === withLang(TRUNK_URL, 'zh-CN')
+  )
+  clickChip(1)
+  await waitFor(
+    'ready worktree 使用合并预览',
+    () => fileFrameSrc() === withLang(MERGE_URL, 'zh-CN')
+  )
+
+  // The Host may confirm the path is gone (an agent removed a temporary file).
+  missingFiles.add(DEMO_FILE)
+  renderFileViewer()
+  await waitFor('文件已不在工作区时给出说明', () =>
+    fileViewerRootEl.textContent.includes(t('viewer.missing'))
+  )
+
+  // A stopped Gateway must be actionable, not an endless load: the shared
+  // Turn-preview poll swallows this failure, so the phase is reported separately.
+  gatewayPhase = 'stopped'
+  renderFileViewer()
+  await waitFor('Gateway 停止时给出启动入口', () =>
+    fileViewerRootEl.textContent.includes(t('dock.gatewayDown'))
+  )
+  const startButton = Array.from(fileViewerRootEl.querySelectorAll('button')).find(
+    (button) => button.textContent === t('dock.startGateway')
+  )
+  if (startButton === undefined) throw new Error('stopped Gateway must offer a start action')
+  gatewayPhase = 'running'
+  missingFiles.delete(DEMO_FILE)
+
+  fileViewerRoot.unmount()
+  fileViewerRootEl.remove()
+}
+
+// ---- native right-Sidebar tab body: the host WITHOUT dsh-better-sidebar ----
+// The seat hands a body nothing but the resource address, so the address has to
+// carry both the session and the path; this proves the whole route works end to
+// end against the same fake Host state API the other surfaces use.
+{
+  const nativeRootEl = document.createElement('div')
+  document.body.appendChild(nativeRootEl)
+  const nativeRoot = createRoot(nativeRootEl)
+  const address = `dsh-resource://file/session/test-session-id/${encodeAddressPath(REL_DEMO_FILE)}`
+  worktrees = []
+  nativeRoot.render(
+    React.createElement(nativeBodyEntry.Component, {
+      ctx: fakeCtx,
+      useTabInfo: () => ({ tab: { contentId: address } })
+    })
+  )
+  await waitFor(
+    '原生侧边栏标签按地址解析出文件与会话并渲染 Viewer',
+    () =>
+      nativeRootEl.querySelector('iframe.uvf_frame')?.getAttribute('src') ===
+      withLang(TRUNK_URL, 'zh-CN')
+  )
+  if (nativeRootEl.querySelector('[data-surface=sidebar-right]') === null)
+    throw new Error('the native tab body must report the surface it renders for')
+  if (nativeRootEl.querySelector('.uvf_unit') !== null)
+    throw new Error('a file without an open worktree must not offer a scope switch')
+  nativeRoot.unmount()
+  nativeRootEl.remove()
 }
 
 server.close()
