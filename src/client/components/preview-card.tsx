@@ -12,11 +12,13 @@ import {
   type UniverTurnMatch
 } from '../conversation/univer-turn-definition.ts'
 import { useUniverStates } from '../hooks/use-univer-state.ts'
+import type { UniverPreferences } from '../settings/univer-preferences.ts'
 import type { ViewerLocaleInjected } from '../viewer-locale.ts'
 import { ReviewPanel } from './review-panel.tsx'
 
 interface PreviewCardShared extends PropsLocale<'univer'>, ViewerLocaleInjected {
   readonly matched: UniverTurnMatch
+  readonly preferences: UniverPreferences
 }
 
 export type PreviewCardProps = PropsRuntime<'conversation.chat.turnTail'> &
@@ -25,13 +27,19 @@ export type PreviewCardProps = PropsRuntime<'conversation.chat.turnTail'> &
 /**
  * List-slot entry for the Turn tail: list slots inject the owner props
  * directly instead of a chain `matched`, so the Turn match is resolved here.
- * Turns without Univer operations render nothing.
+ * Turns without Univer operations render nothing, and so does a Turn whose
+ * review cards the user turned off in the plugin settings.
  */
 export function PreviewCard(props: PreviewCardProps): React.ReactElement | null {
+  const reviewCards = React.useSyncExternalStore(
+    props.preferences.subscribe,
+    () => props.preferences.getSnapshot().conversationReviewCards,
+    () => props.preferences.getSnapshot().conversationReviewCards
+  )
   const matched = selectUniverTurn(props)
   const timeline = props.useChat((snapshot: ChatSnapshot) => snapshot.timeline)
   const cwd = props.useSessions((state: SessionListState) => state.byId[props.sessionId]?.cwd)
-  if (matched === null) return null
+  if (matched === null || !reviewCards) return null
   return <PreviewCardContent {...props} matched={matched} timeline={timeline} cwd={cwd} />
 }
 

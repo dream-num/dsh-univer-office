@@ -125,12 +125,22 @@ try {
   const descriptor = settingsContext.settings
     .describe()
     .find((entry) => entry.ns === 'univer-office')
-  if (descriptor?.value?.autoOpenLivePreview !== true || descriptor.applies !== 'live') {
+  if (
+    descriptor?.value?.autoOpenLivePreview !== true ||
+    descriptor?.value?.conversationReviewCards !== true ||
+    descriptor.applies !== 'live'
+  ) {
     throw new Error(`Univer Settings default missing: ${JSON.stringify(descriptor)}`)
   }
-  await settingsContext.settings.update('univer-office', { autoOpenLivePreview: false })
+  await settingsContext.settings.update('univer-office', {
+    autoOpenLivePreview: false,
+    conversationReviewCards: false
+  })
   const updated = settingsContext.settings.describe().find((entry) => entry.ns === 'univer-office')
-  if (updated?.value?.autoOpenLivePreview !== false)
+  if (
+    updated?.value?.autoOpenLivePreview !== false ||
+    updated?.value?.conversationReviewCards !== false
+  )
     throw new Error(`Univer Settings update failed: ${JSON.stringify(updated)}`)
 } finally {
   await settingsContext.fiber.dispose()

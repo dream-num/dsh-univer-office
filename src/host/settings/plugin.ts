@@ -10,7 +10,8 @@ import {
 export const name = 'univer-settings'
 
 const SettingsSchema: z<UniverSettings> = z.object({
-  autoOpenLivePreview: z.boolean().default(true)
+  autoOpenLivePreview: z.boolean().default(true),
+  conversationReviewCards: z.boolean().default(true)
 })
 
 /** Expose presentation preferences when the active DSH composition provides Settings. */

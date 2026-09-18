@@ -38,4 +38,7 @@ export const worktreeStyles = `
 @media (max-width:680px){.uvf_panel{margin:10px auto 4px;border-radius:14px}.uvf_panel_fullscreen{inset:4px;margin:0;border-radius:14px}.uvf_panelHead{gap:6px;height:54px;min-height:54px;padding:6px}.uvf_panelGlyph{width:30px;height:30px}.uvf_panelIdentity{min-width:0}.uvf_panelTitle{min-width:0;flex:0 1 auto}.uvf_panelWorktree{flex:1}.uvf_panelChip{gap:4px;padding:3px 7px;font-size:10px}.uvf_btn{width:30px;height:30px}.uvf_panelContent{height:min(480px,66dvh);min-height:320px}}
 @media (max-width:420px){.uvf_panelGlyph{display:none}.uvf_panelMeta{display:none}.uvf_panelTitleRow{gap:5px}.uvf_panelIdentity{justify-content:center}}
 @media (prefers-reduced-motion:reduce){.uvf_win,.uvf_windowControl,.uvf_unit,.uvf_btn{transition:none}.uvf_pulse::after{animation:none}}
+.uvf_fileView{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;height:100%;background:var(--dsw-alias-bg-base,#fff)}
+.uvf_fileView>.uvf_units{flex:none}
+.uvf_fileView .uvf_note{color:var(--dsw-alias-label-tertiary,#7d8798)}
 `

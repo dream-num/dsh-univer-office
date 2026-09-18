@@ -169,8 +169,9 @@ DSH selects these tools automatically; you normally do not need to call them man
 
 ## Preview and review experience
 
-- **Live Univer window** — changes open automatically in a window you can drag, resize, fold, or maximize. Disable automatic opening in the plugin's settings — the **Univer Office** page under the sidebar **Plugins** page (or **Settings → Plugins → Plugin configuration** on DSH releases before 0.1.6-alpha.2) — without removing conversation review cards.
-- **Conversation review cards** — each edited `.univer` file has its own full preview card, while deleted temporary files leave no stale cards behind.
+- **On-demand preview from the file tree** — click a `.univer` file in the DSH file tree and it opens in the right sidebar, alongside the built-in previews for `.docx`, `.xlsx`, and `.pptx`. No agent operation is involved: this is the entry point that still works when automatic live previews are off. If the file has a draft or submitted worktree, a scope switch appears so opening a file never hides work that is still in progress. It registers on DSH's own right sidebar; when the `dsh-better-sidebar` plugin is installed instead, it is registered as one of that plugin's file viewers, because that plugin takes over file addresses.
+- **Live Univer window** — changes open automatically in a window you can drag, resize, fold, or maximize. Disable automatic opening in the plugin's settings — the **Univer Office** page under the sidebar **Plugins** page (or **Settings → Plugins → Plugin configuration** on DSH releases before 0.1.6-alpha.2) — without removing conversation review cards or the file-tree preview above.
+- **Conversation review cards** — each edited `.univer` file has its own full preview card, while deleted temporary files leave no stale cards behind. Turn them off with **Show review cards in the conversation** in the plugin's settings for a more compact conversation; the file-tree preview and the live window are controlled by their own switches.
 - **Pinned worktree comparison** — use **Compare** in a draft or submitted worktree to compare it with trunk or another active worktree. Both sides are pinned when the comparison opens, changed entities can be navigated, and a refresh control appears if either side advances.
 - **Responsive review Header** — View/Compare stays centered when space permits; controls share a compact row and wrap in order as the window narrows. The title shows the selected document name; long names truncate, and merge-status messages remain visible.
 - **Historical review** — drafts, submitted changes, approvals, and discarded results remain in the conversation, with older cards collapsed by default.
@@ -182,6 +183,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 ## Requirements and current limits
 
 - DeepSeek Harness and Node.js `>=22.19.0`.
+- The file-tree preview needs no extra plugin: it registers a tab type on DSH's right sidebar and claims `dsh-resource://file/**` addresses ending in `.univer`. While `dsh-better-sidebar` (`^0.19.0`) is installed it takes over file addresses at the same priority with a broader pattern, so the preview is registered as one of its file viewers instead — both shapes are covered, and only one ever applies.
 - Screenshots, PDF printing, Slide layout checks, and SVG text measurement need a local Chromium-family browser. Chrome/Chromium and Microsoft Edge are detected automatically; set the `browserExecutablePath` option or the `UNIVER_RENDER_BROWSER` environment variable to point at a specific executable (for example Edge on Windows).
 - Slide master pages, layout pages, and speaker notes are outside the current editing scope.
 - Board mind maps, tables, ink, advanced editing, and file export are not yet supported.

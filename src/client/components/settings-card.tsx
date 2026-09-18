@@ -5,7 +5,8 @@ import type {
   SettingsScopeSnapshot
 } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { UniverSettings } from '../../shared/settings.ts'
+import { DEFAULT_UNIVER_SETTINGS, type UniverSettings } from '../../shared/settings.ts'
+import type { UniverLocaleKey } from '../locales/zh.ts'
 
 interface UniverSettingsCardInjected {
   readonly settings: SettingsScope<UniverSettings>
@@ -15,12 +16,41 @@ type UniverSettingsCardProps = PropsRuntime<'plugins.bundle.config'> &
   PropsLocale<'univer'> &
   InjectFace<UniverSettingsCardInjected>
 
-type Draft = { readonly kind: 'set'; readonly value: boolean } | { readonly kind: 'unset' } | null
+type Draft = { readonly kind: 'set'; readonly value: boolean } | { readonly kind: 'unset' }
+type Drafts = Partial<Record<BooleanSettingKey, Draft>>
+
+/** Settings that are a plain switch in this card. */
+type BooleanSettingKey = {
+  [K in keyof UniverSettings]: UniverSettings[K] extends boolean ? K : never
+}[keyof UniverSettings]
+
+/** One switch row: the schema field it writes and the copy it renders. */
+interface BooleanSettingField {
+  readonly key: BooleanSettingKey
+  readonly label: UniverLocaleKey
+  readonly hint: UniverLocaleKey
+}
+
+const BOOLEAN_FIELDS: readonly BooleanSettingField[] = [
+  {
+    key: 'autoOpenLivePreview',
+    label: 'settings.autoOpenLivePreview',
+    hint: 'settings.autoOpenLivePreviewHint'
+  },
+  {
+    key: 'conversationReviewCards',
+    label: 'settings.conversationReviewCards',
+    hint: 'settings.conversationReviewCardsHint'
+  }
+]
 
 /**
  * Univer Office configuration contributed to this package's own Plugins page
  * (DSH 0.1.6-alpha.2+) and to the retired settings.plugin.item slot on older
  * hosts, which pass no `view` and receive the page form directly.
+ *
+ * Every switch shares one draft: edits accumulate per field and a single Save
+ * commits them together, so a user can flip both and still Discard once.
  */
 export function UniverSettingsCard(props: UniverSettingsCardProps): React.ReactNode {
   const subscribe = React.useCallback(
@@ -29,41 +59,45 @@ export function UniverSettingsCard(props: UniverSettingsCardProps): React.ReactN
   )
   const getSnapshot = React.useCallback(() => props.settings.getSnapshot(), [props.settings])
   const snapshot = React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
-  const [draft, setDraft] = React.useState<Draft>(null)
+  const [drafts, setDrafts] = React.useState<Drafts>({})
   const [saving, setSaving] = React.useState(false)
   const [failed, setFailed] = React.useState(false)
 
   if (props.view === 'summary') return props.t('settings.description')
   if (snapshot.status !== 'ready' || snapshot.value === undefined) return null
-  const effective = snapshot.value.autoOpenLivePreview
-  const fallback = fallbackValue(snapshot)
-  const selected = draft === null ? effective : draft.kind === 'set' ? draft.value : fallback
-  const overridden = hasBooleanField(snapshot.user, 'autoOpenLivePreview')
-  const willOverride = draft === null ? overridden : draft.kind === 'set'
-  const dirty = draft !== null
+  const dirty = Object.keys(drafts).length > 0
 
-  const toggle = (): void => {
-    const next = !selected
+  const edit = (key: BooleanSettingKey, draft: Draft | undefined): void => {
     setFailed(false)
-    setDraft(next === effective ? null : { kind: 'set', value: next })
-  }
-  const reset = (): void => {
-    setFailed(false)
-    setDraft(overridden ? { kind: 'unset' } : null)
+    setDrafts((previous) => {
+      const next = { ...previous }
+      // An absent draft means "no pending change for this field".
+      if (draft === undefined) delete next[key]
+      else next[key] = draft
+      return next
+    })
   }
   const save = async (): Promise<void> => {
-    if (draft === null || saving) return
-    const pending = draft
+    if (!dirty || saving) return
+    const pending = Object.entries(drafts) as [BooleanSettingKey, Draft][]
     setSaving(true)
     setFailed(false)
-    if (pending.kind === 'unset') await props.settings.unset('autoOpenLivePreview')
-    else await props.settings.set('autoOpenLivePreview', pending.value)
-    const settled = props.settings.getSnapshot()
-    const expected = pending.kind === 'unset' ? fallbackValue(settled) : pending.value
-    const accepted = settled.status === 'ready' && settled.value?.autoOpenLivePreview === expected
+    // Sequential on purpose: each write is revision-guarded, so overlapping
+    // writes against one settings document could drop a field's change.
+    for (const [key, draft] of pending) {
+      if (draft.kind === 'unset') await props.settings.unset(key)
+      else await props.settings.set(key, draft.value)
+    }
+    const applied = props.settings.getSnapshot()
+    const accepted =
+      applied.status === 'ready' &&
+      pending.every(([key, draft]) => {
+        const expected = draft.kind === 'unset' ? fallbackValue(applied, key) : draft.value
+        return applied.value?.[key] === expected
+      })
     setSaving(false)
     setFailed(!accepted)
-    if (accepted) setDraft(null)
+    if (accepted) setDrafts({})
   }
 
   return (
@@ -76,38 +110,56 @@ export function UniverSettingsCard(props: UniverSettingsCardProps): React.ReactN
         {!snapshot.writable ? (
           <output className="uvf_settingsReadOnly">{props.t('settings.readOnly')}</output>
         ) : null}
-        <div className="uvf_settingsField">
-          <div className="uvf_settingsFieldHead">
-            <span className="uvf_settingsLabel">{props.t('settings.autoOpenLivePreview')}</span>
-            <span className="uvf_settingsFieldActions">
-              {willOverride ? (
-                <span className="uvf_settingsBadges">
-                  <span className="uvf_settingsBadge">{props.t('settings.overridden')}</span>
+        {BOOLEAN_FIELDS.map((field) => {
+          const effective = snapshot.value?.[field.key] ?? DEFAULT_UNIVER_SETTINGS[field.key]
+          const pending = drafts[field.key]
+          const selected =
+            pending === undefined
+              ? effective
+              : pending.kind === 'set'
+                ? pending.value
+                : fallbackValue(snapshot, field.key)
+          const overridden = hasBooleanField(snapshot.user, field.key)
+          const willOverride = pending === undefined ? overridden : pending.kind === 'set'
+          return (
+            <div className="uvf_settingsField" key={field.key}>
+              <div className="uvf_settingsFieldHead">
+                <span className="uvf_settingsLabel">{props.t(field.label)}</span>
+                <span className="uvf_settingsFieldActions">
+                  {willOverride ? (
+                    <span className="uvf_settingsBadges">
+                      <span className="uvf_settingsBadge">{props.t('settings.overridden')}</span>
+                      <button
+                        type="button"
+                        className="uvf_settingsReset"
+                        disabled={!snapshot.writable || saving}
+                        onClick={() => edit(field.key, overridden ? { kind: 'unset' } : undefined)}
+                      >
+                        {props.t('settings.reset')}
+                      </button>
+                    </span>
+                  ) : null}
                   <button
                     type="button"
-                    className="uvf_settingsReset"
+                    role="switch"
+                    className={`uvf_settingsSwitch${selected ? ' uvf_settingsSwitch_on' : ''}`}
+                    aria-checked={selected}
+                    aria-label={props.t(field.label)}
                     disabled={!snapshot.writable || saving}
-                    onClick={reset}
+                    onClick={() => {
+                      // Toggling back onto the durable value clears the pending change.
+                      const next = !selected
+                      edit(field.key, next === effective ? undefined : { kind: 'set', value: next })
+                    }}
                   >
-                    {props.t('settings.reset')}
+                    <span className="uvf_settingsSwitchThumb" />
                   </button>
                 </span>
-              ) : null}
-              <button
-                type="button"
-                role="switch"
-                className={`uvf_settingsSwitch${selected ? ' uvf_settingsSwitch_on' : ''}`}
-                aria-checked={selected}
-                aria-label={props.t('settings.autoOpenLivePreview')}
-                disabled={!snapshot.writable || saving}
-                onClick={toggle}
-              >
-                <span className="uvf_settingsSwitchThumb" />
-              </button>
-            </span>
-          </div>
-          <p className="uvf_settingsHint">{props.t('settings.autoOpenLivePreviewHint')}</p>
-        </div>
+              </div>
+              <p className="uvf_settingsHint">{props.t(field.hint)}</p>
+            </div>
+          )
+        })}
         <div className="uvf_settingsFooter">
           {failed ? (
             <output className="uvf_settingsFailed">{props.t('settings.saveFailed')}</output>
@@ -116,7 +168,7 @@ export function UniverSettingsCard(props: UniverSettingsCardProps): React.ReactN
             type="button"
             className="uvf_settingsDiscard"
             disabled={!dirty || saving}
-            onClick={() => setDraft(null)}
+            onClick={() => setDrafts({})}
           >
             {props.t('settings.discard')}
           </button>
@@ -134,12 +186,16 @@ export function UniverSettingsCard(props: UniverSettingsCardProps): React.ReactN
   )
 }
 
-function fallbackValue(snapshot: SettingsScopeSnapshot<UniverSettings>): boolean {
-  const value =
+/** The schema default for one field, used when a Reset is committed. */
+function fallbackValue(
+  snapshot: SettingsScopeSnapshot<UniverSettings>,
+  field: BooleanSettingKey
+): boolean {
+  const base =
     typeof snapshot.base === 'object' && snapshot.base !== null && !Array.isArray(snapshot.base)
-      ? (snapshot.base as Record<string, unknown>).autoOpenLivePreview
+      ? (snapshot.base as Record<string, unknown>)[field]
       : undefined
-  return typeof value === 'boolean' ? value : true
+  return typeof base === 'boolean' ? base : DEFAULT_UNIVER_SETTINGS[field]
 }
 
 function hasBooleanField(value: unknown, field: string): value is Record<string, boolean> {

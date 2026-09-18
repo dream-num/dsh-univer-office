@@ -11,12 +11,12 @@ import {
   type UniverTurnOperation
 } from '../conversation/univer-turn-definition.ts'
 import { useUniverStates } from '../hooks/use-univer-state.ts'
-import type { LivePreviewPreference } from '../settings/live-preview-preference.ts'
+import type { UniverPreferences } from '../settings/univer-preferences.ts'
 import type { ViewerLocaleInjected } from '../viewer-locale.ts'
 import { WorktreeWindow } from './worktree-window.tsx'
 
 interface UniverDockShared extends PropsLocale<'univer'>, ViewerLocaleInjected {
-  readonly livePreview: LivePreviewPreference
+  readonly preferences: UniverPreferences
 }
 
 export type UniverDockProps = PropsRuntime<'conversation.input.dock'> & UniverDockShared
@@ -58,9 +58,9 @@ function UniverSessionDock(
   const [open, setOpen] = React.useState<Record<string, OpenWindow>>({})
   const seen = React.useRef(new Set<string>())
   const livePreviewEnabled = React.useSyncExternalStore(
-    props.livePreview.subscribe,
-    props.livePreview.getSnapshot,
-    props.livePreview.getSnapshot
+    props.preferences.subscribe,
+    () => props.preferences.getSnapshot().livePreview,
+    () => props.preferences.getSnapshot().livePreview
   )
 
   React.useEffect(() => {
