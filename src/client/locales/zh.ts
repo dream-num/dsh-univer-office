@@ -44,9 +44,6 @@ export const zh = {
   'settings.autoOpenLivePreview': '自动打开实时预览',
   'settings.autoOpenLivePreviewHint':
     'Agent 修改文档时自动显示浮动预览窗口；关闭后仍保留会话审阅卡片。',
-  'settings.expand': '展开',
-  'settings.collapse': '收起',
-  'settings.unsaved': '未保存',
   'settings.overridden': '已覆盖',
   'settings.reset': '恢复默认',
   'settings.readOnly': '当前设置文件为只读。',

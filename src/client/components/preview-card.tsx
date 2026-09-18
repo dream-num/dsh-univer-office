@@ -7,6 +7,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
   outcomeOfTurnFile,
   resolveTurnFiles,
+  selectUniverTurn,
   type UniverTurnFile,
   type UniverTurnMatch
 } from '../conversation/univer-turn-definition.ts'
@@ -18,13 +19,20 @@ interface PreviewCardShared extends PropsLocale<'univer'>, ViewerLocaleInjected 
   readonly matched: UniverTurnMatch
 }
 
-export type PreviewCardProps = PropsRuntime<'conversation.chat.turnTail'> & PreviewCardShared
+export type PreviewCardProps = PropsRuntime<'conversation.chat.turnTail'> &
+  Omit<PreviewCardShared, 'matched'>
 
-/** Render one unified Univer card for every file touched during the owning Turn. */
-export function PreviewCard(props: PreviewCardProps): React.ReactElement {
+/**
+ * List-slot entry for the Turn tail: list slots inject the owner props
+ * directly instead of a chain `matched`, so the Turn match is resolved here.
+ * Turns without Univer operations render nothing.
+ */
+export function PreviewCard(props: PreviewCardProps): React.ReactElement | null {
+  const matched = selectUniverTurn(props)
   const timeline = props.useChat((snapshot: ChatSnapshot) => snapshot.timeline)
   const cwd = props.useSessions((state: SessionListState) => state.byId[props.sessionId]?.cwd)
-  return <PreviewCardContent {...props} timeline={timeline} cwd={cwd} />
+  if (matched === null) return null
+  return <PreviewCardContent {...props} matched={matched} timeline={timeline} cwd={cwd} />
 }
 
 /** Render one unified Univer card for every file touched during the owning Turn. */

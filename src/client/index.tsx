@@ -1,6 +1,7 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { ConversationNodeDefinition } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
@@ -9,7 +10,7 @@ import { UNIVER_SETTINGS_NAMESPACE, type UniverSettings } from '../shared/settin
 import { PreviewCard } from './components/preview-card.tsx'
 import { UniverSettingsCard } from './components/settings-card.tsx'
 import { UniverDock } from './components/univer-dock.tsx'
-import { selectUniverTurn, univerTurnDefinition } from './conversation/univer-turn-definition.ts'
+import { univerTurnDefinition } from './conversation/univer-turn-definition.ts'
 import { en, UNIVER_LOCALE_NAMESPACE, zh } from './locales/index.ts'
 import { LivePreviewPreference } from './settings/live-preview-preference.ts'
 import { settingsStyles } from './styles/settings.ts'
@@ -45,9 +46,11 @@ export function apply(ctx: ClientContext): void {
         ctx.slots.register(
           {
             name: 'conversation.chat.turnTail',
-            priority: -10,
+            // List-slot contract (DSH 0.1.6-alpha.2): a fresh id contributes an
+            // entry; the entry component resolves its own Turn match because
+            // list slots inject the owner props instead of a chain `matched`.
+            id: 'univer-turn-preview',
             locale: UNIVER_LOCALE_NAMESPACE,
-            select: selectUniverTurn,
             inject: () => ({ getViewerLocale })
           },
           PreviewCard
@@ -76,11 +79,12 @@ export function apply(ctx: ClientContext): void {
       namespace: UNIVER_SETTINGS_NAMESPACE
     })
     settingsCtx.effect(() => livePreview.attach(settings), 'univer: live preview preference')
-    settingsCtx.slots.inject('settings.plugin.item', () =>
+    // The bundle configuration section of this package's own Plugins page.
+    settingsCtx.slots.inject('plugins.bundle.config', () =>
       settingsCtx.slots.register(
         {
-          name: 'settings.plugin.item',
-          key: UNIVER_SETTINGS_NAMESPACE,
+          name: 'plugins.bundle.config',
+          key: 'dsh-univer-office',
           locale: UNIVER_LOCALE_NAMESPACE,
           inject: () => ({ settings })
         },

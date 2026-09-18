@@ -46,9 +46,6 @@ export const en = {
   'settings.autoOpenLivePreview': 'Open live previews automatically',
   'settings.autoOpenLivePreviewHint':
     'Show a floating preview while the agent edits a document. Conversation review cards remain available when this is off.',
-  'settings.expand': 'Expand',
-  'settings.collapse': 'Collapse',
-  'settings.unsaved': 'Unsaved',
   'settings.overridden': 'Overridden',
   'settings.reset': 'Reset to default',
   'settings.readOnly': 'The current settings document is read-only.',

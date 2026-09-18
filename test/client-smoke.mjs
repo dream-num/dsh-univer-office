@@ -280,7 +280,7 @@ const fakeCtx = {
       if (
         key !== 'conversation.input.dock' &&
         key !== 'conversation.chat.turnTail' &&
-        key !== 'settings.plugin.item'
+        key !== 'plugins.bundle.config'
       )
         throw new Error(`unexpected slots.inject("${key}")`)
       return callback()
@@ -315,10 +315,13 @@ const dockEntry = slotEntries.find(
   (entry) => entry.options.name === 'conversation.input.dock' && entry.options.id === 'univer-dock'
 )
 const tailEntry = slotEntries.find(
-  (entry) => entry.options.name === 'conversation.chat.turnTail' && entry.options.priority === -10
+  (entry) =>
+    entry.options.name === 'conversation.chat.turnTail' &&
+    entry.options.id === 'univer-turn-preview'
 )
 const settingsEntry = slotEntries.find(
-  (entry) => entry.options.name === 'settings.plugin.item' && entry.options.key === 'univer-office'
+  (entry) =>
+    entry.options.name === 'plugins.bundle.config' && entry.options.key === 'dsh-univer-office'
 )
 if (dockEntry === undefined)
   throw new Error(
@@ -327,7 +330,12 @@ if (dockEntry === undefined)
 if (tailEntry === undefined)
   throw new Error('turn-tail entry missing (existing preview card must stay registered)')
 if (settingsEntry === undefined) throw new Error('Univer settings card missing')
-if ('id' in tailEntry.options) throw new Error('chain entries must not declare a list-slot id')
+if (tailEntry.options.id !== 'univer-turn-preview')
+  throw new Error(
+    'turnTail is a list slot since DSH 0.1.6-alpha.2: entries must declare a stable id'
+  )
+if (typeof tailEntry.options.select === 'function')
+  throw new Error('list-slot entries must not declare a chain selector')
 if (localeDicts === null || localeDicts.ns !== 'univer')
   throw new Error('locale dictionaries not registered')
 if (conversationDefinition === null || conversationDefinition.kind !== 'univerTurn')
@@ -350,17 +358,6 @@ if (
   throw new Error('Viewer locale getter missing')
 if (dockInjected.livePreview === undefined || settingsInjected.settings !== settingsScope)
   throw new Error('Settings preference injection missing')
-{
-  const selected = tailEntry.options.select({
-    turn: {
-      turn: 3,
-      data: { get: () => ({ files: [{ file: '/tmp/demo.univer', operations: [] }] }) }
-    }
-  })
-  if (selected?.turn !== 3 || selected.files.length !== 1)
-    throw new Error('turn-tail selector must preserve the owning Turn for review placement')
-}
-
 // ---- definition pure-accumulator sanity: reads never erase a ready transition ----
 {
   const def = conversationDefinition
@@ -606,10 +603,14 @@ function render(session, remount = true, cwd = SESSION_CWD) {
   reviewRoot.render(
     React.createElement(tailEntry.Component, {
       key: 's' + scenario,
-      matched: {
+      // List-slot entries receive the owner props directly; the component
+      // resolves its own match from turn.data.
+      turn: {
         turn: 3,
-        files: session.chat.timeline.turns.get(3)?.data.get('univerTurn')?.files ?? []
+        data: session.chat.timeline.turns.get(3)?.data ?? { get: () => undefined }
       },
+      seq: 3,
+      openFile: () => {},
       t,
       getViewerLocale: tailInjected.getViewerLocale,
       sessionId: 'test-session-id',
@@ -632,19 +633,31 @@ const q = (selector) => document.querySelector(selector)
 const qa = (selector) => Array.from(document.querySelectorAll(selector))
 
 // ---- turn-tail preview: full standalone Viewer, not embedded mode ----
+// List-slot entries (DSH 0.1.6-alpha.2) receive the owner props and resolve
+// their own match, so fixtures express a match as the Turn's univerTurn data.
+const ownerProps = (turn, files, extra = {}) => ({
+  turn: { turn, data: { get: (key) => (key === 'univerTurn' ? { files } : undefined) } },
+  seq: turn,
+  openFile: () => {},
+  ...extra
+})
 const tailRootEl = document.createElement('div')
 document.body.appendChild(tailRootEl)
 const tailRoot = createRoot(tailRootEl)
 worktrees = [wt('draft')]
 const tailProps = {
-  matched: { turn: 3, files: [turnFile(DEMO_FILE, WORKTREE)] },
   sessionId: 'test-session-id',
   t,
   getViewerLocale: tailInjected.getViewerLocale,
   ...runtimeProps(sessionWithTargets([{ file: DEMO_FILE, worktreeId: WORKTREE }], true)),
   useSessions: (selector) => selector({ byId: { 'test-session-id': { cwd: SESSION_CWD } } })
 }
-tailRoot.render(React.createElement(tailEntry.Component, tailProps))
+tailRoot.render(
+  React.createElement(tailEntry.Component, {
+    ...tailProps,
+    ...ownerProps(3, [turnFile(DEMO_FILE, WORKTREE)])
+  })
+)
 await waitFor('回合尾部统一卡片', () => tailRootEl.querySelector('.uvf_panel') !== null)
 await waitFor(
   '卡片显示 worktree 名称',
@@ -658,7 +671,12 @@ await waitFor(
 const tailFrame = tailRootEl.querySelector('.uvf_panelFrame')
 activeLocale = 'en'
 localeRevision += 1
-tailRoot.render(React.createElement(tailEntry.Component, tailProps))
+tailRoot.render(
+  React.createElement(tailEntry.Component, {
+    ...tailProps,
+    ...ownerProps(3, [turnFile(DEMO_FILE, WORKTREE)])
+  })
+)
 await waitFor(
   '统一卡片切换英文',
   () =>
@@ -668,7 +686,12 @@ if (tailRootEl.querySelector('.uvf_panelFrame') !== tailFrame)
   throw new Error('locale switch must update the existing Viewer iframe')
 activeLocale = 'zh'
 localeRevision += 1
-tailRoot.render(React.createElement(tailEntry.Component, tailProps))
+tailRoot.render(
+  React.createElement(tailEntry.Component, {
+    ...tailProps,
+    ...ownerProps(3, [turnFile(DEMO_FILE, WORKTREE)])
+  })
+)
 await waitFor(
   '统一卡片切回中文',
   () =>
@@ -679,10 +702,10 @@ await waitFor(
 tailRoot.render(
   React.createElement(tailEntry.Component, {
     ...tailProps,
-    matched: {
-      turn: 3,
-      files: [turnFile('work_班级成绩表/班级管理.univer'), turnFile(REL_DEMO_FILE, WORKTREE)]
-    }
+    ...ownerProps(3, [
+      turnFile('work_班级成绩表/班级管理.univer'),
+      turnFile(REL_DEMO_FILE, WORKTREE)
+    ])
   })
 )
 await waitFor(
@@ -696,11 +719,13 @@ await waitFor(
 tailRoot.render(
   React.createElement(tailEntry.Component, {
     ...tailProps,
-    matched: {
-      turn: 3,
-      files: [turnFile('学生成绩表.univer'), turnFile(WINDOWS_FILE.replaceAll('\\', '/'), WORKTREE)]
-    },
-    useSessions: (selector) => selector({ byId: { 'test-session-id': { cwd: WINDOWS_CWD } } })
+    ...ownerProps(
+      3,
+      [turnFile('学生成绩表.univer'), turnFile(WINDOWS_FILE.replaceAll('\\', '/'), WORKTREE)],
+      {
+        useSessions: (selector) => selector({ byId: { 'test-session-id': { cwd: WINDOWS_CWD } } })
+      }
+    )
   })
 )
 await waitFor(
@@ -714,7 +739,7 @@ await waitFor(
 tailRoot.render(
   React.createElement(tailEntry.Component, {
     ...tailProps,
-    matched: { turn: 3, files: [turnFile(DEMO_FILE, WORKTREE), turnFile(SECOND_FILE)] }
+    ...ownerProps(3, [turnFile(DEMO_FILE, WORKTREE), turnFile(SECOND_FILE)])
   })
 )
 await waitFor(
@@ -769,7 +794,7 @@ const historicalSession = {
 tailRoot.render(
   React.createElement(tailEntry.Component, {
     ...tailProps,
-    matched: { turn: 3, files: [turnFile(DEMO_FILE, WORKTREE)] },
+    ...ownerProps(3, [turnFile(DEMO_FILE, WORKTREE)]),
     ...runtimeProps(historicalSession)
   })
 )
@@ -902,17 +927,16 @@ if (q('.uvf_panel') === null)
 
 // ---- scenario 1a: Settings card disables and re-enables automatic live windows ----
 {
-  const settingsRootEl = document.createElement('ul')
+  const settingsRootEl = document.createElement('section')
   document.body.appendChild(settingsRootEl)
   const settingsRoot = createRoot(settingsRootEl)
-  settingsRoot.render(React.createElement(settingsEntry.Component, { t, ...settingsInjected }))
+  settingsRoot.render(
+    React.createElement(settingsEntry.Component, { t, ...settingsInjected, view: 'page' })
+  )
   await waitFor(
     'Univer 设置卡片出现',
     () => settingsRootEl.querySelector('.uvf_settingsCard') !== null
   )
-  settingsRootEl
-    .querySelector('.uvf_settingsHeader')
-    .dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
   await waitFor(
     '实时预览开关出现',
     () => settingsRootEl.querySelector('[role=switch]')?.getAttribute('aria-checked') === 'true'
@@ -928,18 +952,10 @@ if (q('.uvf_panel') === null)
     .querySelector('.uvf_settingsSave')
     .dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
   await waitFor('关闭设置后浮窗消失', () => settingsValue === false && q('.uvf_win') === null)
-  await waitFor(
-    '设置保存后卡片自动收起',
-    () =>
-      settingsRootEl.querySelector('.uvf_settingsHeader')?.getAttribute('aria-expanded') === 'false'
-  )
   if (q('.uvf_panel') === null)
     throw new Error('disabling live windows must preserve conversation review cards')
-  settingsRootEl
-    .querySelector('.uvf_settingsHeader')
-    .dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
   await waitFor(
-    '重新展开设置显示覆盖状态',
+    '保存后设置显示覆盖状态',
     () => settingsRootEl.querySelector('.uvf_settingsBadge')?.textContent === '已覆盖'
   )
   settingsRootEl
