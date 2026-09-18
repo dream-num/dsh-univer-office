@@ -77,6 +77,7 @@ export function ReadonlyUniverWorkbookView(input: {
   const selectedKindRef = useRef(input.selectedKind ?? null)
   const selectedRangeRef = useRef(input.selectedRange ?? null)
   const activeSheetIdRef = useRef(input.activeSheetId ?? null)
+  const onScrollChangeRef = useRef(input.onScrollChange)
   const gapConfigRef = useRef(input.gapConfig ?? null)
   const highlightsRef = useRef(input.highlights ?? [])
   const showFormulaTextRef = useRef(input.showFormulaText ?? false)
@@ -90,6 +91,8 @@ export function ReadonlyUniverWorkbookView(input: {
     selectedKindRef.current = input.selectedKind ?? null
     selectedRangeRef.current = input.selectedRange ?? null
     activeSheetIdRef.current = input.activeSheetId ?? null
+  // The viewport subscription outlives worksheet changes; use the current sheet's callback.
+  onScrollChangeRef.current = input.onScrollChange
     gapConfigRef.current = input.gapConfig ?? null
     highlightsRef.current = input.highlights ?? []
   }, [
@@ -228,7 +231,7 @@ export function ReadonlyUniverWorkbookView(input: {
                   {
                     lastAppliedScrollKeyRef,
                     lastEmittedScrollKeyRef,
-                    onScrollChange: input.onScrollChange
+                    onScrollChange: onScrollChangeRef.current
                   },
                   worksheet,
                   {
