@@ -66,6 +66,9 @@ interface RenderSourceRequest extends BaseRequest {
   readonly operation: 'render-source'
 }
 
+/** Compatibility mode for .docx imports; traditional keeps the source page setup. */
+type ImportDocType = 'traditional' | 'modern'
+
 interface ImportRequest {
   readonly operation: 'import'
   readonly sourcePath: string
@@ -73,6 +76,7 @@ interface ImportRequest {
     | UniverInstanceType.UNIVER_SHEET
     | UniverInstanceType.UNIVER_DOC
     | UniverInstanceType.UNIVER_SLIDE
+  readonly docType?: ImportDocType
 }
 
 type WorkerRequest =
@@ -106,7 +110,7 @@ async function main(): Promise<JsonValue> {
   if (request.operation === 'import') {
     return (await importOfficeFile(
       request.sourcePath,
-      importOptions(request.sourcePath, request.unitType)
+      importOptions(request.sourcePath, request.unitType, request.docType)
     )) as unknown as JsonValue
   }
   const urls = gatewayUrls(request)
@@ -335,13 +339,20 @@ function sheetLikeFormat(
   )
 }
 
-function importOptions(sourcePath: string, type: ImportRequest['unitType']): ImportOptions {
+function importOptions(
+  sourcePath: string,
+  type: ImportRequest['unitType'],
+  docType: ImportDocType | undefined
+): ImportOptions {
   return {
     type,
     // Traditional mode keeps the source section geometry; modern mode rewrites
     // page setup to a canned pageless layout and loses it.
     ...(type === UniverInstanceType.UNIVER_DOC
-      ? { compatibilityMode: DocxCompatibilityMode.TRADITIONAL }
+      ? {
+          compatibilityMode:
+            docType === 'modern' ? DocxCompatibilityMode.MODERN : DocxCompatibilityMode.TRADITIONAL
+        }
       : {}),
     ...(type === UniverInstanceType.UNIVER_SHEET && extname(sourcePath).toLowerCase() === '.xlsx'
       ? { formulaCalculation: FormulaCalculationMode.FORCED }
@@ -366,7 +377,13 @@ function parseRequest(value: unknown): WorkerRequest {
     const sourcePath = requiredString(request.sourcePath, 'sourcePath')
     if (!isAbsolute(sourcePath)) invalidRequest('sourcePath must be absolute')
     const unitType = requiredImportUnitType(request.unitType)
-    return { operation: 'import', sourcePath, unitType }
+    const docType = optionalImportDocType(request.docType)
+    return {
+      operation: 'import',
+      sourcePath,
+      unitType,
+      ...(docType === undefined ? {} : { docType })
+    }
   }
   const base = {
     gatewayOrigin: requiredHttpOrigin(request.gatewayOrigin),
@@ -408,6 +425,12 @@ function requiredImportUnitType(value: unknown): ImportRequest['unitType'] {
     invalidRequest('import unitType must be Sheet, Doc, or Slide')
   }
   return value
+}
+
+function optionalImportDocType(value: unknown): ImportDocType | undefined {
+  if (value === undefined || value === null) return undefined
+  if (value === 'traditional' || value === 'modern') return value
+  invalidRequest('import docType must be traditional or modern')
 }
 
 function requiredInspectionQuery(value: unknown): ContentInspectionQuery {

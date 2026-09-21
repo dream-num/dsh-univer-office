@@ -25,7 +25,13 @@ export function importTool(ctx: Context, timeoutMs: number) {
         description: 'Workspace-relative or absolute target .univer path.'
       },
       worktreeId: { type: 'string', required: true, description: 'Writable draft worktree id.' },
-      name: { type: 'string', required: true, description: 'Name for the imported Unit.' }
+      name: { type: 'string', required: true, description: 'Name for the imported Unit.' },
+      docType: {
+        type: 'string',
+        enum: ['traditional', 'modern'],
+        description:
+          'Doc import mode, .docx only. traditional (default) keeps the source page setup — page size, orientation, margins, and headers/footers survive export. modern converts to a pageless document and rewrites page geometry to a fixed layout, so the source page setup cannot be recovered.'
+      }
     },
     output: operationOutput,
     async execute(args, exec) {
@@ -44,7 +50,8 @@ export function importTool(ctx: Context, timeoutMs: number) {
             sourceWorkspace: source.workspace,
             source: source.path,
             worktreeId: worktreeId(args.worktreeId),
-            name: args.name
+            name: args.name,
+            ...(args.docType === undefined ? {} : { docType: args.docType })
           },
           exec.signal
         )

@@ -297,7 +297,7 @@ export class GatewayUniverService extends UniverService {
     ])
     const gateway = await this.requireGateway()
     await this.requireWorktreeStatus(gateway, request.file, request.worktreeId, 'draft')
-    const imported = await this.unitContent.import(request.source, signal)
+    const imported = await this.unitContent.import(request.source, request.docType, signal)
     const result = await new GatewayWorktreeApi(
       new GatewayClient(gateway, this.config.gatewayMutationTimeoutMs)
     ).createUnit(request.file, request.worktreeId, imported.kind, request.name, imported.snapshot)

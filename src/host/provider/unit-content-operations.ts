@@ -10,6 +10,7 @@ import { isRecord, mapUnits, type GatewayUnit } from '../adapters/gateway/mappin
 import { GatewayWorktreeApi } from '../adapters/gateway/worktree-api.ts'
 import type {
   ExportUnitContentRequest,
+  ImportDocType,
   InspectUnitContentRequest,
   JsonValue,
   UniverOperationResult,
@@ -136,11 +137,23 @@ export class UnitContentOperations {
   /** Import one Office file into a JSON Unit snapshot. */
   import(
     sourcePath: string,
+    docType: ImportDocType | undefined,
     signal?: AbortSignal
   ): Promise<{ readonly kind: UniverUnitKind; readonly snapshot: JsonValue }> {
     const kind = importKind(sourcePath)
+    if (docType !== undefined && kind !== 'doc') {
+      throw new UniverError('docType only applies to .docx imports.', 'INVALID_REQUEST')
+    }
     return this.worker
-      .run({ operation: 'import', sourcePath, unitType: unitType(kind) }, signal)
+      .run(
+        {
+          operation: 'import',
+          sourcePath,
+          unitType: unitType(kind),
+          ...(docType === undefined ? {} : { docType })
+        },
+        signal
+      )
       .then((snapshot) => ({ kind, snapshot }))
   }
 

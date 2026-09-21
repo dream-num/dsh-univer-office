@@ -156,7 +156,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `univer_status` | 查看文件内容与草稿状态 |
 | `univer_worktree` | 创建、提交、继续修改、确认或放弃隔离草稿 |
 | `univer_unit` | 添加或删除 Sheet、Doc、Slide、多维表格或 Board 内容 |
-| `univer_import` | 把 Office 文件导入 `.univer` 文件 |
+| `univer_import` | 把 Office 文件导入 `.univer` 文件；docx 默认保留页面设置，`docType` 可选 traditional（默认）或 modern |
 | `univer_inspect` | 读取文档结构或指定 Sheet 范围 |
 | `univer_execute` | 通过 Univer API 读取或编辑内容 |
 | `univer_export` | 导出 Sheet、Doc、Slide 或多维表格内容 |

@@ -1085,6 +1085,30 @@ try {
   ) {
     throw new Error(`docx import lost the source page layout: ${JSON.stringify(docxLayout)}`)
   }
+  const importedModernDocx = await service.importUnitContent({
+    ...scoped,
+    source: landscapeDocxSource,
+    sourceWorkspace: workspace,
+    worktreeId: comparisonWorktreeId,
+    name: 'Imported Modern Doc',
+    docType: 'modern'
+  })
+  const importedModernDocxUnitId = importedModernDocx.result?.unitId
+  if (typeof importedModernDocxUnitId !== 'string' || importedModernDocx.result?.kind !== 'doc') {
+    throw new Error(`modern docx import failed: ${JSON.stringify(importedModernDocx)}`)
+  }
+  const modernDocxLayout = await service.executeUnitContent({
+    ...scoped,
+    worktreeId: comparisonWorktreeId,
+    unitId: importedModernDocxUnitId,
+    code: 'return { flavor: doc.getDocumentFlavor(), traditional: doc.isTraditional() };'
+  })
+  const modernDocxLayoutState = modernDocxLayout.result?.value
+  if (modernDocxLayoutState?.flavor !== 2 || modernDocxLayoutState?.traditional !== false) {
+    throw new Error(
+      `modern docx import did not produce a Modern document: ${JSON.stringify(modernDocxLayout)}`
+    )
+  }
   const comparisonEdit = await service.executeUnitContent({
     ...scoped,
     worktreeId: comparisonWorktreeId,

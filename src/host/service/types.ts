@@ -77,12 +77,16 @@ export interface ExecuteUnitContentRequest extends ScopedFileRequest {
   readonly unitId: UnitId
 }
 
+/** Compatibility mode for .doc/.docx imports; traditional keeps the source page setup. */
+export type ImportDocType = 'traditional' | 'modern'
+
 /** Request for importing one Office file as a Unit in a draft worktree. */
 export interface ImportUnitContentRequest extends ScopedFileRequest {
   readonly source: string
   readonly sourceWorkspace: WorkspacePath
   readonly worktreeId: WorktreeId
   readonly name: string
+  readonly docType?: ImportDocType
 }
 
 /** Request for exporting one Unit. */

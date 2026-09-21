@@ -156,7 +156,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 | `univer_status` | View the content and draft status of a file |
 | `univer_worktree` | Create, submit, revise, approve, or discard an isolated draft |
 | `univer_unit` | Add or remove Sheet, Doc, Slide, Base, or Board content |
-| `univer_import` | Import an Office file into a `.univer` file |
+| `univer_import` | Import an Office file into a `.univer` file; docx keeps its page setup by default, `docType` selects traditional (default) or modern |
 | `univer_inspect` | Read document structure or a selected Sheet range |
 | `univer_execute` | Read or edit content through the Univer API |
 | `univer_export` | Export Sheet, Doc, Slide, or Base content |
