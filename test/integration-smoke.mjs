@@ -1085,6 +1085,49 @@ try {
   ) {
     throw new Error(`docx import lost the source page layout: ${JSON.stringify(docxLayout)}`)
   }
+  const docxRoundtripPath = join(workspace, 'landscape-roundtrip.docx')
+  await service.exportUnitContent({
+    ...scoped,
+    worktreeId: comparisonWorktreeId,
+    unitId: importedDocxUnitId,
+    output: docxRoundtripPath,
+    outputWorkspace: workspace
+  })
+  if ((await stat(docxRoundtripPath)).size === 0) {
+    throw new Error('docx export produced an empty file')
+  }
+  const importedRoundtrip = await service.importUnitContent({
+    ...scoped,
+    source: docxRoundtripPath,
+    sourceWorkspace: workspace,
+    worktreeId: comparisonWorktreeId,
+    name: 'Imported Roundtrip'
+  })
+  const roundtripUnitId = importedRoundtrip.result?.unitId
+  if (typeof roundtripUnitId !== 'string' || importedRoundtrip.result?.kind !== 'doc') {
+    throw new Error(`docx roundtrip import failed: ${JSON.stringify(importedRoundtrip)}`)
+  }
+  const roundtripLayout = await service.executeUnitContent({
+    ...scoped,
+    worktreeId: comparisonWorktreeId,
+    unitId: roundtripUnitId,
+    code: 'const section = doc.getSections()[0]; const page = section ? section.getEffectivePageSetup() : undefined; return { flavor: doc.getDocumentFlavor(), traditional: doc.isTraditional(), sections: doc.getSections().length, page: page === undefined ? null : page };'
+  })
+  const roundtripState = roundtripLayout.result?.value
+  if (
+    roundtripState?.flavor !== 1 ||
+    roundtripState?.traditional !== true ||
+    roundtripState?.sections !== 1 ||
+    !within(roundtripState?.page?.pageSize?.width, 1122.6) ||
+    !within(roundtripState?.page?.pageSize?.height, 793.8) ||
+    !within(roundtripState?.page?.margins?.top, 120) ||
+    !within(roundtripState?.page?.margins?.left, 96) ||
+    roundtripState?.page?.pageOrient !== 1
+  ) {
+    throw new Error(
+      `docx export roundtrip lost the page layout: ${JSON.stringify(roundtripLayout)}`
+    )
+  }
   const importedModernDocx = await service.importUnitContent({
     ...scoped,
     source: landscapeDocxSource,
@@ -1108,6 +1151,22 @@ try {
     throw new Error(
       `modern docx import did not produce a Modern document: ${JSON.stringify(modernDocxLayout)}`
     )
+  }
+  let misflaggedDocTypeRejected = false
+  try {
+    await service.importUnitContent({
+      ...scoped,
+      source,
+      sourceWorkspace: workspace,
+      worktreeId: comparisonWorktreeId,
+      name: 'Misflagged Doc',
+      docType: 'modern'
+    })
+  } catch (error) {
+    misflaggedDocTypeRejected = error instanceof Error && error.code === 'INVALID_REQUEST'
+  }
+  if (!misflaggedDocTypeRejected) {
+    throw new Error('docType on a non-docx import must be rejected with INVALID_REQUEST')
   }
   const comparisonEdit = await service.executeUnitContent({
     ...scoped,
