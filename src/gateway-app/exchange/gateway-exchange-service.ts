@@ -376,7 +376,11 @@ function exchangeImportOptions(
     return {
       type: UniverInstanceType.UNIVER_DOC,
       fileName: filename,
-      ...optionalMappedValue('compatibilityMode', doc?.docType, 'docType', docxCompatibilityMode)
+      // Traditional mode keeps the source section geometry; modern mode rewrites
+      // page setup to a canned pageless layout and loses it.
+      ...(doc?.docType === undefined
+        ? { compatibilityMode: DocxCompatibilityMode.TRADITIONAL }
+        : optionalMappedValue('compatibilityMode', doc.docType, 'docType', docxCompatibilityMode))
     }
   }
   if (unitType === UniverType.UNIVER_SHEET) {

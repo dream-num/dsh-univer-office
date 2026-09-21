@@ -1057,6 +1057,34 @@ try {
   if (typeof comparisonWorktreeId !== 'string') {
     throw new Error(`comparison worktree failed: ${JSON.stringify(comparisonWorktree)}`)
   }
+  const landscapeDocx = buildLandscapeDocx()
+  const landscapeDocxSource = join(workspace, 'landscape-src.docx')
+  await writeFile(landscapeDocxSource, landscapeDocx)
+  const importedDocx = await service.importUnitContent({
+    ...scoped,
+    source: landscapeDocxSource,
+    sourceWorkspace: workspace,
+    worktreeId: comparisonWorktreeId,
+    name: 'Imported Doc'
+  })
+  const importedDocxUnitId = importedDocx.result?.unitId
+  if (typeof importedDocxUnitId !== 'string' || importedDocx.result?.kind !== 'doc') {
+    throw new Error(`docx import failed: ${JSON.stringify(importedDocx)}`)
+  }
+  const docxLayout = await service.executeUnitContent({
+    ...scoped,
+    worktreeId: comparisonWorktreeId,
+    unitId: importedDocxUnitId,
+    code: 'return { flavor: doc.getDocumentFlavor(), traditional: doc.isTraditional(), sections: doc.getSections().length };'
+  })
+  const docxLayoutState = docxLayout.result?.value
+  if (
+    docxLayoutState?.flavor !== 1 ||
+    docxLayoutState?.traditional !== true ||
+    docxLayoutState?.sections !== 1
+  ) {
+    throw new Error(`docx import lost the source page layout: ${JSON.stringify(docxLayout)}`)
+  }
   const comparisonEdit = await service.executeUnitContent({
     ...scoped,
     worktreeId: comparisonWorktreeId,
@@ -1141,6 +1169,55 @@ try {
     throw new Error('server exchange download failed')
   }
 
+  const docxForm = new FormData()
+  docxForm.append(
+    'file',
+    new Blob([landscapeDocx], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    }),
+    'landscape-src.docx'
+  )
+  const uploadedDocx = await fetch(
+    `${exchangeBase}/stream/file/upload?size=${landscapeDocx.byteLength}&source=1&flate=false`,
+    { method: 'POST', body: docxForm }
+  )
+  if (uploadedDocx.status !== 201)
+    throw new Error(`docx exchange upload failed: ${await uploadedDocx.text()}`)
+  const uploadedDocxBody = await uploadedDocx.json()
+  const docxImportTask = await postJson(`${exchangeBase}/exchange/1/import`, {
+    fileID: uploadedDocxBody.FileId,
+    outputType: 2,
+    options: {}
+  })
+  const docxImported = await waitForExchangeTask(exchangeBase, docxImportTask.taskID)
+  const docxJsonId = docxImported.import?.jsonID
+  if (typeof docxJsonId !== 'string' || docxImported.status !== 'done') {
+    throw new Error(`docx exchange import failed: ${JSON.stringify(docxImported)}`)
+  }
+  const docxJsonSigned = await (await fetch(`${exchangeBase}/file/${docxJsonId}/sign-url`)).json()
+  const docxJsonDownload = await fetch(`${origin}${docxJsonSigned.url}`)
+  if (!docxJsonDownload.ok) throw new Error('docx exchange snapshot download failed')
+  const docxJson = await docxJsonDownload.json()
+  const docxSnapshot = docxJson.snapshot?.doc
+  const docPayload = JSON.parse(
+    Buffer.from(String(docxSnapshot?.originalMeta ?? ''), 'base64').toString('utf8')
+  )
+  const docxSection = docPayload.body?.sectionBreaks?.[0]
+  if (
+    docPayload.documentStyle?.documentFlavor !== 1 ||
+    !within(docxSection?.pageSize?.width, 1122.6) ||
+    !within(docxSection?.pageSize?.height, 793.8) ||
+    !within(docxSection?.marginTop, 120) ||
+    !within(docxSection?.marginLeft, 96)
+  ) {
+    throw new Error(
+      `docx exchange import lost the source page setup: ${JSON.stringify({
+        flavor: docPayload.documentStyle?.documentFlavor,
+        section: docxSection
+      })}`
+    )
+  }
+
   const discarded = await service.worktreeAction({
     ...scoped,
     action: 'discard',
@@ -1207,6 +1284,95 @@ async function closeServer(server) {
   await new Promise((resolve, reject) =>
     server.close((error) => (error === undefined ? resolve() : reject(error)))
   )
+}
+
+/** A4 landscape one-paragraph docx with the page setup the import must preserve. */
+function buildLandscapeDocx() {
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`
+  const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`
+  const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>
+<w:p><w:r><w:t>landscape probe</w:t></w:r></w:p>
+<w:sectPr>
+<w:pgSz w:w="16839" w:h="11907" w:orient="landscape"/>
+<w:pgMar w:top="1800" w:right="1440" w:bottom="1800" w:left="1440" w:header="851" w:footer="992" w:gutter="0"/>
+</w:sectPr>
+</w:body>
+</w:document>`
+  return storeZip([
+    ['[Content_Types].xml', contentTypes],
+    ['_rels/.rels', rels],
+    ['word/document.xml', document]
+  ])
+}
+
+/** Stored-entry ZIP writer (method 0); OOXML readers accept uncompressed parts. */
+function storeZip(entries) {
+  const chunks = []
+  const central = []
+  let offset = 0
+  for (const [name, content] of entries) {
+    const nameBytes = Buffer.from(name, 'utf8')
+    const data = Buffer.from(content, 'utf8')
+    const crc = crc32(data)
+    const local = Buffer.alloc(30)
+    local.writeUInt32LE(0x04034b50, 0)
+    local.writeUInt16LE(20, 4)
+    local.writeUInt32LE(crc, 14)
+    local.writeUInt32LE(data.length, 18)
+    local.writeUInt32LE(data.length, 22)
+    local.writeUInt16LE(nameBytes.length, 26)
+    chunks.push(local, nameBytes, data)
+    const entry = Buffer.alloc(46)
+    entry.writeUInt32LE(0x02014b50, 0)
+    entry.writeUInt16LE(20, 4)
+    entry.writeUInt16LE(20, 6)
+    entry.writeUInt32LE(crc, 16)
+    entry.writeUInt32LE(data.length, 20)
+    entry.writeUInt32LE(data.length, 24)
+    entry.writeUInt16LE(nameBytes.length, 28)
+    entry.writeUInt32LE(offset, 42)
+    central.push(entry, nameBytes)
+    offset += local.length + nameBytes.length + data.length
+  }
+  const centralStart = offset
+  const centralBytes = Buffer.concat(central)
+  const end = Buffer.alloc(22)
+  end.writeUInt32LE(0x06054b50, 0)
+  end.writeUInt16LE(entries.length, 8)
+  end.writeUInt16LE(entries.length, 10)
+  end.writeUInt32LE(centralBytes.length, 12)
+  end.writeUInt32LE(centralStart, 16)
+  return Buffer.concat([Buffer.concat(chunks), centralBytes, end])
+}
+
+function crc32(bytes) {
+  let table = crc32.table
+  if (table === undefined) {
+    table = crc32.table = new Int32Array(256)
+    for (let n = 0; n < 256; n++) {
+      let c = n
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+      table[n] = c
+    }
+  }
+  let crc = -1
+  for (const byte of bytes) crc = (crc >>> 8) ^ table[(crc ^ byte) & 0xff]
+  return (crc ^ -1) >>> 0
+}
+
+/** Twip-derived geometry survives as floating-point pixels; compare with slack. */
+function within(value, expected) {
+  return typeof value === 'number' && Math.abs(value - expected) < 0.05
 }
 
 async function postJson(url, body) {

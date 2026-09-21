@@ -67,7 +67,7 @@ Use `INLINE` for normal content, `WRAP_SQUARE` or `WRAP_TOP_AND_BOTTOM` when tex
 
 ## Document flavor and pagination
 
-Check `doc.getDocumentFlavor()` or `doc.isTraditional()` before page-specific work. A new Doc is Modern and pageless. Traditional section/page APIs reject Modern Docs; do not simulate pages with large spacers.
+Check `doc.getDocumentFlavor()` or `doc.isTraditional()` before page-specific work. A new Doc is Modern and pageless; an imported docx file is Traditional so its page setup survives round-trips. Traditional section/page APIs reject Modern Docs; do not simulate pages with large spacers.
 
 For a Traditional Doc, insert a hard page boundary with one atomic section command:
 

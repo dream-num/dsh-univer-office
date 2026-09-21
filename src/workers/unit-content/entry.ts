@@ -9,6 +9,7 @@ import {
   type UniverFactoryContext
 } from '@univer-cli/univer-collaboration-runtime'
 import {
+  DocxCompatibilityMode,
   ExchangeFormat,
   FormulaCalculationMode,
   exportToFile,
@@ -337,6 +338,11 @@ function sheetLikeFormat(
 function importOptions(sourcePath: string, type: ImportRequest['unitType']): ImportOptions {
   return {
     type,
+    // Traditional mode keeps the source section geometry; modern mode rewrites
+    // page setup to a canned pageless layout and loses it.
+    ...(type === UniverInstanceType.UNIVER_DOC
+      ? { compatibilityMode: DocxCompatibilityMode.TRADITIONAL }
+      : {}),
     ...(type === UniverInstanceType.UNIVER_SHEET && extname(sourcePath).toLowerCase() === '.xlsx'
       ? { formulaCalculation: FormulaCalculationMode.FORCED }
       : {})
