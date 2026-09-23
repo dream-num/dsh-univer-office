@@ -134,7 +134,7 @@ Create a monthly expense spreadsheet with dates, categories, amounts, a total, a
 ### 3. Review it in the conversation
 
 - Changes appear in a live, movable preview window while the agent works.
-- Review cards remain in the conversation and can be folded or opened fullscreen later.
+- Review cards remain in the conversation and can be folded or opened fullscreen later. Fullscreen escapes conversation layout constraints, preserves the card's space without reloading the Viewer, and supports Esc to exit.
 - Continue editing, approve, or discard changes from the Univer page embedded in the card.
 
 ## How it works

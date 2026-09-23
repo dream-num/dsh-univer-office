@@ -194,6 +194,18 @@ if (dom.window.PointerEvent === undefined) {
     }
   }
 }
+// jsdom has no dialog top layer; actual containment and iframe continuity are
+// verified in the browser layout regression. This shim only models open state.
+dom.window.HTMLDialogElement.prototype.show = function () {
+  this.open = true
+}
+dom.window.HTMLDialogElement.prototype.showModal = function () {
+  this.open = true
+}
+dom.window.HTMLDialogElement.prototype.close = function () {
+  this.open = false
+}
+
 globalThis.window = dom.window
 globalThis.document = dom.window.document
 Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true })
@@ -1625,6 +1637,9 @@ if (q('.uvf_panelMeta')?.textContent !== DEMO_FILE)
   throw new Error('review header metadata must contain only the full file path')
 if (q('.uvf_panelFoot') !== null || q('.uvf_action') !== null)
   throw new Error('card must defer lifecycle actions to the embedded Viewer')
+const inlinePanelParent = q('.uvf_panel').parentElement
+const inlineReviewFrame = q('.uvf_panelFrame')
+q('.uvf_panel').getBoundingClientRect = () => ({ height: 650 })
 q('[data-panel-action=fullscreen]').dispatchEvent(
   new dom.window.MouseEvent('click', { bubbles: true })
 )
@@ -1636,6 +1651,15 @@ if (q('[data-panel-action=fullscreen]')?.getAttribute('aria-label') !== '退出�
   throw new Error('fullscreen control must expose its current action')
 if (q('[data-panel-action=fold]') !== null)
   throw new Error('fullscreen review card must hide the fold control')
+if (q('.uvf_panelFrame') !== inlineReviewFrame)
+  throw new Error('fullscreen must preserve the Viewer iframe')
+if (
+  q('.uvf_panelPlaceholder')?.parentElement !== inlinePanelParent ||
+  q('.uvf_panelPlaceholder')?.style.height !== '650px'
+)
+  throw new Error('fullscreen review must preserve its inline footprint')
+if (document.activeElement !== q('[data-panel-action=fullscreen]'))
+  throw new Error('fullscreen review must retain keyboard focus')
 dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape' }))
 await waitFor(
   'Escape 退出审阅全屏',
@@ -1643,6 +1667,20 @@ await waitFor(
 )
 if (q('[data-panel-action=fold]') === null)
   throw new Error('fold control must return after exiting fullscreen')
+if (q('.uvf_panelFrame') !== inlineReviewFrame)
+  throw new Error('exiting fullscreen must preserve the Viewer iframe')
+if (q('.uvf_panel').parentElement !== inlinePanelParent || q('.uvf_panelPlaceholder') !== null)
+  throw new Error('exiting fullscreen must restore the inline card and remove its placeholder')
+if (document.activeElement !== q('[data-panel-action=fullscreen]'))
+  throw new Error('exiting fullscreen must restore keyboard focus')
+q('[data-panel-action=fullscreen]').dispatchEvent(
+  new dom.window.MouseEvent('click', { bubbles: true })
+)
+await waitFor('再次进入审阅全屏', () => q('.uvf_panel_fullscreen') !== null)
+q('[data-panel-action=fullscreen]').dispatchEvent(
+  new dom.window.MouseEvent('click', { bubbles: true })
+)
+await waitFor('按钮退出审阅全屏', () => q('.uvf_panel_fullscreen') === null)
 {
   const frame = q('.uvf_panelFrame')
   q('[data-panel-action=fold]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
@@ -1736,8 +1774,14 @@ if (q('.uvf_win') !== null || q('.uvf_panelFrame')?.getAttribute('src') !== ZH_T
   throw new Error('replayed merged card must open the full mainline page')
 
 // ---- scenario 6: targets cleared → everything closes ----
+q('[data-panel-action=fullscreen]').dispatchEvent(
+  new dom.window.MouseEvent('click', { bubbles: true })
+)
+await waitFor('清空目标前进入全屏', () => q('.uvf_panel_fullscreen') !== null)
 render(sessionWithTargets([], false))
 await waitFor('targets 清空后全部关闭', () => q('.uvf_win') === null && q('.uvf_panel') === null)
+if (q('.uvf_panelPlaceholder') !== null)
+  throw new Error('unmounting fullscreen review must remove its placeholder')
 
 reactRoot.unmount()
 reviewRoot.unmount()

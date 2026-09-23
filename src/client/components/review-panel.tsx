@@ -20,6 +20,8 @@ export function ReviewPanel(props: {
 }): React.ReactElement {
   const [open, setOpen] = React.useState(!props.historical)
   const [fullscreen, setFullscreen] = React.useState(false)
+  const [placeholderHeight, setPlaceholderHeight] = React.useState(0)
+  const panelRef = React.useRef<HTMLDialogElement>(null)
   const [selected, setSelected] = React.useState<string | undefined>(
     props.preferredUnitId ?? undefined
   )
@@ -61,14 +63,52 @@ export function ReviewPanel(props: {
   React.useEffect(() => {
     if (!fullscreen) return
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setFullscreen(false)
+      if (event.key === 'Escape' && !event.defaultPrevented) setFullscreen(false)
     }
+    // Keyboard events inside the same-origin Viewer do not bubble to the Host.
+    const frame = panelRef.current?.querySelector('iframe')
+    let viewerWindow: Window | null = null
+    const listenToViewer = (): void => {
+      viewerWindow?.removeEventListener('keydown', onKeyDown)
+      viewerWindow = frame?.contentDocument?.defaultView ?? null
+      viewerWindow?.addEventListener('keydown', onKeyDown)
+    }
+    listenToViewer()
+    frame?.addEventListener('load', listenToViewer)
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      frame?.removeEventListener('load', listenToViewer)
+      viewerWindow?.removeEventListener('keydown', onKeyDown)
+    }
+  }, [fullscreen, url])
+
+  React.useLayoutEffect(() => {
+    const panel = panelRef.current
+    if (!fullscreen || panel === null) return
+    // The browser top layer escapes containment without moving or reloading
+    // the Viewer iframe. A dialog must close before changing its modal mode.
+    panel.close()
+    panel.showModal()
+    const control = panel.querySelector<HTMLButtonElement>('[data-panel-action=fullscreen]')
+    control?.focus({ preventScroll: true })
+    return () => {
+      panel.close()
+      panel.show()
+      control?.focus({ preventScroll: true })
+    }
   }, [fullscreen])
 
-  return (
-    <section
+  const panel = (
+    <dialog
+      open
+      ref={panelRef}
+      role={fullscreen ? 'dialog' : 'region'}
+      aria-modal={fullscreen ? true : undefined}
+      onCancel={(event) => {
+        event.preventDefault()
+        setFullscreen(false)
+      }}
       className={`uvf_panel${fullscreen ? ' uvf_panel_fullscreen' : ''}${props.historical ? ' uvf_panel_history' : ''}`}
       data-status={status}
       aria-label={basename(props.file)}
@@ -94,6 +134,8 @@ export function ReviewPanel(props: {
           action="fullscreen"
           label={props.t(fullscreen ? 'dock.exitFullscreen' : 'dock.fullscreen')}
           onClick={() => {
+            if (!fullscreen)
+              setPlaceholderHeight(panelRef.current?.getBoundingClientRect().height ?? 0)
             setOpen(true)
             setFullscreen((value) => !value)
           }}
@@ -122,7 +164,20 @@ export function ReviewPanel(props: {
           )}
         </div>
       </div>
-    </section>
+    </dialog>
+  )
+
+  return (
+    <>
+      {fullscreen ? (
+        <div
+          className="uvf_panelPlaceholder"
+          style={{ height: placeholderHeight }}
+          aria-hidden="true"
+        />
+      ) : null}
+      {panel}
+    </>
   )
 }
 

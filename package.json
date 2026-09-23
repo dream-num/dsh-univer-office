@@ -81,10 +81,11 @@
     "test:integration": "node test/integration-smoke.mjs",
     "test:host": "node test/host-smoke.mjs",
     "test:client": "node test/client-smoke.mjs",
+    "test:client:layout": "node test/client-layout.mjs",
     "test:comparison": "pnpm --filter @univer/unit-comparison-viewer test",
     "test:skills": "node test/skills-smoke.mjs",
     "test:telemetry": "node test/telemetry-smoke.mjs",
-    "test": "pnpm run build && pnpm run test:host && pnpm run test:integration && pnpm run test:client && pnpm run test:comparison && pnpm run test:skills && pnpm run test:telemetry",
+    "test": "pnpm run build && pnpm run test:host && pnpm run test:integration && pnpm run test:client && pnpm run test:client:layout && pnpm run test:comparison && pnpm run test:skills && pnpm run test:telemetry",
     "verify:public-dependencies": "node scripts/verify-public-runtime-dependencies.mjs",
     "prepublishOnly": "pnpm run build && pnpm run test"
   },

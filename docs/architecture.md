@@ -355,6 +355,8 @@ Client 只解析结构化 `univer_*` 工具事件，不从 bash 命令或自由�
 
 Client 是状态投影，不拥有 worktree 真相。预览目标来自可回放的会话事件；实时状态来自 Host API；Viewer iframe 负责文档内容的实时展示。
 
+审阅卡片平时使用文档流中的非模态 dialog，全屏时通过 `showModal()` 进入浏览器 top layer，避免对话祖先的 containment、transform 或裁剪限制。切换不迁移 DOM 或重载 Viewer iframe，原位置保留等高占位；退出或卸载时撤销模态状态与键盘监听。Esc 同时监听 Host 与同源 Viewer，已被 Viewer 消费的按键不用于退出全屏。
+
 Viewer 内的 Compare 是 Gateway 的只读 Consumer，不扩大 Client 权限。DSH Client 仍只投影 Host 授权后的不透明 Viewer URL；Viewer 使用该 URL 已绑定的文件和 worktree 创建固定比较会话，并把同一个 `/diff` 语义结果交给差异列表、双栏渲染和定位行为。
 
 Client 通过 `univerTurnDefinition` 按 `callId` 配对结构化工具调用与结果，并分别归约生命周期、内容写入和读取操作；读取操作不能覆盖同一 Turn 已完成的 ready、reopen、merge 或 discard 转换。统一回合卡片把该投影与 Host `FileState` 组合，按权威状态打开 trunk、worktree 或 merge preview 完整页面；若 Host 明确确认投影中的文件已不存在，则不渲染该卡片，以覆盖 Agent 在同一 Turn 中创建并通过其他工具删除临时文件的场景。

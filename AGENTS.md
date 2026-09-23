@@ -45,6 +45,8 @@ Choose the narrowest validation that proves the change:
 
 Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before every handoff. Report the exact commands that completed successfully.
 
+For review-panel layout changes, also run `pnpm run test:client:layout`. This source-level browser test uses the installed render browser to check containment, fullscreen, iframe continuity, and cleanup; it supplements the built Client smoke test.
+
 ## 3. Architecture and Cordis boundaries
 
 - A complete capability seam consists of a Service Definition, Provider, and Consumer. `UniverService` is the stable Host boundary; HTTP and tools remain Consumers, while concrete Gateway, Worker, cache, and worktree behavior remains in the Provider.
