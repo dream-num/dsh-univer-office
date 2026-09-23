@@ -547,6 +547,18 @@ export class App {
     if (initWorktree && isViewableWorktreeStatus(initWorktree.status)) {
       await this.enterWorktree(initWorktree.worktreeId, this.initUnitId ?? undefined)
     } else {
+      // A bare file link should show pending content when nothing has reached trunk yet.
+      // Explicit deep links and embedded review scopes retain their requested target.
+      const defaultWorktree =
+        this.initWorktreeId === null && this.initUnitId === null && this.trunkUnits.length === 0
+          ? [...this.worktrees.values()].find((worktree) =>
+              isViewableWorktreeStatus(worktree.status)
+            )
+          : undefined
+      if (defaultWorktree !== undefined) {
+        await this.enterWorktree(defaultWorktree.worktreeId)
+        return
+      }
       if (this.initWorktreeId !== null && !initWorktree) {
         toast(t().toast.worktreeGone)
       }

@@ -1837,49 +1837,32 @@ reviewRoot.unmount()
     )
   const fileChips = () => Array.from(fileViewerRootEl.querySelectorAll('.uvf_unit'))
   const fileFrameSrc = () => fileViewerRootEl.querySelector('iframe.uvf_frame')?.getAttribute('src')
-  const clickChip = (index) =>
-    fileChips()[index].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
-
   // Opening the file must reach the Viewer with no agent operation: the client
   // half resolves the Host-projected trunk target on its own.
   worktrees = [wt('draft')]
   renderFileViewer()
   await waitFor('点击文件即按需展示当前版本', () => fileFrameSrc() === withLang(TRUNK_URL, 'zh-CN'))
-  if (fileChips().length !== 2)
-    throw new Error(
-      `an open worktree must be offered as an explicit switch, got ${fileChips().length} chips`
-    )
-  if (fileChips()[0].textContent !== t('dock.currentVersion'))
-    throw new Error('the first scope chip must be the current version')
-  if (fileChips()[1].textContent !== t('dock.draft'))
-    throw new Error('the open worktree chip must carry its lifecycle label')
+  if (fileChips().length !== 0)
+    throw new Error('file preview must leave worktree navigation to the Viewer')
 
-  // A file opened while an agent is still working must not hide that work.
-  clickChip(1)
-  await waitFor('切换到进行中的 worktree', () => fileFrameSrc() === withLang(VIEW_URL, 'zh-CN'))
-
-  // Labels and the Viewer locale follow a language switch without a remount.
+  const initialFrame = fileViewerRootEl.querySelector('iframe.uvf_frame')
   setActiveLocale('en')
   await waitFor(
-    '语言切换后预览标签与 Viewer locale 同步跟随',
-    () =>
-      fileFrameSrc() === withLang(VIEW_URL, 'en-US') &&
-      fileChips()[0].textContent === 'Current version'
+    '语言切换后 Viewer locale 同步跟随',
+    () => fileFrameSrc() === withLang(TRUNK_URL, 'en-US')
   )
+  if (fileViewerRootEl.querySelector('iframe.uvf_frame') !== initialFrame)
+    throw new Error('locale changes must preserve the file preview iframe element')
   setActiveLocale('zh')
 
-  // A ready worktree opens the merge preview, matching the review card's table.
   worktrees = [wt('ready')]
   renderFileViewer()
   await waitFor(
-    'ready worktree 仍默认展示当前版本',
+    'ready worktree 仍打开完整 Viewer',
     () => fileFrameSrc() === withLang(TRUNK_URL, 'zh-CN')
   )
-  clickChip(1)
-  await waitFor(
-    'ready worktree 使用合并预览',
-    () => fileFrameSrc() === withLang(MERGE_URL, 'zh-CN')
-  )
+  if (fileChips().length !== 0)
+    throw new Error('ready worktrees must not add an outer scope switch')
 
   // The Host may confirm the path is gone (an agent removed a temporary file).
   missingFiles.add(DEMO_FILE)
@@ -1915,7 +1898,7 @@ reviewRoot.unmount()
   document.body.appendChild(nativeRootEl)
   const nativeRoot = createRoot(nativeRootEl)
   const address = `dsh-resource://file/session/test-session-id/${encodeAddressPath(REL_DEMO_FILE)}`
-  worktrees = []
+  worktrees = [wt('ready')]
   nativeRoot.render(
     React.createElement(nativeBodyEntry.Component, {
       ctx: fakeCtx,
@@ -1931,7 +1914,7 @@ reviewRoot.unmount()
   if (nativeRootEl.querySelector('[data-surface=sidebar-right]') === null)
     throw new Error('the native tab body must report the surface it renders for')
   if (nativeRootEl.querySelector('.uvf_unit') !== null)
-    throw new Error('a file without an open worktree must not offer a scope switch')
+    throw new Error('the native file preview must leave worktree navigation to the Viewer')
   nativeRoot.unmount()
   nativeRootEl.remove()
 }

@@ -29,7 +29,7 @@
 
 - 在 DSH 会话中发现 `.univer` 文件，并为每个文件显示采用统一审阅布局的回合尾部卡片；
 - 在 DSH 内以 Viewer 全屏预览文件；
-- 在 DSH 文件树中点击 `.univer` 文件即可按需打开 Viewer 预览，不需要任何 Agent 操作，也不要求安装 `dsh-better-sidebar`；该入口在关闭实时浮动窗口后仍然可用，并允许在主线与非终态 worktree 之间切换；
+- 在 DSH 文件树中点击 `.univer` 文件即可按需打开 Viewer 预览，不需要任何 Agent 操作，也不要求安装 `dsh-better-sidebar`；该入口在关闭实时浮动窗口后仍然可用，并由 Viewer 提供主线与非终态 worktree 之间的切换；
 - worktree 创建或更新后显示实时浮动窗口；
 - 用户可在 DSH 插件设置中分别关闭实时浮动窗口与会话审阅卡片，且不影响另一者与文件树按需预览；
 - 一个 worktree 改动多个 unit 时，只列出有改动的 unit 并允许切换；
@@ -370,7 +370,7 @@ Client 通过 `univerTurnDefinition` 按 `callId` 配对结构化工具调用与
 - **DSH 原生右栏**：`ctx.sidebarRightTabs.register` 注册自己的 tab 类型（自有 kind、`patterns: ['*.univer']`、`extension` 档、`canOpen` 只接受 session 作用域地址），正文注册在 keyed seat `sidebar.right.pane.tab`，通过 `useTabInfo().tab.contentId` 取得资源地址。地址语法（`dsh-resource://file/…`）由本包镜像实现：客户端 bundle 的 purity gate 禁止 value-import 未列出的 `@deepseek-ai/*` 包，生态做法同样是本地镜像。
 - **`dsh-better-sidebar`（可选）**：该插件以自有 editor 类型在**同档**用整地址模式 `dsh-resource://file/**` 接管文件地址。同档比模式长度，它的模式更长，所以在它存在时永远赢下 claim，地址进入它的 `matchFileViewer` 注册表；本插件因此在那里注册文件预览器（`fetchStrategy: 'none'`，声明 `.univer` 扩展名）。若缺这条注册，`.univer` 会落到它的 catch-all code viewer，即二进制当文本渲染。
 
-两条路径互不依赖：没有 `sidebarRightTabs` 时原生注册被跳过，没有 `betterSidebar` 时预览器注册被跳过，两者都不阻塞其余 Client 表面。两条路径共用同一个预览正文组件，因此加载态、Host 明确确认文件不存在、Gateway 未运行、Viewer 目标解析与非终态 worktree 切换只实现一次。预览器声明 `fetchStrategy: 'none'`，因为 `.univer` 是二进制容器：任何按字节读取的策略都会落到通用下载面板，而 Viewer URL 只能由 Host 授权后投影。它复用回合卡片的同一份 `FileState` 轮询解析 Viewer 目标，默认展示主线，并在文件存在非终态 worktree 时提供显式切换，避免打开文件时隐藏进行中的修改；`useGatewayStatus` 额外暴露 Gateway 阶段，使未运行的 Gateway 变成可操作的启动入口而不是永久加载态。
+两条路径互不依赖：没有 `sidebarRightTabs` 时原生注册被跳过，没有 `betterSidebar` 时预览器注册被跳过，两者都不阻塞其余 Client 表面。两条路径共用同一个预览正文组件，因此加载态、Host 明确确认文件不存在、Gateway 未运行、Viewer 目标解析只实现一次。预览器声明 `fetchStrategy: 'none'`，因为 `.univer` 是二进制容器：任何按字节读取的策略都会落到通用下载面板，而 Viewer URL 只能由 Host 授权后投影。它复用回合卡片的同一份 `FileState` 轮询解析 Viewer 目标，以主线 URL 打开完整 Viewer，版本切换与 worktree 审阅统一由 Viewer 管理，外层不再维护版本选择或重复提供切换控件。完整 Viewer 首次打开未指定 worktree 或 Unit 的文件链接时，若主线没有 Unit，则按 worktree 列表顺序进入第一个 draft 或 ready worktree；没有活跃 worktree 时保留空状态，显式目标与 embedded scope 不受此默认导航影响；`useGatewayStatus` 额外暴露 Gateway 阶段，使未运行的 Gateway 变成可操作的启动入口而不是永久加载态。
 
 Client 必须满足：
 
