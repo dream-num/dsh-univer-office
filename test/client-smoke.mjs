@@ -430,6 +430,60 @@ if (dockInjected.livePreview === undefined || settingsInjected.settings !== sett
     }
   }
   state = def.update(mkContext(state), readyResult)
+  // Session format v4 (DSH 0.1.7): the tool result is a first-class tool-role
+  // message — `toolCallId` / `isError` sit on the message and `content` holds
+  // the text blocks directly (no `tool-result` wrapper block). The definition
+  // must read both shapes; 0.3.2 threw "reading 'flatMap'" on this one and took
+  // the whole conversation timeline down with it.
+  {
+    let v4 = def.start({ state: undefined }, startMatch, { previous: () => undefined })
+    v4 = def.update(mkContext(v4), readyCall)
+    v4 = def.update(mkContext(v4), {
+      id: '7',
+      role: 'update',
+      location: { kind: 'turn', turn: 7 },
+      event: {
+        type: 'tool/result',
+        data: {
+          turn: 7,
+          step: 1,
+          message: {
+            role: 'tool',
+            source: { kind: 'tool', callId: 'call-ready' },
+            toolCallId: 'call-ready',
+            isError: false,
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  operation: 'worktree',
+                  file: '/x/proj/notes/demo.univer',
+                  result: { action: 'ready', worktreeId: 'wt-abc12345' }
+                })
+              }
+            ]
+          }
+        }
+      }
+    })
+    const op = v4.files[0]?.operations.find((entry) => entry.callId === 'call-ready')
+    if (op === undefined || op.phase !== 'succeeded' || op.worktreeId !== 'wt-abc12345')
+      throw new Error(`v4 tool/result shape not applied: ${JSON.stringify(v4.files)}`)
+    // A foreign (non-univer) v4 result must be ignored, not crash the timeline.
+    const foreign = def.update(mkContext(v4), {
+      id: '7',
+      role: 'update',
+      location: { kind: 'turn', turn: 7 },
+      event: {
+        type: 'tool/result',
+        data: {
+          turn: 7, step: 1,
+          message: { role: 'tool', source: { kind: 'tool', callId: 'call-other' }, toolCallId: 'call-other', content: [{ type: 'text', text: 'total 12\n-rw-r--r-- x' }] }
+        }
+      }
+    })
+    if (foreign !== v4) throw new Error('foreign v4 tool/result must leave state untouched')
+  }
   const laterStatus = {
     id: '7',
     role: 'update',

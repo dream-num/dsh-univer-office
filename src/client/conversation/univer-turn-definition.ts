@@ -206,11 +206,58 @@ function addCall(state: UniverTurnState, data: SessionEvent<'tool/call'>['data']
   return { ...state, files: appendOperation(state.files, operation) }
 }
 
+/**
+ * Text blocks of a tool result across host formats. Hosts up to 0.1.6 wrap the
+ * result in one `tool-result` content block (`content[0].content` holds the
+ * text blocks, `content[0].toolCallId` the call id); 0.1.7 persists a
+ * first-class tool-role message whose `content` is the text blocks and whose
+ * `toolCallId` / `isError` sit on the message itself (session format v4).
+ */
+interface ResultTextBlock {
+  readonly type: string
+  readonly text?: string
+}
+interface ToolResultShape {
+  readonly message: {
+    readonly toolCallId?: string
+    readonly isError?: boolean
+    readonly content?: ReadonlyArray<{
+      readonly type: string
+      readonly text?: string
+      readonly toolCallId?: string
+      readonly isError?: boolean
+      readonly content?: ReadonlyArray<ResultTextBlock> | string
+    }>
+  }
+  readonly error?: unknown
+}
+
+function resultTextBlocks(data: ToolResultShape): ReadonlyArray<ResultTextBlock> {
+  const content = data.message.content
+  if (!Array.isArray(content)) return []
+  const first = content[0]
+  if (first !== undefined && first.type === 'tool-result') {
+    if (Array.isArray(first.content)) return first.content
+    return typeof first.content === 'string' ? [{ type: 'text', text: first.content }] : []
+  }
+  return content
+}
+
+function resultCallId(data: ToolResultShape): string | undefined {
+  return data.message.toolCallId ?? data.message.content?.[0]?.toolCallId
+}
+
+function resultFailed(data: ToolResultShape): boolean {
+  if (data.error !== undefined) return true
+  return (data.message.isError ?? data.message.content?.[0]?.isError) === true
+}
+
 function applyResult(
   state: UniverTurnState,
   data: SessionEvent<'tool/result'>['data']
 ): UniverTurnState {
-  const callId = data.message.content[0].toolCallId
+  const callId = resultCallId(data)
+  if (callId === undefined) return state
   const structured = structuredResult(data)
   let matched: UniverTurnOperation | undefined
   for (const file of state.files) {
@@ -236,8 +283,7 @@ function applyResult(
     worktreeId:
       typeof result?.worktreeId === 'string' ? result.worktreeId : (matched?.worktreeId ?? null),
     unitId: typeof result?.unitId === 'string' ? result.unitId : (matched?.unitId ?? null),
-    phase:
-      data.error === undefined && data.message.content[0].isError !== true ? 'succeeded' : 'failed'
+    phase: resultFailed(data) ? 'failed' : 'succeeded'
   }
   const withoutCall = state.files.flatMap((entry) => {
     const operations = entry.operations.filter((candidate) => candidate.callId !== callId)
@@ -264,8 +310,8 @@ function appendOperation(
 function structuredResult(
   data: SessionEvent<'tool/result'>['data']
 ): Record<string, unknown> | null {
-  const text = data.message.content[0].content
-    .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+  const text = resultTextBlocks(data)
+    .flatMap((block) => (block.type === 'text' && typeof block.text === 'string' ? [block.text] : []))
     .join('\n')
   const firstBrace = text.indexOf('{')
   return firstBrace === -1 ? null : parseRecord(text.slice(firstBrace))
