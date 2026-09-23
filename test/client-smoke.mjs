@@ -5,6 +5,7 @@
 // closes the window and embeds the merge panel → merged panel shows trunk.
 //
 //   node test/client-smoke.mjs
+import { spawnSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { join, dirname, isAbsolute } from 'node:path'
@@ -243,6 +244,9 @@ const sidebarViewers = []
 const nativeTabTypes = []
 /** Gateway phase the fake host reports; a stopped Gateway cannot project Viewer URLs. */
 let gatewayPhase = 'running'
+const modernSettings = process.env.UNIVER_SETTINGS_API === 'configForms'
+let settingsWriteFailure
+const settingsEffects = []
 const SETTINGS_DEFAULTS = { autoOpenLivePreview: true, conversationReviewCards: true }
 let settingsRevision = 0
 let settingsValue = { ...SETTINGS_DEFAULTS }
@@ -269,6 +273,8 @@ const settingsScope = {
     return () => settingsListeners.delete(listener)
   },
   async set(field, value) {
+    if (settingsWriteFailure === 'throw') throw new Error('transport unavailable')
+    if (settingsWriteFailure === 'refuse') return false
     if (!Object.hasOwn(SETTINGS_DEFAULTS, field) || typeof value !== 'boolean')
       throw new Error(`unexpected settings write: ${field}`)
     settingsValue = { ...settingsValue, [field]: value }
@@ -276,6 +282,7 @@ const settingsScope = {
     settingsRevision += 1
     settingsSnapshot = makeSettingsSnapshot()
     for (const listener of settingsListeners) listener()
+    return modernSettings ? true : undefined
   },
   async unset(field) {
     if (!Object.hasOwn(SETTINGS_DEFAULTS, field))
@@ -298,12 +305,14 @@ const conversationEventRegistry = {
 const fakeCtx = {
   inject(services, callback) {
     const key = services.join(',')
-    if (key !== 'settingsScope' && key !== 'betterSidebar' && key !== 'sidebarRightTabs')
+    if (key === (modernSettings ? 'settingsScope' : 'configForms')) return () => {}
+    if (!['settingsScope', 'configForms', 'betterSidebar', 'sidebarRightTabs'].includes(key))
       throw new Error(`unexpected ctx.inject(${JSON.stringify(services)})`)
     return callback(fakeCtx)
   },
   effect(fn) {
     const disposer = fn()
+    settingsEffects.push(disposer)
     return () => {
       if (typeof disposer === 'function') disposer()
     }
@@ -349,6 +358,13 @@ const fakeCtx = {
     }
   },
   get(name) {
+    if (name === 'configForms')
+      return {
+        get(entryId) {
+          if (entryId !== 'univer') throw new Error(`unexpected config entry ${entryId}`)
+          return settingsScope
+        }
+      }
     if (name === 'uiConversation') return { events: conversationEventRegistry }
     if (name === 'sidebarRightTabs')
       return {
@@ -605,8 +621,14 @@ for (const [address, claimable, title] of [
       event: {
         type: 'tool/result',
         data: {
-          turn: 7, step: 1,
-          message: { role: 'tool', source: { kind: 'tool', callId: 'call-other' }, toolCallId: 'call-other', content: [{ type: 'text', text: 'total 12\n-rw-r--r-- x' }] }
+          turn: 7,
+          step: 1,
+          message: {
+            role: 'tool',
+            source: { kind: 'tool', callId: 'call-other' },
+            toolCallId: 'call-other',
+            content: [{ type: 'text', text: 'total 12\n-rw-r--r-- x' }]
+          }
         }
       }
     })
@@ -1235,6 +1257,49 @@ if (q('.uvf_panel') === null)
   settingsRootEl.remove()
 }
 
+// ConfigForm may reject transport failures or explicitly refuse a write.
+if (modernSettings) {
+  const el = document.createElement('section')
+  document.body.appendChild(el)
+  const settingsRoot = createRoot(el)
+  settingsRoot.render(
+    React.createElement(settingsEntry.Component, { t, ...settingsInjected, view: 'page' })
+  )
+  await waitFor('modern settings form', () => el.querySelectorAll('[role=switch]').length === 2)
+  el.querySelectorAll('[role=switch]')[1].dispatchEvent(
+    new dom.window.MouseEvent('click', { bubbles: true })
+  )
+  for (const failure of ['throw', 'refuse']) {
+    settingsWriteFailure = failure
+    await waitFor('save can retry', () => !el.querySelector('.uvf_settingsSave').disabled)
+    el.querySelector('.uvf_settingsSave').dispatchEvent(
+      new dom.window.MouseEvent('click', { bubbles: true })
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitFor(
+      'failed save remains actionable',
+      () =>
+        el.querySelector('.uvf_settingsFailed') !== null &&
+        !el.querySelector('.uvf_settingsSave').disabled
+    )
+    if (settingsValue.conversationReviewCards !== true)
+      throw new Error('failed save changed durable preferences')
+  }
+  settingsWriteFailure = undefined
+  el.querySelector('.uvf_settingsSave').dispatchEvent(
+    new dom.window.MouseEvent('click', { bubbles: true })
+  )
+  await waitFor(
+    'retry persists retained draft',
+    () =>
+      settingsValue.conversationReviewCards === false &&
+      el.querySelector('.uvf_settingsSave').disabled
+  )
+  await settingsScope.unset('conversationReviewCards')
+  settingsRoot.unmount()
+  el.remove()
+}
+
 // ---- scenario 1a'': a Host settings schema older than this Client bundle ----
 // The Host half resolves the settings document, so a Client that ships first
 // (a rolling upgrade, or this session's HMR reload) reads a snapshot without
@@ -1685,6 +1750,7 @@ reviewRoot.unmount()
     ...fakeCtx,
     inject(services, callback) {
       const key = services.join(',')
+      if (key === 'configForms') return () => {}
       if (key !== 'settingsScope' && key !== 'betterSidebar' && key !== 'sidebarRightTabs')
         throw new Error(`unexpected ctx.inject(${JSON.stringify(services)})`)
       return callback(legacyCtx)
@@ -1871,4 +1937,15 @@ reviewRoot.unmount()
 }
 
 server.close()
-console.log('client smoke OK (uiConversation Conversation API)')
+for (const dispose of settingsEffects.toReversed()) if (typeof dispose === 'function') dispose()
+if (settingsListeners.size !== 0) throw new Error('settings subscriptions survived unload')
+console.log(
+  `client smoke OK (uiConversation Conversation API, ${modernSettings ? 'configForms' : 'settingsScope'})`
+)
+if (!modernSettings) {
+  const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
+    env: { ...process.env, UNIVER_SETTINGS_API: 'configForms' },
+    stdio: 'inherit'
+  })
+  if (child.status !== 0) throw new Error(`configForms smoke failed: ${child.status}`)
+}

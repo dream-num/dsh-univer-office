@@ -1,4 +1,4 @@
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { UniverSettingsForm } from './settings-contract.ts'
 import type { UniverSettings } from '../../shared/settings.ts'
 
 /** Presentation switches the browser surfaces read from the DSH Settings scope. */
@@ -47,7 +47,7 @@ export class UniverPreferences {
   }
 
   /** Attach one Settings scope and return its detach for the owning fiber. */
-  attach(scope: SettingsScope<UniverSettings>): () => void {
+  attach(scope: UniverSettingsForm): () => void {
     const sync = (): void => this.publish(project(scope.getSnapshot()))
     const dispose = scope.subscribe(sync)
     sync()

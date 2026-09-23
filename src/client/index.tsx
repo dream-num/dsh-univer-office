@@ -6,7 +6,11 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
-import { UNIVER_SETTINGS_NAMESPACE, type UniverSettings } from '../shared/settings.ts'
+import {
+  UNIVER_CONFIG_ENTRY_ID,
+  UNIVER_SETTINGS_NAMESPACE,
+  type UniverSettings
+} from '../shared/settings.ts'
 import { betterSidebarOf } from './better-sidebar.ts'
 import { PreviewCard } from './components/preview-card.tsx'
 import { UniverSettingsCard } from './components/settings-card.tsx'
@@ -21,6 +25,7 @@ import { selectUniverTurn, univerTurnDefinition } from './conversation/univer-tu
 import { en, UNIVER_LOCALE_NAMESPACE, zh } from './locales/index.ts'
 import { fileAddressBasename, parseFileAddress } from './resource-address.ts'
 import { sidebarRightTabsOf } from './sidebar-right.ts'
+import type { UniverConfigForms, UniverSettingsForm } from './settings/settings-contract.ts'
 import { UniverPreferences } from './settings/univer-preferences.ts'
 import { settingsStyles } from './styles/settings.ts'
 import { worktreeStyles } from './styles/worktree.ts'
@@ -118,37 +123,53 @@ export function apply(ctx: ClientContext): void {
     sidebarCtx.effect(() => registerUniverFileViewer(sidebarCtx), 'univer: univer file viewer')
   })
   ctx.inject(['settingsScope'], (settingsCtx: ClientContext) => {
-    const settings = settingsCtx.settingsScope.bind<UniverSettings>({
-      namespace: UNIVER_SETTINGS_NAMESPACE
-    })
-    settingsCtx.effect(() => preferences.attach(settings), 'univer: presentation preferences')
-    // The bundle configuration section of this package's own Plugins page
-    // (DSH 0.1.6-alpha.2+). Hosts that retired settings.plugin.item never
-    // declare the legacy slot below, and hosts without the Plugins page never
-    // declare this one, so exactly one contribution runs per host.
-    settingsCtx.slots.inject('plugins.bundle.config', () =>
-      settingsCtx.slots.register(
-        {
-          name: 'plugins.bundle.config',
-          key: 'dsh-univer-office',
-          locale: UNIVER_LOCALE_NAMESPACE,
-          inject: () => ({ settings })
-        },
-        UniverSettingsCard
-      )
-    )
-    untypedSlots(settingsCtx).inject('settings.plugin.item', () =>
-      untypedSlots(settingsCtx).register(
-        {
-          name: 'settings.plugin.item',
-          key: UNIVER_SETTINGS_NAMESPACE,
-          locale: UNIVER_LOCALE_NAMESPACE,
-          inject: () => ({ settings })
-        },
-        UniverSettingsCard
-      )
+    registerSettings(
+      settingsCtx,
+      preferences,
+      settingsCtx.settingsScope.bind<UniverSettings>({
+        namespace: UNIVER_SETTINGS_NAMESPACE
+      })
     )
   })
+  ctx.inject(['configForms'], (settingsCtx: ClientContext) => {
+    // The bundle patch owns this entry id; modern DSH projects its live Config.
+    const forms = settingsCtx.get('configForms') as UniverConfigForms
+    registerSettings(settingsCtx, preferences, forms.get(UNIVER_CONFIG_ENTRY_ID))
+  })
+}
+
+function registerSettings(
+  settingsCtx: ClientContext,
+  preferences: UniverPreferences,
+  settings: UniverSettingsForm
+): void {
+  settingsCtx.effect(() => preferences.attach(settings), 'univer: presentation preferences')
+  // The bundle configuration section of this package's own Plugins page
+  // (DSH 0.1.6-alpha.2+). Hosts that retired settings.plugin.item never
+  // declare the legacy slot below, and hosts without the Plugins page never
+  // declare this one, so exactly one contribution runs per host.
+  settingsCtx.slots.inject('plugins.bundle.config', () =>
+    settingsCtx.slots.register(
+      {
+        name: 'plugins.bundle.config',
+        key: 'dsh-univer-office',
+        locale: UNIVER_LOCALE_NAMESPACE,
+        inject: () => ({ settings })
+      },
+      UniverSettingsCard
+    )
+  )
+  untypedSlots(settingsCtx).inject('settings.plugin.item', () =>
+    untypedSlots(settingsCtx).register(
+      {
+        name: 'settings.plugin.item',
+        key: UNIVER_SETTINGS_NAMESPACE,
+        locale: UNIVER_LOCALE_NAMESPACE,
+        inject: () => ({ settings })
+      },
+      UniverSettingsCard
+    )
+  )
 }
 
 /**

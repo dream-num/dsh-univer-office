@@ -1,15 +1,13 @@
 import * as React from 'react'
 import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
-import type {
-  SettingsScope,
-  SettingsScopeSnapshot
-} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { DEFAULT_UNIVER_SETTINGS, type UniverSettings } from '../../shared/settings.ts'
+import type { UniverSettingsForm } from '../settings/settings-contract.ts'
 import type { UniverLocaleKey } from '../locales/zh.ts'
 
 interface UniverSettingsCardInjected {
-  readonly settings: SettingsScope<UniverSettings>
+  readonly settings: UniverSettingsForm
 }
 
 type UniverSettingsCardProps = PropsRuntime<'plugins.bundle.config'> &
@@ -82,19 +80,31 @@ export function UniverSettingsCard(props: UniverSettingsCardProps): React.ReactN
     const pending = Object.entries(drafts) as [BooleanSettingKey, Draft][]
     setSaving(true)
     setFailed(false)
-    // Sequential on purpose: each write is revision-guarded, so overlapping
-    // writes against one settings document could drop a field's change.
-    for (const [key, draft] of pending) {
-      if (draft.kind === 'unset') await props.settings.unset(key)
-      else await props.settings.set(key, draft.value)
+    let accepted = true
+    try {
+      // Each write uses the revision accepted by its predecessor.
+      for (const [key, draft] of pending) {
+        const result =
+          draft.kind === 'unset'
+            ? await props.settings.unset(key)
+            : await props.settings.set(key, draft.value)
+        if (result === false) {
+          accepted = false
+          break
+        }
+      }
+      const applied = props.settings.getSnapshot()
+      accepted =
+        accepted &&
+        applied.status === 'ready' &&
+        pending.every(([key, draft]) => {
+          const expected = draft.kind === 'unset' ? fallbackValue(applied, key) : draft.value
+          return applied.value?.[key] === expected
+        })
+    } catch {
+      // ConfigForm rejects transport failures; retain the draft for a retry.
+      accepted = false
     }
-    const applied = props.settings.getSnapshot()
-    const accepted =
-      applied.status === 'ready' &&
-      pending.every(([key, draft]) => {
-        const expected = draft.kind === 'unset' ? fallbackValue(applied, key) : draft.value
-        return applied.value?.[key] === expected
-      })
     setSaving(false)
     setFailed(!accepted)
     if (accepted) setDrafts({})

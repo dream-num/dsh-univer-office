@@ -1,9 +1,14 @@
 import { isAbsolute, join, resolve } from 'node:path'
 import z from '@deepseek-ai/schemastery'
+import { DEFAULT_UNIVER_SETTINGS } from '../shared/settings.ts'
 import { resolveDshHome } from './dsh-home.ts'
 
 /** Configuration shared by the Univer service provider and its consumers. */
 export interface Config {
+  /** Live browser preference; modern DSH owns its resolved value. */
+  autoOpenLivePreview?: boolean
+  /** Live browser preference; modern DSH owns its resolved value. */
+  conversationReviewCards?: boolean
   /** Initial loopback port used by the bundled Gateway; occupied ports advance by one. */
   gatewayPort?: number
   /** Start the bundled Gateway when file state is first requested. */
@@ -74,8 +79,21 @@ export interface ResolvedConfig {
   readonly telemetry: boolean
 }
 
+/**
+ * Declare live fields using the serialized metadata understood by DSH 0.1.7+.
+ * Older schemastery accepts this metadata without requiring its new volatile()
+ * builder; legacy Hosts continue to own preferences through settings.register.
+ */
+function livePreference(value: boolean): z<boolean> {
+  const field = z.boolean().default(value)
+  Object.assign(field.meta, { volatile: true })
+  return field
+}
+
 /** Cordis configuration schema. */
 export const Config: z<Config> = z.object({
+  autoOpenLivePreview: livePreference(DEFAULT_UNIVER_SETTINGS.autoOpenLivePreview),
+  conversationReviewCards: livePreference(DEFAULT_UNIVER_SETTINGS.conversationReviewCards),
   gatewayPort: z.natural().max(65535).default(9080),
   autoStartGateway: z.boolean().default(true),
   gatewayStartupTimeoutMs: z.natural().default(10_000),

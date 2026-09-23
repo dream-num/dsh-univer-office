@@ -1,3 +1,6 @@
+/** Entry id owned by cordis.patch.yml; modern DSH keys forms by entry. */
+export const UNIVER_CONFIG_ENTRY_ID = 'univer'
+
 /** Settings namespace owned by the Univer Office plugin. */
 export const UNIVER_SETTINGS_NAMESPACE = 'univer-office'
 

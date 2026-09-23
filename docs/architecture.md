@@ -190,7 +190,8 @@ src/
       en.ts
       zh.ts
     settings/
-      live-preview-preference.ts     # Settings scope 的浮窗偏好投影
+      univer-preferences.ts          # 新旧设置接口的展示偏好投影
+      settings-contract.ts           # SettingsScope / ConfigForm 的共享接口
     styles/
       settings.ts
       worktree.ts
@@ -360,7 +361,9 @@ Client 通过 `univerTurnDefinition` 按 `callId` 配对结构化工具调用与
 
 实时浮窗只由 `univer_new`、worktree create/reopen/ready 和内容写入主动拉起，纯 status、inspect、lint、screenshot、print-pdf 与 export 不主动打开窗口。用户保持打开的文件或非终态 worktree 会在下一 Turn 继续显示；用户关闭优先，merged 与 discarded 清除打开意图。
 
-`univer-office` Settings 命名空间拥有两个相互独立的布尔偏好，默认均开启且实时生效：`autoOpenLivePreview` 控制实时浮窗及其轮询，`conversationReviewCards` 控制回合尾部审阅卡片是否渲染。Settings 服务或对应 Client 设置表面缺席时，Client 保持默认开启，不让可选设置能力阻塞预览与审阅注册；任一偏好关闭只移除它自己的表面，不影响另一者，也不影响文件树按需预览。偏好投影把 `loading` 解析为全关，避免被关闭的表面在持久值到达前闪现；而设置文档加载失败时保持产品默认，因为「读不到设置」不是用户的决定。设置卡片的一份 draft 按字段累计、一次保存提交，因此两个开关可以分别覆盖与恢复默认。
+展示配置按运行时能力兼容两种 DSH 契约：旧版 Host 使用 `settings.register` 注册 `univer-office` 命名空间，Client 通过 `settingsScope.bind` 订阅；0.1.7-alpha.1 起 Host 从根插件 `Config` 的 `volatile` 字段派生表单，Client 通过 `configForms.get` 读取 bundle patch 拥有的 `univer` entry。该 entry id 必须与 `cordis.patch.yml` 一致。Host schema 使用序列化的 `volatile` metadata，兼容没有 `.volatile()` builder 的旧 schemastery；新版 Host 不再调用已移除的 `settings.register`。Client 共享最小读写接口，处理新版写入返回 `false` 和网络异常，保存失败时保留 draft 并恢复保存按钮。旧版独立设置文档与新版 profile 存储不同，本插件不迁移旧配置；升级后可能需要重新设置偏好。
+
+两种契约均拥有两个相互独立的布尔偏好，默认均开启且实时生效：`autoOpenLivePreview` 控制实时浮窗及其轮询，`conversationReviewCards` 控制回合尾部审阅卡片是否渲染。Settings 服务或对应 Client 设置表面缺席时，Client 保持默认开启，不让可选设置能力阻塞预览与审阅注册；任一偏好关闭只移除它自己的表面，不影响另一者，也不影响文件树按需预览。偏好投影把 `loading` 解析为全关，避免被关闭的表面在持久值到达前闪现；而设置文档加载失败时保持产品默认，因为「读不到设置」不是用户的决定。设置卡片的一份 draft 按字段累计、一次保存提交，因此两个开关可以分别覆盖与恢复默认。
 
 文件树按需预览是浮窗之外的第二条入口：它不由任何 `univer_*` 操作触发，而是让 `.univer` 地址交给 Viewer 渲染。DSH 右栏按地址认领标签类型，排序规则是**档位（`extension` > `builtin` > `fallback`）→ 命中模式字符串长度 → 注册顺序**，因此本插件按宿主形态注册两条路径，任一时刻只有一条生效：
 

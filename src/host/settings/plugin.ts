@@ -18,6 +18,8 @@ const SettingsSchema: z<UniverSettings> = z.object({
 export function apply(ctx: Context): void {
   ctx.inject(['settings'], (settingsCtx: Context) => {
     const settings: SettingsProvider = settingsCtx.settings
+    // DSH 0.1.7+ derives forms from the root plugin's live Config instead.
+    if (typeof settings.register !== 'function') return
     settings.register(UNIVER_SETTINGS_NAMESPACE, SettingsSchema, {
       base: DEFAULT_UNIVER_SETTINGS,
       applies: 'live'
