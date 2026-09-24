@@ -1,4 +1,3 @@
-import { isDeepStrictEqual } from 'node:util'
 import type Database from 'libsql'
 import type {
   AppendHistoryRecordResult,
@@ -6,40 +5,41 @@ import type {
   HistoryDatabaseContext,
   HistoryOrigin,
   HistoryRecord,
-  HistoryRecordRange,
   IHistoryDatabaseAdapter,
   ListHistoryRecordsOptions,
   ListHistoryRecordsResult
 } from '@univerjs-pro/collaboration-history-service'
-import { HISTORY_SCHEMA_TABLE_DDL, HISTORY_SCHEMA_INDEX_DDL } from '../schema/history.ts'
-import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.js'
+import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
 
 const HISTORY_SCHEMA_COMPONENT = 'history'
-const HISTORY_SCHEMA_VERSION = 2
-const SCHEMA_VERSIONS_TABLE = 'collaboration_schema_versions'
-const HISTORY_RECORDS_TABLE = 'collaboration_history_records'
-const HISTORY_REVISIONS_TABLE = 'collaboration_history_revisions'
+export const HISTORY_SCHEMA_VERSION = 2
+export const HISTORY_RECORDS_TABLE = 'collaboration_history_records'
 
-interface HistoryRecordRow {
+/** DDL shared by schema creation and the v2-to-v3 `.univer` upgrade. */
+export const HISTORY_RECORDS_SCHEMA_SQL = `
+  CREATE TABLE collaboration_history_records (
+    unit_id TEXT NOT NULL,
+    start_revision INTEGER NOT NULL CHECK (start_revision >= 1),
+    user_id TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
+    origin INTEGER NOT NULL,
+    additional_fields TEXT,
+    PRIMARY KEY (unit_id, start_revision)
+  );
+
+  CREATE INDEX collaboration_history_origin_lookup
+    ON collaboration_history_records(unit_id, origin, start_revision);
+  CREATE INDEX collaboration_history_creator_lookup
+    ON collaboration_history_records(unit_id, user_id, start_revision);
+`
+
+interface HistoryRow {
   readonly unit_id: string
   readonly start_revision: number
   readonly user_id: string
   readonly created_at_ms: number
   readonly origin: number
   readonly additional_fields: string | null
-}
-
-interface HistoryPageRow extends HistoryRecordRow {
-  readonly next_start_revision: number | null
-}
-
-interface HistoryCreatorRow {
-  readonly user_id: string
-  readonly origin: number
-}
-
-interface LatestStartRevisionRow {
-  readonly start_revision: number
 }
 
 interface SchemaVersionRow {
@@ -52,12 +52,10 @@ export interface UniverfileSQLiteHistoryDatabaseAdapterOptions {
 }
 
 /**
- * Persistent, rebuildable History segment index stored beside the authoritative collaboration data.
+ * Persistent, rebuildable History boundaries stored beside the authoritative collaboration data.
  *
- * History Service owns the grouping policy: it appends one record per segment start and reads them
- * back newest-first, so this class stores boundaries only.
- *
- * This adapter never owns or closes the shared `.univer` connection.
+ * This adapter never owns or closes the shared `.univer` connection. History Service owns the
+ * grouping policy; this class only provides its CAS persistence contract and Gateway repair seam.
  */
 export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseAdapter {
   private readonly _database: Database.Database
@@ -76,15 +74,7 @@ export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseA
     unitID: string
   ): Promise<HistoryRecord | null> {
     this._assertOpen()
-    const row = this._database
-      .prepare(
-        `SELECT unit_id, start_revision, user_id, created_at_ms, origin, additional_fields
-         FROM collaboration_history_records
-         WHERE unit_id = ?
-         ORDER BY start_revision DESC
-         LIMIT 1`
-      )
-      .get(unitID) as HistoryRecordRow | undefined
+    const row = this._latest(unitID)
     return row === undefined ? null : rowToRecord(row)
   }
 
@@ -95,16 +85,23 @@ export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseA
   ): Promise<AppendHistoryRecordResult> {
     this._assertOpen()
     validateRecord(record)
-    return runUniverfileSQLiteTransaction<AppendHistoryRecordResult>(this._database, () => {
-      const existing = this._getRecord(record.unitID, record.startRevision)
-      if (existing !== null) {
-        // A retried identical append is idempotent; the same boundary with different facts is a
-        // real clash, exactly as the reference adapter classifies it.
-        return isDeepStrictEqual(existing, record)
-          ? { status: 'already-exists' }
-          : { status: 'conflict' }
+    return runUniverfileSQLiteTransaction(this._database, () => {
+      const existing = this._database
+        .prepare(
+          `SELECT unit_id, start_revision, user_id, created_at_ms, origin, additional_fields
+           FROM collaboration_history_records
+           WHERE unit_id = ? AND start_revision = ?`
+        )
+        .get(record.unitID, record.startRevision) as HistoryRow | undefined
+      if (existing !== undefined) {
+        const same =
+          existing.user_id === record.userID &&
+          existing.created_at_ms === record.createdAt &&
+          existing.origin === record.origin &&
+          existing.additional_fields === (record.additionalFields ?? null)
+        return { status: same ? 'already-exists' : 'conflict' }
       }
-      const latest = this._latestStartRevision(record.unitID)
+      const latest = this._latest(record.unitID)?.start_revision ?? null
       if (latest !== options.expectedLatestStartRevision || record.startRevision <= (latest ?? 0)) {
         return { status: 'conflict' }
       }
@@ -132,45 +129,52 @@ export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseA
     options: ListHistoryRecordsOptions
   ): Promise<ListHistoryRecordsResult> {
     this._assertOpen()
-    // `beforeRevision` is exclusive: pagination walks backwards from one revision below the previous
-    // page's oldest segment start.
-    const before = options.beforeRevision
-    const upperBound =
-      before === undefined ? options.throughRevision : Math.min(options.throughRevision, before - 1)
-    const conditions = ['records.unit_id = ?', 'records.start_revision <= ?']
-    const parameters: (string | number)[] = [unitID, upperBound]
-    // The reference adapter only applies the origin filter when the origin is truthy, so `origin: 0`
-    // lists every segment. Reproduced here so both adapters answer a request with the same page.
-    if (options.origin !== undefined && options.origin !== 0) {
-      conditions.push('records.origin = ?')
+    const parameters: Array<string | number> = [
+      options.throughRevision,
+      options.throughRevision,
+      unitID,
+      options.throughRevision
+    ]
+    const filters: string[] = []
+    if (options.beforeRevision !== undefined) {
+      filters.push('r.start_revision < ?')
+      parameters.push(options.beforeRevision)
+    }
+    // The SDK adapters treat origin 0 as "any origin".
+    if (options.origin) {
+      filters.push('r.origin = ?')
       parameters.push(options.origin)
     }
-    const userIDs = [...new Set(options.userIDs ?? [])]
-    if (userIDs.length > 0) {
-      conditions.push(`records.user_id IN (${userIDs.map(() => '?').join(', ')})`)
-      parameters.push(...userIDs)
+    if (options.userIDs !== undefined && options.userIDs.length > 0) {
+      filters.push(`r.user_id IN (${options.userIDs.map(() => '?').join(', ')})`)
+      parameters.push(...options.userIDs)
     }
+    parameters.push(options.length + 1)
+    // End revisions come from the unfiltered successor, not the next row of this page.
     const rows = this._database
       .prepare(
-        `SELECT records.unit_id, records.start_revision, records.user_id,
-                records.created_at_ms, records.origin, records.additional_fields,
-                (SELECT MIN(next.start_revision)
-                 FROM collaboration_history_records next
-                 WHERE next.unit_id = records.unit_id
-                   AND next.start_revision > records.start_revision) AS next_start_revision
-         FROM collaboration_history_records records
-         WHERE ${conditions.join(' AND ')}
-         ORDER BY records.start_revision DESC
+        `SELECT r.unit_id, r.start_revision, r.user_id, r.created_at_ms, r.origin,
+                r.additional_fields,
+                MIN(?, COALESCE((
+                  SELECT next.start_revision - 1
+                  FROM collaboration_history_records AS next
+                  WHERE next.unit_id = r.unit_id AND next.start_revision > r.start_revision
+                  ORDER BY next.start_revision ASC
+                  LIMIT 1
+                ), ?)) AS end_revision
+         FROM collaboration_history_records AS r
+         WHERE r.unit_id = ? AND r.start_revision <= ?
+           ${filters.length > 0 ? `AND ${filters.join(' AND ')}` : ''}
+         ORDER BY r.start_revision DESC
          LIMIT ?`
       )
-      .all(...parameters, options.length + 1) as unknown as HistoryPageRow[]
-    // Requesting one row beyond the page is how `hasMore` is decided: it is true only when another
-    // *matching* segment exists below the page, matching the reference adapter's scan.
-    const hasMore = rows.length > options.length
-    const page = hasMore ? rows.slice(0, options.length) : rows
+      .all(...parameters) as unknown as Array<HistoryRow & { readonly end_revision: number }>
     return {
-      records: page.map((row) => rowToRange(row, options.throughRevision)),
-      hasMore
+      records: rows.slice(0, options.length).map((row) => ({
+        record: rowToRecord(row),
+        endRevision: row.end_revision
+      })),
+      hasMore: rows.length > options.length
     }
   }
 
@@ -182,30 +186,44 @@ export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseA
     this._assertOpen()
     const rows = this._database
       .prepare(
-        `SELECT user_id, origin
+        `SELECT DISTINCT user_id, origin
          FROM collaboration_history_records
          WHERE unit_id = ? AND start_revision <= ?
-         ORDER BY start_revision ASC`
+         ORDER BY user_id, origin`
       )
-      .all(unitID, options.throughRevision) as unknown as HistoryCreatorRow[]
-    // A creator is a segment's first author, so grouping follows the record's own `user_id` rather
-    // than every user who edited inside the segment.
-    const creators = new Map<string, Set<HistoryOrigin>>()
+      .all(unitID, options.throughRevision) as unknown as Array<{
+      readonly user_id: string
+      readonly origin: number
+    }>
+    const creators = new Map<string, HistoryOrigin[]>()
     for (const row of rows) {
-      const origins = creators.get(row.user_id) ?? new Set<HistoryOrigin>()
-      origins.add(toHistoryOrigin(row.origin))
+      const origins = creators.get(row.user_id) ?? []
+      origins.push(toOrigin(row.origin))
       creators.set(row.user_id, origins)
     }
-    return [...creators]
-      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-      .map(([userID, origins]) => ({
-        userID,
-        origins: [...origins].sort((left, right) => left - right)
-      }))
+    return [...creators].map(([userID, origins]) => ({ userID, origins }))
+  }
+
+  /** Latest persisted boundary, or `null` when History Service has not initialized the Unit. */
+  public latestStartRevision(unitID: string): number | null {
+    this._assertOpen()
+    return this._latest(unitID)?.start_revision ?? null
   }
 
   public async dispose(): Promise<void> {
     this._disposed = true
+  }
+
+  private _latest(unitID: string): HistoryRow | undefined {
+    return this._database
+      .prepare(
+        `SELECT unit_id, start_revision, user_id, created_at_ms, origin, additional_fields
+         FROM collaboration_history_records
+         WHERE unit_id = ?
+         ORDER BY start_revision DESC
+         LIMIT 1`
+      )
+      .get(unitID) as HistoryRow | undefined
   }
 
   private _initializeSchema(): void {
@@ -221,48 +239,33 @@ export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseA
         if (row.version !== HISTORY_SCHEMA_VERSION) {
           throw new Error(`Unsupported .univer History schema version ${row.version}`)
         }
-        if (!hasTable(this._database, HISTORY_RECORDS_TABLE)) {
-          throw new Error('.univer History schema v2 is missing its records table')
+        if (!this._hasTable(HISTORY_RECORDS_TABLE)) {
+          throw new Error(
+            `.univer History schema v${HISTORY_SCHEMA_VERSION} is missing its records table`
+          )
         }
         return
       }
       if (
-        hasTable(this._database, HISTORY_RECORDS_TABLE) ||
-        hasTable(this._database, HISTORY_REVISIONS_TABLE)
+        this._hasTable(HISTORY_RECORDS_TABLE) ||
+        this._hasTable('collaboration_history_revisions')
       ) {
         throw new Error('.univer History table exists without a schema version')
       }
       this._database.exec(`
-        ${HISTORY_SCHEMA_TABLE_DDL}
-        ${HISTORY_SCHEMA_INDEX_DDL}
-        INSERT INTO ${SCHEMA_VERSIONS_TABLE} (component, version)
+        ${HISTORY_RECORDS_SCHEMA_SQL}
+        INSERT INTO collaboration_schema_versions (component, version)
         VALUES ('${HISTORY_SCHEMA_COMPONENT}', ${HISTORY_SCHEMA_VERSION});
       `)
     })
   }
 
-  private _getRecord(unitID: string, startRevision: number): HistoryRecord | null {
-    const row = this._database
-      .prepare(
-        `SELECT unit_id, start_revision, user_id, created_at_ms, origin, additional_fields
-         FROM collaboration_history_records
-         WHERE unit_id = ? AND start_revision = ?`
-      )
-      .get(unitID, startRevision) as HistoryRecordRow | undefined
-    return row === undefined ? null : rowToRecord(row)
-  }
-
-  private _latestStartRevision(unitID: string): number | null {
-    const row = this._database
-      .prepare(
-        `SELECT start_revision
-         FROM collaboration_history_records
-         WHERE unit_id = ?
-         ORDER BY start_revision DESC
-         LIMIT 1`
-      )
-      .get(unitID) as LatestStartRevisionRow | undefined
-    return row?.start_revision ?? null
+  private _hasTable(tableName: string): boolean {
+    return (
+      this._database
+        .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?")
+        .get(tableName) !== undefined
+    )
   }
 
   private _assertOpen(): void {
@@ -270,27 +273,22 @@ export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseA
   }
 }
 
-function rowToRecord(row: HistoryRecordRow): HistoryRecord {
+function rowToRecord(row: HistoryRow): HistoryRecord {
   return {
     unitID: row.unit_id,
     startRevision: row.start_revision,
     userID: row.user_id,
     createdAt: row.created_at_ms,
-    origin: toHistoryOrigin(row.origin),
+    origin: toOrigin(row.origin),
     ...(row.additional_fields === null ? {} : { additionalFields: row.additional_fields })
   }
 }
 
-/**
- * A segment ends one revision before the next segment starts. The newest segment has no successor,
- * so its end is the queried `throughRevision`, which is what the reference adapter clamps to.
- */
-function rowToRange(row: HistoryPageRow, throughRevision: number): HistoryRecordRange {
-  const endRevision =
-    row.next_start_revision === null
-      ? throughRevision
-      : Math.min(throughRevision, row.next_start_revision - 1)
-  return { record: rowToRecord(row), endRevision }
+function toOrigin(value: number): HistoryOrigin {
+  if (value !== 0 && value !== 1 && value !== 2) {
+    throw new Error('.univer History contains an invalid origin')
+  }
+  return value
 }
 
 function validateRecord(record: HistoryRecord): void {
@@ -301,28 +299,8 @@ function validateRecord(record: HistoryRecord): void {
     record.startRevision < 1 ||
     !Number.isSafeInteger(record.createdAt) ||
     record.createdAt < 0 ||
-    !isHistoryOrigin(record.origin)
+    (record.origin !== 0 && record.origin !== 1 && record.origin !== 2)
   ) {
-    // Kept identical to the reference adapter's validator so both reject the same records.
     throw new TypeError('History record is invalid')
   }
-}
-
-function isHistoryOrigin(value: number): value is HistoryOrigin {
-  return value === 0 || value === 1 || value === 2
-}
-
-function toHistoryOrigin(value: number): HistoryOrigin {
-  if (!isHistoryOrigin(value)) {
-    throw new Error('.univer History contains an invalid origin')
-  }
-  return value
-}
-
-function hasTable(database: Database.Database, tableName: string): boolean {
-  return (
-    database
-      .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?")
-      .get(tableName) !== undefined
-  )
 }

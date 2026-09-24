@@ -120,14 +120,35 @@ try {
     await live.dispose()
   }
 
+  // Inconsistent rc History is a rebuildable index: only that Unit loses its boundaries.
+  const inconsistent = join(workspace, 'inconsistent-history.univer')
+  createLegacy(inconsistent, snapshot)
+  const inconsistentDb = new Database(inconsistent)
+  // Revision 3 points at a segment start that revision 2 does not declare.
+  inconsistentDb.exec(
+    'UPDATE collaboration_history_revisions SET history_revision = 1 WHERE revision = 2;'
+  )
+  inconsistentDb.close()
+  const fromInconsistent = api.openUniverfileSQLite(inconsistent)
+  try {
+    assert.equal(fromInconsistent.upgrade.status, 'upgraded')
+    assert.equal(
+      await fromInconsistent.historyDatabaseAdapter.getLatestRecord(context, 'unit'),
+      null
+    )
+  } finally {
+    await fromInconsistent.dispose()
+  }
+
   // Both a component conversion failure and final verification failure leave the source byte-identical.
-  for (const failure of ['history', 'asset']) {
+  for (const failure of ['foreign-key', 'asset']) {
     const file = join(workspace, `failed-${failure}.univer`)
     createLegacy(file, snapshot)
     const db = new Database(file)
-    if (failure === 'history') {
-      // A valid first segment must not hide a missing later segment start.
-      db.exec('UPDATE collaboration_history_revisions SET history_revision = 1 WHERE revision = 2;')
+    if (failure === 'foreign-key') {
+      db.exec(`PRAGMA foreign_keys = OFF;
+        INSERT INTO collaboration_worktree_units
+        VALUES ('wt-missing', 'u-orphan', 0, 2, 'Orphan', 1, 'worktree', 1, 1, NULL, NULL);`)
     } else {
       db.exec("UPDATE collaboration_asset_blobs SET bytes = X'040506';")
     }
@@ -135,7 +156,7 @@ try {
     const before = await readFile(file)
     assert.throws(
       () => api.openUniverfileSQLite(file),
-      failure === 'history' ? /unit.*missing segment/ : /digest verification/
+      failure === 'foreign-key' ? /foreign-key violation/ : /digest verification/
     )
     assert.deepEqual(await readFile(file), before)
     assert.equal(api.detectUniverfileSQLiteFormat(file), 'v2')

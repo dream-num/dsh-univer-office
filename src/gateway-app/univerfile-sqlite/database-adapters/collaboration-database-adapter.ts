@@ -16,12 +16,7 @@ import {
   type UnitRecord
 } from '@univerjs-pro/collaboration-service'
 import type { IChangeset, ISheetBlock, ISnapshot, UniverType } from '@univerjs/protocol'
-import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.js'
-import {
-  coreUnitsTableDdl,
-  coreChangesetsTableDdl,
-  CORE_CHANGESETS_REVISION_INDEX_DDL
-} from '../schema/core.ts'
+import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
 
 const BINARY_TAG = '__univerCollaborationBinary'
 const CORE_SCHEMA_COMPONENT = 'core'
@@ -55,13 +50,6 @@ interface UnitRow {
   readonly soft_deleted_at_ms: number | null
 }
 
-interface SnapshotRow {
-  readonly unit_id: string
-  readonly revision: number
-  readonly type: number
-  readonly payload_json: string
-}
-
 interface PayloadRow {
   readonly payload_json: string
 }
@@ -93,8 +81,6 @@ export interface UniverfileUnitMetadata {
   readonly name?: string
   /** Merge may create several Worktree Units in trunk under one SDK call. */
   readonly unitNames?: Readonly<Record<string, string>>
-  /** Worktree lifecycle timestamp. Trunk Unit creation time comes from `UnitRecord.createdAt`. */
-  readonly createdAtMs?: number
 }
 
 export interface UniverfileUnitSummary {
@@ -103,9 +89,6 @@ export interface UniverfileUnitSummary {
   readonly name: string
   readonly headRev: number
   readonly createdAt: string
-  /** Creation identity the SDK requires of a Unit record; a Worktree Unit joined from trunk copies it. */
-  readonly creatorID: string
-  readonly createdAtMs: number
 }
 
 /**
@@ -166,6 +149,20 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
     return rows.map(rowToUnitSummary)
   }
 
+  /** Active Unit records in catalog order, for synchronous Gateway compatibility entries. */
+  public listUnitRecords(): readonly UnitRecord[] {
+    this._assertOpen()
+    const rows = this._database
+      .prepare(
+        `SELECT unit_id, type, name, head_revision, creator_id, created_at_ms, soft_deleted_at_ms
+         FROM collaboration_units
+         WHERE soft_deleted_at_ms IS NULL
+         ORDER BY created_at_ms ASC, unit_id ASC`
+      )
+      .all() as unknown as UnitRow[]
+    return rows.map(rowToUnitRecord)
+  }
+
   public getChangeset(unitID: string, revision: number): IChangeset | undefined {
     this._assertOpen()
     const row = this._database
@@ -196,21 +193,33 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
     options?: { readonly revision?: number }
   ): Promise<ISnapshot | null> {
     this._assertOpen()
-    const row = this._selectSnapshotRow(unitID, options?.revision)
-    return row ? decode<ISnapshot>(row.payload_json) : null
-  }
+    const requestedRevision = options?.revision
+    if (requestedRevision !== undefined && requestedRevision < 0) {
+      throw invalidRequest('Snapshot revision cannot be negative')
+    }
 
-  async getSnapshotInfo(
-    _context: DatabaseContext,
-    unitID: string,
-    options?: { readonly revision?: number }
-  ): Promise<SnapshotInfo | null> {
-    this._assertOpen()
-    const row = this._selectSnapshotRow(unitID, options?.revision)
-    // `collaboration_snapshots.revision` is written from `ISnapshot.rev` by this adapter and by the
-    // legacy readers, so the identity fields come from the row itself instead of decoding a
-    // snapshot payload that can carry whole workbooks.
-    return row ? { unitID: row.unit_id, type: row.type as UniverType, rev: row.revision } : null
+    const unit = this._getActiveUnitRow(unitID)
+    if (!unit) {
+      return null
+    }
+    const targetRevision =
+      requestedRevision === undefined || requestedRevision === 0
+        ? unit.head_revision
+        : Math.min(requestedRevision, unit.head_revision)
+    const row = this._database
+      .prepare(
+        `SELECT collaboration_snapshots.payload_json
+         FROM collaboration_snapshots
+         JOIN collaboration_units
+           ON collaboration_units.unit_id = collaboration_snapshots.unit_id
+         WHERE collaboration_snapshots.unit_id = ?
+           AND collaboration_snapshots.revision <= ?
+           AND collaboration_units.soft_deleted_at_ms IS NULL
+         ORDER BY collaboration_snapshots.revision DESC
+         LIMIT 1`
+      )
+      .get(unitID, targetRevision) as PayloadRow | undefined
+    return row ? decode<ISnapshot>(row.payload_json) : null
   }
 
   async getChangesets(
@@ -219,32 +228,72 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
     range: { readonly from: number; readonly to?: number }
   ): Promise<readonly IChangeset[] | null> {
     this._assertOpen()
-    if (range.from < 0 || (range.to !== undefined && range.to < 0)) {
+    const to = range.to ?? 0
+    if (range.from < 0 || to < 0) {
       throw invalidRequest('Changeset range revisions cannot be negative')
     }
 
-    const unit = this._database
-      .prepare(
-        `SELECT head_revision
-         FROM collaboration_units
-         WHERE unit_id = ? AND soft_deleted_at_ms IS NULL`
-      )
-      .get(unitID) as { readonly head_revision: number } | undefined
-    if (unit === undefined) return null
-    const to =
-      range.to === undefined || range.to === 0
-        ? unit.head_revision
-        : Math.min(range.to, unit.head_revision)
-    if (to <= range.from) return []
+    const unit = this._getActiveUnitRow(unitID)
+    if (!unit) {
+      return null
+    }
     const rows = this._database
       .prepare(
         `SELECT payload_json
          FROM collaboration_changesets
-         WHERE unit_id = ? AND revision > ? AND revision <= ?
+         WHERE unit_id = ? AND revision > ? AND revision <= CASE
+           WHEN ? = 0 THEN ?
+           ELSE MIN(?, ?)
+         END
          ORDER BY revision ASC`
       )
-      .all(unitID, range.from, to) as unknown as PayloadRow[]
+      .all(
+        unitID,
+        range.from,
+        to,
+        unit.head_revision,
+        to,
+        unit.head_revision
+      ) as unknown as PayloadRow[]
     return rows.map((row) => decode<IChangeset>(row.payload_json))
+  }
+
+  async getSnapshotInfo(
+    _context: DatabaseContext,
+    unitID: string,
+    options?: { readonly revision?: number }
+  ): Promise<SnapshotInfo | null> {
+    this._assertOpen()
+    const requestedRevision = options?.revision
+    if (requestedRevision !== undefined && requestedRevision < 0) {
+      throw invalidRequest('Snapshot revision cannot be negative')
+    }
+
+    const unit = this._getActiveUnitRow(unitID)
+    if (!unit) {
+      return null
+    }
+    const targetRevision =
+      requestedRevision === undefined || requestedRevision === 0
+        ? unit.head_revision
+        : Math.min(requestedRevision, unit.head_revision)
+    const row = this._database
+      .prepare(
+        `SELECT collaboration_snapshots.revision
+         FROM collaboration_snapshots
+         JOIN collaboration_units
+           ON collaboration_units.unit_id = collaboration_snapshots.unit_id
+         WHERE collaboration_snapshots.unit_id = ?
+           AND collaboration_snapshots.revision <= ?
+           AND collaboration_units.soft_deleted_at_ms IS NULL
+         ORDER BY collaboration_snapshots.revision DESC
+         LIMIT 1`
+      )
+      .get(unitID, targetRevision) as { revision: number } | undefined
+    if (!row) {
+      return null
+    }
+    return { unitID, type: unit.type as UniverType, rev: row.revision }
   }
 
   async getSubmission(
@@ -293,8 +342,6 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
         return { status: 'already-exists', record: rowToUnitRecord(existing) }
       }
 
-      const metadata = readUnitMetadata(context, input.record.unitID)
-      // The SDK record owns the Unit's creation identity; the CLI metadata only names it.
       this._database
         .prepare(
           `INSERT INTO collaboration_units
@@ -304,7 +351,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
         .run(
           input.record.unitID,
           input.record.type,
-          metadata.name,
+          readUnitName(context, input.record.unitID),
           input.record.creatorID,
           input.record.createdAt
         )
@@ -417,28 +464,24 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   ): Promise<CommitChangesetResult> {
     this._assertOpen()
     validateSubmissionIdentity(input.changeset)
-    // Match the SDK adapters: persist the server commit time in protocol seconds and return it.
-    const createTime = Math.floor(Date.now() / 1000)
-    const savedChangeset: IChangeset = { ...input.changeset, createTime }
-    const payload = encode(savedChangeset)
-    const createdAtMs = createTime * 1000
+    const createTime = currentUnixSeconds()
+    const changeset: IChangeset = { ...input.changeset, createTime }
+    const payload = encode(changeset)
 
     return this._transaction(() => {
-      const { changeset } = input
-      const expectedHeadRevision = changeset.baseRev
       const unit = this._getActiveUnitRow(changeset.unitID)
       if (!unit) {
         throw new CollabError('UNIT_NOT_FOUND', 'Cannot commit to a missing unit')
       }
 
-      if (unit.head_revision !== expectedHeadRevision) {
+      if (unit.head_revision !== changeset.baseRev) {
         return {
           status: 'revision-mismatch',
           actualHeadRevision: unit.head_revision
         }
       }
 
-      validateCandidate(rowToUnitRecord(unit), input)
+      validateCandidate(rowToUnitRecord(unit), changeset)
       this._database
         .prepare(
           `INSERT INTO collaboration_changesets
@@ -452,7 +495,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
           changeset.sid as string,
           changeset.reqId as number,
           payload,
-          createdAtMs
+          createTime * 1000
         )
       const update = this._database
         .prepare(
@@ -466,7 +509,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
           changeset.revision,
           readOptionalUnitName(context, changeset.unitID) ?? null,
           changeset.unitID,
-          expectedHeadRevision
+          changeset.baseRev
         )
       if (update.changes !== 1) {
         throw new CollabError(
@@ -581,7 +624,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
         const missingTables = CORE_TABLE_NAMES.filter((tableName) => !this._hasTable(tableName))
         if (missingTables.length > 0) {
           throw incompatibleSchema(
-            `SQLite collaboration core schema v2 is incomplete: missing ${missingTables.join(', ')}`
+            `SQLite collaboration core schema v${CORE_SCHEMA_VERSION} is incomplete: missing ${missingTables.join(', ')}`
           )
         }
         this._assertGatewayColumns()
@@ -594,7 +637,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
       }
 
       this._database.exec(`
-        ${coreUnitsTableDdl('collaboration_units')}
+        ${coreUnitsTableSql('collaboration_units')}
 
         CREATE TABLE collaboration_unit_tombstones (
           unit_id TEXT PRIMARY KEY,
@@ -611,7 +654,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
             REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
         );
 
-        ${coreChangesetsTableDdl('collaboration_changesets')}
+        ${coreChangesetsTableSql('collaboration_changesets')}
 
         CREATE TABLE collaboration_sheet_blocks (
           unit_id TEXT NOT NULL,
@@ -633,51 +676,13 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
 
         CREATE INDEX collaboration_snapshots_nearest_revision
           ON collaboration_snapshots(unit_id, revision DESC);
-        ${CORE_CHANGESETS_REVISION_INDEX_DDL}
+        CREATE INDEX collaboration_changesets_revision_range
+          ON collaboration_changesets(unit_id, revision ASC);
 
         INSERT INTO collaboration_schema_versions (component, version)
-        VALUES ('core', 2);
+        VALUES ('core', ${CORE_SCHEMA_VERSION});
       `)
     })
-  }
-
-  /**
-   * Resolves the snapshot `getSnapshot` and `getSnapshotInfo` have to agree on: the closest stored
-   * snapshot at or below the requested revision, defaulting to the Unit head.
-   */
-  private _selectSnapshotRow(
-    unitID: string,
-    requestedRevision: number | undefined
-  ): SnapshotRow | null {
-    if (requestedRevision !== undefined && requestedRevision < 0) {
-      throw invalidRequest('Snapshot revision cannot be negative')
-    }
-
-    const unit = this._getActiveUnitRow(unitID)
-    if (!unit) {
-      return null
-    }
-    const targetRevision =
-      requestedRevision === undefined || requestedRevision === 0
-        ? unit.head_revision
-        : Math.min(requestedRevision, unit.head_revision)
-    const row = this._database
-      .prepare(
-        `SELECT collaboration_snapshots.unit_id,
-                collaboration_snapshots.revision,
-                collaboration_snapshots.type,
-                collaboration_snapshots.payload_json
-         FROM collaboration_snapshots
-         JOIN collaboration_units
-           ON collaboration_units.unit_id = collaboration_snapshots.unit_id
-         WHERE collaboration_snapshots.unit_id = ?
-           AND collaboration_snapshots.revision <= ?
-           AND collaboration_units.soft_deleted_at_ms IS NULL
-         ORDER BY collaboration_snapshots.revision DESC
-         LIMIT 1`
-      )
-      .get(unitID, targetRevision) as SnapshotRow | undefined
-    return row ?? null
   }
 
   private _getActiveUnitRow(unitID: string): UnitRow | null {
@@ -711,7 +716,15 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   }
 
   private _hasTable(tableName: string): boolean {
-    return hasTable(this._database, tableName)
+    return Boolean(
+      this._database
+        .prepare(
+          `SELECT 1
+           FROM sqlite_schema
+           WHERE type = 'table' AND name = ?`
+        )
+        .get(tableName)
+    )
   }
 
   private _hasAnyCoreTable(): boolean {
@@ -737,10 +750,22 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
           .all() as unknown as ColumnRow[]
       ).map(({ name }) => name)
     )
-    const missing = ['name', 'created_at_ms'].filter((column) => !columns.has(column))
+    const changesetColumns = new Set(
+      (
+        this._database
+          .prepare('PRAGMA table_info(collaboration_changesets)')
+          .all() as unknown as ColumnRow[]
+      ).map(({ name }) => name)
+    )
+    const missing = [
+      ...['name', 'creator_id', 'created_at_ms']
+        .filter((column) => !columns.has(column))
+        .map((column) => `collaboration_units.${column}`),
+      ...(changesetColumns.has('created_at_ms') ? [] : ['collaboration_changesets.created_at_ms'])
+    ]
     if (missing.length > 0) {
       throw incompatibleSchema(
-        `SQLite collaboration core database v1 is missing CLI columns: ${missing.join(', ')}`
+        `SQLite collaboration core schema v${CORE_SCHEMA_VERSION} is missing CLI columns: ${missing.join(', ')}`
       )
     }
   }
@@ -772,18 +797,6 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   }
 }
 
-function hasTable(database: Database.Database, tableName: string): boolean {
-  return Boolean(
-    database
-      .prepare(
-        `SELECT 1
-         FROM sqlite_schema
-         WHERE type = 'table' AND name = ?`
-      )
-      .get(tableName)
-  )
-}
-
 function validateOptions(options: UniverfileSQLiteDatabaseAdapterOptions): void {
   if (!options.filename) {
     throw invalidRequest('SQLite filename is required')
@@ -812,6 +825,14 @@ function validateInitialUnit(input: CreateUnitDatabaseInput): void {
   ) {
     throw invalidRequest('Initial unit record and snapshot must match at revision 1')
   }
+  if (
+    typeof record.creatorID !== 'string' ||
+    record.creatorID.length === 0 ||
+    !Number.isSafeInteger(record.createdAt) ||
+    record.createdAt < 0
+  ) {
+    throw invalidRequest('Unit creation requires creatorID and createdAt in Unix milliseconds')
+  }
 }
 
 function validateSubmissionIdentity(changeset: IChangeset): void {
@@ -820,8 +841,7 @@ function validateSubmissionIdentity(changeset: IChangeset): void {
   }
 }
 
-function validateCandidate(record: UnitRecord, input: CommitChangesetInput): void {
-  const { changeset } = input
+function validateCandidate(record: UnitRecord, changeset: IChangeset): void {
   if (changeset.type !== record.type || changeset.revision !== changeset.baseRev + 1) {
     throw invalidRequest('Confirmed changeset must match the unit type and expected revision')
   }
@@ -843,23 +863,53 @@ function rowToUnitSummary(row: UnitRow): UniverfileUnitSummary {
     type: row.type as UniverType,
     name: row.name,
     headRev: row.head_revision,
-    createdAt: new Date(row.created_at_ms).toISOString(),
-    creatorID: row.creator_id,
-    createdAtMs: row.created_at_ms
+    createdAt: new Date(row.created_at_ms).toISOString()
   }
 }
 
-function readUnitMetadata(context: DatabaseContext, unitID: string): { readonly name: string } {
+/** Column layout shared by schema creation and the v2-to-v3 `.univer` upgrade. */
+export function coreUnitsTableSql(tableName: string): string {
+  return `CREATE TABLE ${tableName} (
+          unit_id TEXT PRIMARY KEY,
+          type INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          head_revision INTEGER NOT NULL CHECK (head_revision >= 1),
+          creator_id TEXT NOT NULL,
+          created_at_ms INTEGER NOT NULL,
+          soft_deleted_at_ms INTEGER
+        );`
+}
+
+/** `created_at_ms` repeats the payload `createTime` in Unix milliseconds, as the SDK schema does. */
+export function coreChangesetsTableSql(tableName: string): string {
+  return `CREATE TABLE ${tableName} (
+          unit_id TEXT NOT NULL,
+          revision INTEGER NOT NULL CHECK (revision >= 2),
+          base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
+          sid TEXT NOT NULL,
+          req_id INTEGER NOT NULL CHECK (req_id >= 1),
+          payload_json TEXT NOT NULL,
+          created_at_ms INTEGER NOT NULL,
+          PRIMARY KEY (unit_id, revision),
+          UNIQUE (unit_id, sid, req_id),
+          FOREIGN KEY (unit_id)
+            REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
+        );`
+}
+
+export function currentUnixSeconds(): number {
+  return Math.floor(Date.now() / 1000)
+}
+
+function readUnitName(context: DatabaseContext, unitID: string): string {
   const value = context.customData[UNIVERFILE_UNIT_METADATA_KEY] as
     | UniverfileUnitMetadata
     | undefined
-  const name =
-    typeof value?.unitNames?.[unitID] === 'string' && value.unitNames[unitID]!.length > 0
-      ? value.unitNames[unitID]!
-      : typeof value?.name === 'string' && value.name.length > 0
-        ? value.name
-        : unitID
-  return { name }
+  return typeof value?.unitNames?.[unitID] === 'string' && value.unitNames[unitID]!.length > 0
+    ? value.unitNames[unitID]!
+    : typeof value?.name === 'string' && value.name.length > 0
+      ? value.name
+      : unitID
 }
 
 function readOptionalUnitName(context: DatabaseContext, unitID: string): string | undefined {

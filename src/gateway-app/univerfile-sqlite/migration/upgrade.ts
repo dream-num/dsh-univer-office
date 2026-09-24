@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { copyFileSync, existsSync, renameSync, unlinkSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import type { UniverfileSQLiteFormat } from '../schema/detect.ts'
-import type { UniverfileVerification } from './verify.ts'
 import { UniverfileSQLiteConnection } from '../connection.ts'
 import { UniverfileSQLiteAssetStore } from '../database-adapters/asset-store.ts'
 import { UniverfileSQLiteHistoryDatabaseAdapter } from '../database-adapters/history-database-adapter.ts'
@@ -11,20 +9,23 @@ import { detectUniverfileSQLiteFormat } from '../schema/detect.ts'
 import { createUniverfileBackup, sha256 } from './backup.ts'
 import { migrateLegacyBaseContentToV2 } from './base-content.ts'
 import { withUniverfileUpgradeLock } from './lock.ts'
-import { pruneCandidateToCurrentV3Schema } from './prune.ts'
+import { pruneCandidateToCurrentSchema } from './prune.ts'
 import { migrateV0CandidateToV3 } from './readers/v0.ts'
 import { migrateV1CandidateToV2 } from './readers/v1.ts'
-import { migrateV2CandidateToV3, normalizeCandidateChangesetTimes } from './readers/v2.ts'
-import { verifyV3Candidate } from './verify.ts'
+import { migrateV2CandidateToV3, normalizeChangesetCreateTimes } from './readers/v2.ts'
+import { verifyV3Candidate, type UniverfileVerification } from './verify.ts'
+
+export type UniverfileUpgradeSourceFormat = 'v0' | 'v1' | 'v2'
 
 export type UniverfileUpgradeResult =
   | { readonly status: 'unchanged'; readonly format: 'v3' }
   | {
       readonly status: 'upgraded'
-      readonly sourceFormat: Exclude<UniverfileSQLiteFormat, 'v3'>
+      readonly sourceFormat: UniverfileUpgradeSourceFormat
       readonly targetFormat: 'v3'
       readonly backupPath: string
       readonly backupSha256: string
+      /** v0 and v1 logical Worktree commits have no Collaboration SDK equivalent. */
       readonly omitted: readonly 'logical-commit-history'[]
       readonly preserved: { readonly mergingWorktrees: number }
       readonly warnings: readonly string[]
@@ -35,17 +36,17 @@ export interface UpgradeUniverfileSQLiteOptions {
   readonly lockTimeoutMs?: number
 }
 
-/** Publish a current-format file only after every migration and verification succeeds on a copy. */
 export function upgradeUniverfileSQLite(
   filename: string,
   options: UpgradeUniverfileSQLiteOptions = {}
 ): UniverfileUpgradeResult {
-  if (detectUniverfileSQLiteFormat(filename) === 'v3') {
-    return { status: 'unchanged', format: 'v3' }
-  }
+  const initial = detectUniverfileSQLiteFormat(filename)
+  if (initial === 'v3') return { status: 'unchanged', format: 'v3' }
+
   return withUniverfileUpgradeLock(filename, options.lockTimeoutMs ?? 5_000, () => {
     const sourceFormat = detectUniverfileSQLiteFormat(filename)
     if (sourceFormat === 'v3') return { status: 'unchanged', format: 'v3' }
+
     const backup = createUniverfileBackup(filename, sourceFormat)
     const candidatePath = join(
       dirname(filename),
@@ -53,7 +54,7 @@ export function upgradeUniverfileSQLite(
     )
     try {
       copyFileSync(backup.path, candidatePath)
-      const mergingWorktrees = migrateCandidate(candidatePath, sourceFormat)
+      const preservedMergingWorktrees = migrateCandidate(candidatePath, sourceFormat)
       const verification = verifyV3Candidate(candidatePath)
       if (sha256(filename) !== backup.sha256) {
         throw new Error('source file changed while its upgrade candidate was prepared')
@@ -66,7 +67,7 @@ export function upgradeUniverfileSQLite(
         backupPath: backup.path,
         backupSha256: backup.sha256,
         omitted: sourceFormat === 'v2' ? [] : ['logical-commit-history'],
-        preserved: { mergingWorktrees },
+        preserved: { mergingWorktrees: preservedMergingWorktrees },
         warnings: [],
         verification
       }
@@ -82,34 +83,27 @@ export function upgradeUniverfileSQLite(
   })
 }
 
+/** Returns the number of merging Worktrees normalized back to ready. */
 function migrateCandidate(
   candidatePath: string,
-  sourceFormat: Exclude<UniverfileSQLiteFormat, 'v3'>
+  sourceFormat: UniverfileUpgradeSourceFormat
 ): number {
   const connection = new UniverfileSQLiteConnection({ filename: candidatePath })
   try {
-    let mergingWorktrees = 0
-    switch (sourceFormat) {
-      case 'v0': {
-        // This reader initializes the current adapters and copies legacy data directly into v3.
-        const result = migrateV0CandidateToV3(connection)
-        if (result.status !== 'migrated') throw new Error('v0 reader did not migrate the candidate')
-        break
-      }
-      case 'v1':
-        mergingWorktrees = migrateV1CandidateToV2(connection)
-        migrateV2CandidateToV3(connection.database)
-        break
-      case 'v2':
-        migrateV2CandidateToV3(connection.database)
-        break
+    let normalizedMergingWorktrees = 0
+    if (sourceFormat === 'v0') {
+      const result = migrateV0CandidateToV3(connection)
+      if (result.status !== 'migrated') throw new Error('v0 reader did not migrate the candidate')
+      normalizeChangesetCreateTimes(connection.database)
+    } else {
+      if (sourceFormat === 'v1') normalizedMergingWorktrees = migrateV1CandidateToV2(connection)
+      migrateV2CandidateToV3(connection)
     }
     new UniverfileSQLiteAssetStore({ connection })
     new UniverfileSQLiteHistoryDatabaseAdapter({ connection })
-    normalizeCandidateChangesetTimes(connection.database)
     if (sourceFormat !== 'v2') migrateLegacyBaseContentToV2(connection.database)
-    pruneCandidateToCurrentV3Schema(connection.database)
-    return mergingWorktrees
+    pruneCandidateToCurrentSchema(connection.database)
+    return normalizedMergingWorktrees
   } finally {
     connection.dispose()
   }

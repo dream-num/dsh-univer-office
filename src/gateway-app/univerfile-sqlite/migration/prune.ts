@@ -1,6 +1,6 @@
 import type Database from 'libsql'
-import { runUniverfileSQLiteTransaction } from '../connection.js'
-import { CURRENT_V3_INDEXES, CURRENT_V3_TABLES } from '../schema/objects.js'
+import { runUniverfileSQLiteTransaction } from '../connection.ts'
+import { CURRENT_V3_INDEXES, CURRENT_V3_TABLES } from '../schema/objects.ts'
 
 interface SchemaObjectRow {
   readonly name: string
@@ -18,7 +18,7 @@ const CURRENT_INDEXES = new Set<string>(CURRENT_V3_INDEXES)
  * the current owned schema so retired caches and unrelated application tables cannot influence a
  * later format detection or adapter initialization.
  */
-export function pruneCandidateToCurrentV3Schema(database: Database.Database): void {
+export function pruneCandidateToCurrentSchema(database: Database.Database): void {
   const objects = database
     .prepare(
       `SELECT type, name, sql

@@ -9,6 +9,7 @@ export const V0_TABLES = [
   'worktree_snapshots'
 ] as const
 
+/** Core v1 and v2 own the same tables; v2 adds `collaboration_units.creator_id`. */
 export const CORE_V1_TABLES = [
   'collaboration_units',
   'collaboration_unit_tombstones',
@@ -33,7 +34,6 @@ export const ASSET_V1_TABLES = ['collaboration_asset_blobs', 'collaboration_asse
 
 export const HISTORY_V1_TABLES = ['collaboration_history_revisions'] as const
 
-/** History v2 keeps one row per segment start instead of one row per revision. */
 export const HISTORY_V2_TABLES = ['collaboration_history_records'] as const
 
 export const CURRENT_V3_TABLES = [
@@ -49,6 +49,6 @@ export const CURRENT_V3_INDEXES = [
   'collaboration_changesets_revision_range',
   'collaboration_worktree_changesets_revision',
   'collaboration_assets_scope',
-  'collaboration_history_record_lookup',
+  'collaboration_history_origin_lookup',
   'collaboration_history_creator_lookup'
 ] as const

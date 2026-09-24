@@ -4,10 +4,10 @@ import type { IChangeset, IMutation, ISheetBlock, ISnapshot } from '@univerjs/pr
 import {
   type UniverfileSQLiteConnection,
   runUniverfileSQLiteTransaction
-} from '../../connection.js'
-import { UniverfileSQLiteDatabaseAdapter } from '../../database-adapters/collaboration-database-adapter.js'
-import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../../database-adapters/worktree-database-adapter.js'
-import { ANONYMOUS_CREATOR_ID, toUnixMilliseconds } from '../legacy-creation.ts'
+} from '../../connection.ts'
+import { UniverfileSQLiteDatabaseAdapter } from '../../database-adapters/collaboration-database-adapter.ts'
+import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../../database-adapters/worktree-database-adapter.ts'
+import { ANONYMOUS_CREATOR_ID } from './v2.ts'
 
 const LEGACY_PREFIX = '__collaboration_migration_v0_'
 const BINARY_TAG = '__univerCollaborationBinary'
@@ -189,10 +189,10 @@ export function migrateV0CandidateToV3(
 
     runUniverfileSQLiteTransaction(database, () => {
       renameLegacyTables(database)
-      initializeDatabaseV3(filename, connection)
+      initializeCurrentDatabase(filename, connection)
       migrateTrunk(database)
       migrateWorktrees(database)
-      validateDatabaseV3(filename, connection)
+      validateCurrentDatabase(filename, connection)
       for (const tableName of [...legacyTableNames()].reverse()) {
         database.exec(`DROP TABLE ${legacyTable(tableName)};`)
       }
@@ -245,7 +245,7 @@ function renameLegacyTables(database: Database.Database): void {
   }
 }
 
-function initializeDatabaseV3(filename: string, connection: UniverfileSQLiteConnection): void {
+function initializeCurrentDatabase(filename: string, connection: UniverfileSQLiteConnection): void {
   const trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection })
   let worktree: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
   try {
@@ -281,8 +281,7 @@ function migrateTrunk(database: Database.Database): void {
       unit.type,
       unit.name,
       unit.head_rev,
-      // Pre-collaboration files record no author for a Unit, so the migration names the one the
-      // component schema requires instead of inventing an identity.
+      // v0 recorded no creation author.
       ANONYMOUS_CREATOR_ID,
       parseTimestamp(unit.created_at, `legacy Unit ${unit.unit_id} created_at`),
       unit.deleted_at === null
@@ -526,21 +525,21 @@ function migrateWorktree(
         name: unit.name,
         source: 'trunk' as const,
         baselineRevision: baseline[unitId]!,
-        // A Unit joined from trunk keeps the trunk Unit's creation time: that is the value the
-        // Worktree migration derives for this column, and the Worktree's own timestamp is not it.
+        creatorId: ANONYMOUS_CREATOR_ID,
         createdAt: parseTimestamp(unit.created_at, `legacy Unit ${unitId} created_at`)
       }
     }),
     ...[...created.values()].map((unit) => ({
       ...unit,
       source: 'worktree' as const,
-      baselineRevision: 1
+      baselineRevision: 1,
+      creatorId: ANONYMOUS_CREATOR_ID
     }))
   ].filter((unit) => !deleted.has(unit.unitId))
 
   const insertUnit = database.prepare(
     `INSERT INTO collaboration_worktree_units
-       (worktree_id, unit_id, unit_order, type, name, created_at_ms, creator_id, source,
+       (worktree_id, unit_id, unit_order, type, name, creator_id, created_at_ms, source,
         baseline_trunk_revision, draft_head_revision, ready_draft_head_revision,
         merge_result_json)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -557,9 +556,8 @@ function migrateWorktree(
       order,
       unit.type,
       unit.name,
+      unit.creatorId,
       unit.createdAt,
-      // Pre-collaboration files record no author, so every Unit names the required placeholder.
-      ANONYMOUS_CREATOR_ID,
       unit.source,
       unit.baselineRevision,
       draftHead,
@@ -631,11 +629,7 @@ function migrateActiveWorktreeChangesets(
   const insert = database.prepare(
     `INSERT INTO collaboration_worktree_changesets
        (worktree_id, unit_id, revision, base_revision, sid, req_id, payload_json, created_at_ms)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-  const worktreeCreatedAtMs = parseTimestamp(
-    worktree.created_at,
-    `Worktree ${worktree.worktree_id} created_at`
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0)`
   )
   for (const unit of activeUnits) {
     const usedIdentities = new Set<string>()
@@ -649,10 +643,7 @@ function migrateActiveWorktreeChangesets(
         row.base_rev,
         identity.sid,
         identity.reqId,
-        encode(changeset),
-        // The legacy payload carries the commit time the current schema also stores in its own
-        // column; a file that predates a usable value falls back to the Worktree's creation time.
-        toUnixMilliseconds(row.create_time) ?? worktreeCreatedAtMs
+        encode(changeset)
       )
     }
   }
@@ -704,7 +695,7 @@ function migrateChangesets(
   const insert = database.prepare(
     `INSERT INTO ${targetTable}
        (unit_id, revision, base_revision, sid, req_id, payload_json, created_at_ms)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, 0)`
   )
   const usedByUnit = new Map<string, Set<string>>()
   for (const row of rows) {
@@ -719,11 +710,7 @@ function migrateChangesets(
       row.base_rev,
       identity.sid,
       identity.reqId,
-      encode(toChangeset(row, identity)),
-      // The legacy payload carries the commit time the current schema also stores in its own column.
-      // A file that predates a usable value falls back to the Unit's creation time.
-      toUnixMilliseconds(row.create_time) ??
-        parseTimestamp(unit.created_at, `legacy Unit ${row.unit_id} created_at`)
+      encode(toChangeset(row, identity))
     )
   }
 }
@@ -1007,7 +994,7 @@ function countMergingWorktrees(database: Database.Database, table: string): numb
   return Number(row.count)
 }
 
-function validateDatabaseV3(filename: string, connection: UniverfileSQLiteConnection): void {
+function validateCurrentDatabase(filename: string, connection: UniverfileSQLiteConnection): void {
   let trunk: UniverfileSQLiteDatabaseAdapter | undefined
   let worktree: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
   try {

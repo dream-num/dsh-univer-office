@@ -1,5 +1,5 @@
 import Database from 'libsql'
-import { UniverfileSQLiteError } from '../errors.js'
+import { UniverfileSQLiteError } from '../errors.ts'
 import {
   ASSET_V1_TABLES,
   CORE_V1_TABLES,
@@ -8,7 +8,7 @@ import {
   V0_TABLES,
   WORKTREE_COMMON_TABLES,
   WORKTREE_V1_ONLY_TABLES
-} from './objects.js'
+} from './objects.ts'
 
 export type UniverfileSQLiteFormat = 'v0' | 'v1' | 'v2' | 'v3'
 
@@ -58,40 +58,34 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
       throw unsupported(`unknown schema components: ${unknown.join(', ')}`)
     }
     const coreVersion = versions.get('core')
+    if (coreVersion === 2) return detectV3(database, tables, versions)
+    if (coreVersion !== 1) throw unsupported('core schema version must be v1 or v2')
     const worktreeVersion = versions.get('worktree')
-    const assetVersion = versions.get('assets')
-    const historyVersion = versions.get('history')
-    const current =
-      coreVersion === 2 && worktreeVersion === 3 && assetVersion === 1 && historyVersion === 2
-    const legacy =
-      coreVersion === 1 &&
-      (worktreeVersion === 1 || worktreeVersion === 2) &&
-      (historyVersion === undefined || historyVersion === 1) &&
-      (assetVersion === 1 || (worktreeVersion === 1 && assetVersion === undefined))
-    if (!current && !legacy) {
-      throw unsupported(
-        `unsupported component version combination: ${JSON.stringify(Object.fromEntries(versions))}`
-      )
+    if (worktreeVersion !== 1 && worktreeVersion !== 2) {
+      throw unsupported(`worktree schema version ${String(worktreeVersion)} is not supported`)
     }
 
-    const hasCompleteAssetSchema = assetVersion === 1
-    const hasCompleteHistorySchema = historyVersion !== undefined
-    const historyTables = current ? HISTORY_V2_TABLES : HISTORY_V1_TABLES
-    if (!hasCompleteAssetSchema && ASSET_V1_TABLES.some((table) => tables.has(table))) {
-      throw unsupported('assets tables exist without a component version')
+    const assetVersion = versions.get('assets')
+    const presentAssetTables = ASSET_V1_TABLES.filter((table) => tables.has(table))
+    const hasCompleteAssetSchema =
+      assetVersion === 1 && presentAssetTables.length === ASSET_V1_TABLES.length
+    const hasNoAssetSchema = assetVersion === undefined && presentAssetTables.length === 0
+    if (!hasCompleteAssetSchema && !(worktreeVersion === 1 && hasNoAssetSchema)) {
+      throw unsupported('assets schema must be complete, or absent on a Gateway v1 file')
     }
-    if (
-      !hasCompleteHistorySchema &&
-      [...HISTORY_V1_TABLES, ...HISTORY_V2_TABLES].some((table) => tables.has(table))
-    ) {
-      throw unsupported('history tables exist without a component version')
+
+    const historyVersion = versions.get('history')
+    const presentHistoryTables = HISTORY_V1_TABLES.filter((table) => tables.has(table))
+    const hasCompleteHistorySchema =
+      historyVersion === 1 && presentHistoryTables.length === HISTORY_V1_TABLES.length
+    const hasNoHistorySchema = historyVersion === undefined && presentHistoryTables.length === 0
+    if (!hasCompleteHistorySchema && !hasNoHistorySchema) {
+      throw unsupported('history schema must be complete or absent')
     }
-    if (current && HISTORY_V1_TABLES.some((table) => tables.has(table))) {
-      throw unsupported('v3 contains retired History tables')
-    }
+
     const required: string[] = [...CORE_V1_TABLES, ...WORKTREE_COMMON_TABLES]
     if (hasCompleteAssetSchema) required.push(...ASSET_V1_TABLES)
-    if (hasCompleteHistorySchema) required.push(...historyTables)
+    if (hasCompleteHistorySchema) required.push(...HISTORY_V1_TABLES)
     if (worktreeVersion === 1) required.push(...WORKTREE_V1_ONLY_TABLES)
     const missing = required.filter((table) => !tables.has(table))
     if (missing.length > 0) {
@@ -102,24 +96,6 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
     const hasHeadCommit = worktreeColumns.has('head_commit')
     if (worktreeVersion === 1 && !hasHeadCommit) {
       throw unsupported('worktree v1 logical commit storage is incomplete')
-    }
-    if (current) {
-      for (const [table, requiredColumns] of [
-        ['collaboration_units', ['creator_id', 'created_at_ms']],
-        ['collaboration_changesets', ['created_at_ms']],
-        ['collaboration_worktree_units', ['creator_id', 'created_at_ms']],
-        ['collaboration_worktree_changesets', ['created_at_ms']],
-        [
-          'collaboration_history_records',
-          ['unit_id', 'start_revision', 'user_id', 'created_at_ms', 'origin', 'additional_fields']
-        ]
-      ] as const) {
-        const present = columns(database, table)
-        if (requiredColumns.some((column) => !present.has(column))) {
-          throw unsupported(`v3 table ${table} is incomplete`)
-        }
-      }
-      return 'v3'
     }
     return worktreeVersion === 1 ? 'v1' : 'v2'
   } catch (error) {
@@ -132,6 +108,52 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
   } finally {
     database?.close()
   }
+}
+
+const V3_REQUIRED_COLUMNS: readonly (readonly [string, readonly string[]])[] = [
+  ['collaboration_units', ['creator_id', 'created_at_ms']],
+  ['collaboration_changesets', ['created_at_ms']],
+  ['collaboration_worktree_units', ['creator_id', 'created_at_ms']],
+  ['collaboration_worktree_changesets', ['created_at_ms']],
+  [
+    'collaboration_history_records',
+    ['unit_id', 'start_revision', 'user_id', 'created_at_ms', 'origin', 'additional_fields']
+  ]
+]
+
+/** Core v2, worktree v3, assets v1, and history v2. */
+function detectV3(
+  database: Database.Database,
+  tables: ReadonlySet<string>,
+  versions: ReadonlyMap<string, number>
+): 'v3' {
+  const worktreeVersion = versions.get('worktree')
+  if (worktreeVersion !== 3) {
+    throw unsupported(`worktree schema version ${String(worktreeVersion)} requires core v1`)
+  }
+  if (versions.get('assets') !== 1) throw unsupported('assets schema version must be v1')
+  if (versions.get('history') !== 2) throw unsupported('history schema version must be v2')
+  if (HISTORY_V1_TABLES.some((table) => tables.has(table))) {
+    throw unsupported('v3 contains retired History tables')
+  }
+  const required = [
+    ...CORE_V1_TABLES,
+    ...WORKTREE_COMMON_TABLES,
+    ...ASSET_V1_TABLES,
+    ...HISTORY_V2_TABLES
+  ]
+  const missing = required.filter((table) => !tables.has(table))
+  if (missing.length > 0) {
+    throw unsupported(`schema is incomplete: missing ${missing.join(', ')}`)
+  }
+  for (const [table, requiredColumns] of V3_REQUIRED_COLUMNS) {
+    const present = columns(database, table)
+    const absent = requiredColumns.filter((column) => !present.has(column))
+    if (absent.length > 0) {
+      throw unsupported(`${table} is missing ${absent.join(', ')}`)
+    }
+  }
+  return 'v3'
 }
 
 function columns(database: Database.Database, table: string): ReadonlySet<string> {

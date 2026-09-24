@@ -26,7 +26,8 @@ import type {
   WorktreeUnitSeed
 } from '@univerjs-pro/collaboration-worktree-service'
 import { UniverType, type IChangeset } from '@univerjs/protocol'
-import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.js'
+import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
+import { currentUnixSeconds } from './collaboration-database-adapter.ts'
 
 const SCHEMA_COMPONENT = 'worktree'
 const SCHEMA_VERSION = 3
@@ -62,8 +63,8 @@ interface WorktreeUnitRow {
   readonly worktree_id: string
   readonly unit_id: string
   readonly name: string
-  readonly created_at_ms: number
   readonly creator_id: string
+  readonly created_at_ms: number
   readonly type: number
   readonly source: string
   readonly baseline_trunk_revision: number
@@ -348,7 +349,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
         )
       const insertUnit = this._database.prepare(
         `INSERT INTO collaboration_worktree_units
-           (worktree_id, unit_id, unit_order, type, name, created_at_ms, creator_id, source,
+           (worktree_id, unit_id, unit_order, type, name, creator_id, created_at_ms, source,
             baseline_trunk_revision, draft_head_revision)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'trunk', ?, ?)`
       )
@@ -359,8 +360,8 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           index,
           unit.type,
           metadata.unitNames[unit.unitID] ?? unit.unitID,
-          validTimestamp(unit.createdAt),
           unit.creatorID,
+          unit.createdAt,
           unit.baselineTrunkRevision as number,
           unit.draftHeadRevision
         )
@@ -406,7 +407,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
       this._database
         .prepare(
           `INSERT INTO collaboration_worktree_units
-             (worktree_id, unit_id, unit_order, type, name, created_at_ms, creator_id, source,
+             (worktree_id, unit_id, unit_order, type, name, creator_id, created_at_ms, source,
               baseline_trunk_revision, draft_head_revision)
            VALUES (?, ?, ?, ?, ?, ?, ?, 'trunk', ?, ?)`
         )
@@ -416,8 +417,8 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           orderRow.next_order,
           unit.type,
           metadata.unitNames[unit.unitID] ?? unit.unitID,
-          validTimestamp(unit.createdAt),
           unit.creatorID,
+          unit.createdAt,
           unit.baselineTrunkRevision as number,
           unit.draftHeadRevision
         )
@@ -468,7 +469,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
       this._database
         .prepare(
           `INSERT INTO collaboration_worktree_units
-             (worktree_id, unit_id, unit_order, type, name, created_at_ms, creator_id, source,
+             (worktree_id, unit_id, unit_order, type, name, creator_id, created_at_ms, source,
               baseline_trunk_revision, draft_head_revision)
            VALUES (?, ?, ?, ?, ?, ?, ?, 'worktree', 1, 1)`
         )
@@ -478,8 +479,8 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           orderRow.next_order,
           unit.type,
           metadata.unitNames[unit.unitID] ?? unit.unitID,
-          validTimestamp(unit.createdAt),
-          unit.creatorID
+          unit.creatorID,
+          unit.createdAt
         )
       this._database
         .prepare(
@@ -562,8 +563,9 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
     this._assertOpen()
     validateSubmissionIdentity(input.changeset)
     return this._transaction(() => {
-      const { worktreeID, changeset } = input
-      const expectedHeadRevision = changeset.baseRev
+      const { worktreeID } = input
+      const createTime = currentUnixSeconds()
+      const changeset: IChangeset = { ...input.changeset, createTime }
       const worktree = this._getWorktreeRow(worktreeID)
       const unit = this._getUnitRow(worktreeID, changeset.unitID)
       if (!worktree || !unit) return { status: 'not-found' }
@@ -575,22 +577,18 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
       }
       const record = rowToUnitRecord(unit)
       if (isTerminal(record)) return { status: 'unit-frozen' }
-      if (record.draftHeadRevision !== expectedHeadRevision) {
+      if (record.draftHeadRevision !== changeset.baseRev) {
         return {
           status: 'revision-mismatch',
           actualHeadRevision: record.draftHeadRevision
         }
       }
-      validateChangesetCandidate(record, input)
-      // Match Core and the SDK adapters: retries return this persisted server commit time.
-      const createTime = Math.floor(Date.now() / 1000)
-      const savedChangeset: IChangeset = { ...changeset, createTime }
-      const createdAtMs = createTime * 1000
+      validateChangesetCandidate(record, changeset)
       this._database
         .prepare(
           `INSERT INTO collaboration_worktree_changesets
              (worktree_id, unit_id, revision, base_revision,
-              sid, req_id, created_at_ms, payload_json)
+              sid, req_id, payload_json, created_at_ms)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
@@ -600,8 +598,8 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           changeset.baseRev,
           changeset.sid as string,
           changeset.reqId as number,
-          createdAtMs,
-          encode(savedChangeset)
+          encode(changeset),
+          createTime * 1000
         )
       const update = this._database
         .prepare(
@@ -615,7 +613,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           readWorktreeChangeMetadata(context).unitName ?? null,
           worktreeID,
           changeset.unitID,
-          expectedHeadRevision
+          changeset.baseRev
         )
       if (update.changes !== 1) {
         throw new CollabError(
@@ -623,22 +621,9 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           'SQLite draft head changed inside a write transaction'
         )
       }
-      const stored = this._database
-        .prepare(
-          `SELECT payload_json
-           FROM collaboration_worktree_changesets
-           WHERE worktree_id = ? AND unit_id = ? AND revision = ?`
-        )
-        .get(worktreeID, changeset.unitID, changeset.revision) as PayloadRow | undefined
-      if (stored === undefined) {
-        throw new CollabError(
-          'INTERNAL_ERROR',
-          'SQLite draft changeset disappeared inside a write transaction'
-        )
-      }
       return {
         status: 'committed',
-        changeset: decode<IChangeset>(stored.payload_json),
+        changeset: decode<IChangeset>(encode(changeset)),
         headRevision: changeset.revision
       }
     })
@@ -972,43 +957,9 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           merged_at_ms INTEGER
         );
 
-        CREATE TABLE collaboration_worktree_units (
-          worktree_id TEXT NOT NULL,
-          unit_id TEXT NOT NULL,
-          unit_order INTEGER NOT NULL CHECK (unit_order >= 0),
-          type INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          created_at_ms INTEGER NOT NULL,
-          creator_id TEXT NOT NULL,
-          source TEXT NOT NULL
-            CHECK (source IN ('trunk', 'worktree')),
-          baseline_trunk_revision INTEGER NOT NULL
-            CHECK (baseline_trunk_revision >= 1),
-          draft_head_revision INTEGER NOT NULL
-            CHECK (draft_head_revision >= baseline_trunk_revision),
-          ready_draft_head_revision INTEGER,
-          merge_result_json TEXT,
-          PRIMARY KEY (worktree_id, unit_id),
-          UNIQUE (worktree_id, unit_order),
-          FOREIGN KEY (worktree_id)
-            REFERENCES collaboration_worktrees(worktree_id) ON DELETE CASCADE
-        );
+        ${worktreeUnitsTableSql('collaboration_worktree_units')}
 
-        CREATE TABLE collaboration_worktree_changesets (
-          worktree_id TEXT NOT NULL,
-          unit_id TEXT NOT NULL,
-          revision INTEGER NOT NULL CHECK (revision >= 2),
-          base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
-          sid TEXT NOT NULL,
-          req_id INTEGER NOT NULL CHECK (req_id >= 1),
-          created_at_ms INTEGER NOT NULL,
-          payload_json TEXT NOT NULL,
-          PRIMARY KEY (worktree_id, unit_id, revision),
-          UNIQUE (worktree_id, unit_id, sid, req_id),
-          FOREIGN KEY (worktree_id, unit_id)
-            REFERENCES collaboration_worktree_units(worktree_id, unit_id)
-            ON DELETE CASCADE
-        );
+        ${worktreeChangesetsTableSql('collaboration_worktree_changesets')}
 
         CREATE INDEX collaboration_worktree_changesets_revision
           ON collaboration_worktree_changesets(
@@ -1056,7 +1007,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
         );
 
         INSERT INTO collaboration_schema_versions (component, version)
-        VALUES ('worktree', 3);
+        VALUES ('worktree', ${SCHEMA_VERSION});
       `)
     })
   }
@@ -1084,18 +1035,19 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
     const missingWorktree = ['agent_id', 'name', 'created_at_ms', 'merged_at_ms'].filter(
       (column) => !worktreeColumns.has(column)
     )
-    const missingUnit = ['name', 'created_at_ms', 'creator_id'].filter(
+    const missingUnit = ['name', 'creator_id', 'created_at_ms'].filter(
       (column) => !unitColumns.has(column)
     )
-    const missingChangeset = ['created_at_ms'].filter((column) => !changesetColumns.has(column))
     const missing = [
       ...missingWorktree.map((column) => `collaboration_worktrees.${column}`),
       ...missingUnit.map((column) => `collaboration_worktree_units.${column}`),
-      ...missingChangeset.map((column) => `collaboration_worktree_changesets.${column}`)
+      ...(changesetColumns.has('created_at_ms')
+        ? []
+        : ['collaboration_worktree_changesets.created_at_ms'])
     ]
     if (missing.length > 0) {
       throw incompatibleSchema(
-        `SQLite Worktree database v${SCHEMA_VERSION} is missing application columns: ${missing.join(', ')}`
+        `SQLite Worktree schema v${SCHEMA_VERSION} is missing application columns: ${missing.join(', ')}`
       )
     }
   }
@@ -1123,7 +1075,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
   private _getUnitRow(worktreeID: string, unitID: string): WorktreeUnitRow | null {
     const row = this._database
       .prepare(
-        `SELECT worktree_id, unit_id, type, name, created_at_ms, creator_id, source,
+        `SELECT worktree_id, unit_id, type, name, creator_id, created_at_ms, source,
                 baseline_trunk_revision, draft_head_revision, ready_draft_head_revision,
                 merge_result_json
          FROM collaboration_worktree_units
@@ -1136,7 +1088,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
   private _getUnitRows(worktreeID: string): readonly WorktreeUnitRow[] {
     return this._database
       .prepare(
-        `SELECT worktree_id, unit_id, type, name, created_at_ms, creator_id, source,
+        `SELECT worktree_id, unit_id, type, name, creator_id, created_at_ms, source,
                 baseline_trunk_revision, draft_head_revision, ready_draft_head_revision,
                 merge_result_json
          FROM collaboration_worktree_units
@@ -1181,7 +1133,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
     if (!row) return null
     return {
       snapshot: decode(row.snapshot_json),
-      sheetBlocks: row.sheet_blocks_json === null ? [] : decode(row.sheet_blocks_json)
+      ...(row.sheet_blocks_json === null ? {} : { sheetBlocks: decode(row.sheet_blocks_json) })
     }
   }
 
@@ -1202,7 +1154,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
       readyDraftHeadRevision: row.ready_draft_head_revision,
       unit: {
         snapshot: decode(row.snapshot_json),
-        sheetBlocks: row.sheet_blocks_json === null ? [] : decode(row.sheet_blocks_json)
+        ...(row.sheet_blocks_json === null ? {} : { sheetBlocks: decode(row.sheet_blocks_json) })
       }
     }
   }
@@ -1292,10 +1244,10 @@ function rowToUnitRecord(row: WorktreeUnitRow): WorktreeUnitRecord {
     unitID: row.unit_id,
     type: row.type as UniverType,
     source,
-    ...(source === 'trunk' ? { baselineTrunkRevision: row.baseline_trunk_revision } : {}),
-    draftHeadRevision: row.draft_head_revision,
     creatorID: row.creator_id,
     createdAt: row.created_at_ms,
+    ...(source === 'trunk' ? { baselineTrunkRevision: row.baseline_trunk_revision } : {}),
+    draftHeadRevision: row.draft_head_revision,
     ...(row.ready_draft_head_revision === null
       ? {}
       : { readyDraftHeadRevision: row.ready_draft_head_revision }),
@@ -1408,6 +1360,58 @@ function validateUnitIdentity(unit: WorktreeUnitRecord): void {
   if (!unit.worktreeID || !unit.unitID) {
     throw invalidRequest('Worktree and Unit identity are required')
   }
+  if (
+    typeof unit.creatorID !== 'string' ||
+    unit.creatorID.length === 0 ||
+    !Number.isSafeInteger(unit.createdAt) ||
+    unit.createdAt < 0
+  ) {
+    throw invalidRequest('Worktree Unit requires creatorID and createdAt in Unix milliseconds')
+  }
+}
+
+/** `created_at_ms` repeats the payload `createTime` in Unix milliseconds, as the SDK schema does. */
+export function worktreeChangesetsTableSql(tableName: string): string {
+  return `CREATE TABLE ${tableName} (
+          worktree_id TEXT NOT NULL,
+          unit_id TEXT NOT NULL,
+          revision INTEGER NOT NULL CHECK (revision >= 2),
+          base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
+          sid TEXT NOT NULL,
+          req_id INTEGER NOT NULL CHECK (req_id >= 1),
+          payload_json TEXT NOT NULL,
+          created_at_ms INTEGER NOT NULL,
+          PRIMARY KEY (worktree_id, unit_id, revision),
+          UNIQUE (worktree_id, unit_id, sid, req_id),
+          FOREIGN KEY (worktree_id, unit_id)
+            REFERENCES collaboration_worktree_units(worktree_id, unit_id)
+            ON DELETE CASCADE
+        );`
+}
+
+/** Column layout shared by schema creation and the v2-to-v3 `.univer` upgrade. */
+export function worktreeUnitsTableSql(tableName: string): string {
+  return `CREATE TABLE ${tableName} (
+          worktree_id TEXT NOT NULL,
+          unit_id TEXT NOT NULL,
+          unit_order INTEGER NOT NULL CHECK (unit_order >= 0),
+          type INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          creator_id TEXT NOT NULL,
+          created_at_ms INTEGER NOT NULL,
+          source TEXT NOT NULL
+            CHECK (source IN ('trunk', 'worktree')),
+          baseline_trunk_revision INTEGER NOT NULL
+            CHECK (baseline_trunk_revision >= 1),
+          draft_head_revision INTEGER NOT NULL
+            CHECK (draft_head_revision >= baseline_trunk_revision),
+          ready_draft_head_revision INTEGER,
+          merge_result_json TEXT,
+          PRIMARY KEY (worktree_id, unit_id),
+          UNIQUE (worktree_id, unit_order),
+          FOREIGN KEY (worktree_id)
+            REFERENCES collaboration_worktrees(worktree_id) ON DELETE CASCADE
+        );`
 }
 
 function validateSubmissionIdentity(changeset: IChangeset): void {
@@ -1416,22 +1420,17 @@ function validateSubmissionIdentity(changeset: IChangeset): void {
   }
 }
 
-function validateChangesetCandidate(
-  unit: WorktreeUnitRecord,
-  input: CommitWorktreeChangesetInput
-): void {
-  const { changeset } = input
+function validateChangesetCandidate(unit: WorktreeUnitRecord, changeset: IChangeset): void {
   if (changeset.type !== unit.type || changeset.revision !== changeset.baseRev + 1) {
     throw invalidRequest('Draft changeset must match Unit type and expected revision')
   }
 }
 
 function validateRange(range: WorktreeRevisionRange): void {
-  if (
-    !Number.isSafeInteger(range.from) ||
-    range.from < 0 ||
-    (range.to !== undefined && (!Number.isSafeInteger(range.to) || range.to < 0))
-  ) {
+  if (!Number.isSafeInteger(range.from) || range.from < 0) {
+    throw invalidRequest('Draft revision range cannot be negative')
+  }
+  if (range.to !== undefined && (!Number.isSafeInteger(range.to) || range.to < 0)) {
     throw invalidRequest('Draft revision range cannot be negative')
   }
 }
