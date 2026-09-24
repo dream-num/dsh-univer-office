@@ -815,6 +815,7 @@ function WorktreeTitle({
   const preview = snap.previews.get(worktreeId)
   const previewError = snap.previewErrors.get(worktreeId)
   const mergeable = preview?.mergeable ?? false
+  const previewChoice = worktree?.status === 'ready' && preview?.diverged === true
   const unitBadge =
     worktree !== undefined && unit !== undefined ? app.unitBadgeInfo(worktree, unit) : undefined
   return (
@@ -855,7 +856,7 @@ function WorktreeTitle({
                 {t().topbar.previewUnavailable}
               </span>
             </Badge>
-          ) : preview?.diverged ? (
+          ) : previewChoice ? (
             <Badge
               variant={mergeable ? 'info' : 'danger'}
               className="max-w-full min-w-0 px-2 py-1 text-[11px] leading-4"
@@ -885,7 +886,7 @@ function WorktreeTitle({
         />
       }
       preview={
-        preview?.diverged ? (
+        previewChoice ? (
           <SegmentedToggle
             className="grid h-auto w-full grid-cols-2 gap-0 rounded-lg bg-muted p-0.5"
             itemClassName="min-h-7 min-w-0 whitespace-normal px-3.5 py-1 text-[13px] [overflow-wrap:anywhere]"

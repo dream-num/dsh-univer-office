@@ -1177,11 +1177,6 @@ try {
   if (comparisonEdit.result?.committed !== true || comparisonEdit.result?.value !== 'compared') {
     throw new Error(`comparison edit failed: ${JSON.stringify(comparisonEdit)}`)
   }
-  await assertMaterializedPreview(origin, gatewayKey, comparisonWorktreeId, unitId, {
-    label: 'Sheet merge preview',
-    blocks: 'required',
-    text: 'worktree diff'
-  })
   const baseEdit = await service.executeUnitContent({
     ...scoped,
     worktreeId: comparisonWorktreeId,
@@ -1191,15 +1186,42 @@ try {
   if (baseEdit.result?.committed !== true || baseEdit.result?.value !== 1) {
     throw new Error(`base preview edit failed: ${JSON.stringify(baseEdit)}`)
   }
+  const trunkAdvance = await service.worktree({
+    ...scoped,
+    action: 'create',
+    name: 'trunk advance'
+  })
+  const trunkAdvanceId = trunkAdvance.result?.worktreeId
+  if (typeof trunkAdvanceId !== 'string') {
+    throw new Error(`trunk advance worktree failed: ${JSON.stringify(trunkAdvance)}`)
+  }
+  const trunkEdit = await service.executeUnitContent({
+    ...scoped,
+    worktreeId: trunkAdvanceId,
+    unitId,
+    code: 'workbook.getActiveSheet().getRange("E5").setValue("trunk advance"); return "advanced";'
+  })
+  if (trunkEdit.result?.committed !== true || trunkEdit.result?.value !== 'advanced') {
+    throw new Error(`trunk advance edit failed: ${JSON.stringify(trunkEdit)}`)
+  }
+  await expectTransition(trunkAdvanceId, 'ready', 'ready')
+  await expectTransition(trunkAdvanceId, 'merge', 'merged')
+  await expectTransition(comparisonWorktreeId, 'ready', 'ready')
+  await assertMaterializedPreview(origin, gatewayKey, comparisonWorktreeId, unitId, {
+    label: 'Sheet merge preview',
+    blocks: 'required',
+    texts: ['worktree diff', 'trunk advance']
+  })
   await assertMaterializedPreview(origin, gatewayKey, comparisonWorktreeId, baseUnitId, {
     label: 'Base merge preview',
     blocks: 'required',
-    text: 'preview record'
+    texts: ['preview record']
   })
   await assertMaterializedPreview(origin, gatewayKey, comparisonWorktreeId, docUnitId, {
     label: 'Doc merge preview',
     blocks: 'absent'
   })
+  await expectTransition(comparisonWorktreeId, 'reopen', 'draft')
   const pinnedComparison = await verifyWorktreeComparison(
     origin,
     gatewayKey,
@@ -1534,6 +1556,9 @@ async function assertMaterializedPreview(origin, gatewayKey, worktreeId, unitId,
   )
   const missing = referenced.filter((id) => !returned.has(id))
   const blocks = preview.sheetBlocks
+  const rendered = JSON.stringify({ snapshot: preview.snapshot, blocks })
+  const texts = expectation.texts ?? []
+  const missingText = texts.find((text) => !rendered.includes(text))
   if (
     preview.error?.code !== 1 ||
     preview.snapshot?.unitID !== unitId ||
@@ -1541,10 +1566,10 @@ async function assertMaterializedPreview(origin, gatewayKey, worktreeId, unitId,
     missing.length > 0 ||
     (expectation.blocks === 'required' && (!Array.isArray(blocks) || blocks.length === 0)) ||
     (expectation.blocks === 'absent' && blocks !== undefined) ||
-    (expectation.text !== undefined && !JSON.stringify(blocks).includes(expectation.text))
+    missingText !== undefined
   ) {
     throw new Error(
-      `${expectation.label} did not return the materialized head: ${JSON.stringify(preview)}`
+      `${expectation.label} did not return the evaluated preview: ${JSON.stringify(preview)}`
     )
   }
 }

@@ -760,21 +760,66 @@ export class CollabService {
       }
       throw new Error(`Unit ${unitId} is not part of Worktree ${worktreeId}`)
     }
+    const worktree = requireWorktree(this.runtime, worktreeId)
+    if (worktree.status !== 'ready') {
+      return {
+        type: unit.type,
+        error: `Worktree ${worktreeId} is ${worktree.status}; merge preview requires ready`
+      }
+    }
+    const evaluation = await this.runtime.worktreeService.evaluateWorktreeUnitMerge(
+      { worktreeID: worktreeId, unitID: unitId },
+      callOptions('local')
+    )
+    switch (evaluation.status) {
+      case 'preview':
+        return previewUnitData(
+          unit.type,
+          evaluation.preview.snapshot,
+          evaluation.preview.sheetBlocks ?? []
+        )
+      case 'not-behind':
+        return this._materializeWorktreeHead(worktreeId, unit)
+      case 'not-applicable':
+        if (evaluation.reason === 'worktree-created-unit') {
+          return this._materializeWorktreeHead(worktreeId, unit)
+        }
+        return {
+          type: unit.type,
+          error: `Unit ${unitId} is deleted in Worktree ${worktreeId}`
+        }
+      case 'conflict':
+        return {
+          type: unit.type,
+          error: `Unit ${unitId} conflicts with the latest version`
+        }
+      case 'already-merged':
+        return {
+          type: unit.type,
+          error: `Unit ${unitId} is already merged`
+        }
+      default: {
+        const unreachable: never = evaluation
+        return unreachable
+      }
+    }
+  }
+
+  /** Draft head, used when the evaluator has no trunk delta to apply. */
+  private async _materializeWorktreeHead(
+    worktreeId: string,
+    unit: UniverfileWorktreeUnitSummary
+  ): Promise<MergePreviewUnitData> {
     const loadData = await this._getWorktreeLoadDataWithBlocks(
       worktreeId,
-      unitId,
+      unit.unitId,
       unit.type,
       unit.headRev
     )
     const materializer = new UnitSnapshotMaterializer()
     try {
       const materialized = await materializer.materializeSnapshot(loadData)
-      const sheetBlocks = deserializeSheetBlocks(materialized.sheetBlocks)
-      return {
-        type: unit.type,
-        snapshot: materialized.snapshot,
-        ...(sheetBlocks === undefined ? {} : { sheetBlocks })
-      }
+      return previewUnitData(unit.type, materialized.snapshot, materialized.sheetBlocks)
     } finally {
       await materializer.dispose()
     }
@@ -1341,6 +1386,19 @@ class WorktreeCatalogCompatibility {
       .listWorktrees()
       .find((worktree) => worktree.worktreeId === worktreeId)
     return row ? toWorktreeRecord(row) : undefined
+  }
+}
+
+function previewUnitData(
+  type: UniverType,
+  snapshot: ISnapshot,
+  blocks: readonly ISheetBlock[]
+): MergePreviewUnitData {
+  const sheetBlocks = deserializeSheetBlocks(blocks)
+  return {
+    type,
+    snapshot,
+    ...(sheetBlocks === undefined ? {} : { sheetBlocks })
   }
 }
 

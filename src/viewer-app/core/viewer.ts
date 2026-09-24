@@ -318,12 +318,13 @@ export interface PreviewViewerOptions {
 }
 
 /**
- * Mount a read-only Univer that renders a worktree's merge preview for one unit, with NO
- * collaboration / network / socket plugins. The gateway materializes the target revision as a
- * complete snapshot. Here we rebuild engine data from it (Sheet and Base also need their
- * sheet blocks), then lock editing. Sheet formula calculation is best-effort: a timeout or a
- * trigger failure still leaves the snapshot mounted. Disposable and non-collaborative: it never
- * opens comb and never writes back. Switching unit/worktree is done by disposing and recreating.
+ * Mount a read-only Univer that renders a ready worktree's merge preview for one unit, with NO
+ * collaboration / network / socket plugins. The gateway returns the evaluated snapshot: trunk
+ * head plus the draft when the trunk has moved, otherwise the worktree head. Here we rebuild
+ * engine data from it (Sheet and Base also need their sheet blocks), then lock editing. Sheet
+ * formula calculation is best-effort: a timeout or a trigger failure still leaves the snapshot
+ * mounted. Disposable and non-collaborative: it never opens comb and never writes back.
+ * Switching unit/worktree is done by disposing and recreating.
  */
 export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<ViewerHandle> {
   const localePack = await loadViewerLocale(opts.locale)

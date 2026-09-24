@@ -165,7 +165,7 @@ class ViewerController {
   }
 
   /**
-   * Read-only merge-preview render of one unit, from the gateway's materialized snapshot
+   * Read-only merge-preview render of one unit, from the gateway's evaluated snapshot
    * (no collaboration). Always rebuilds: preview data is re-fetched on unit switch and recompute.
    */
   public async showPreview(
@@ -344,7 +344,7 @@ export class App {
   private previews = new Map<string, MergePreview>()
   /** Why a worktree's merge preview is unavailable (business error / fetch failure), by worktreeId. */
   private previewErrors = new Map<string, string>()
-  /** Within a diverged worktree: showing the merge preview (true) vs the original edits (false). */
+  /** Within a ready, diverged worktree: merge preview (true) vs the original edits (false). */
   private viewPreview = false
   /** Orthogonal Worktree content mode. Diff always renders two pinned, read-only sides. */
   private comparisonMode = false
@@ -917,9 +917,20 @@ export class App {
         isViewableWorktreeStatus(prev.status) &&
         isViewableWorktreeStatus(worktree.status)
       ) {
-        // draft <-> ready changes the server-side write policy. Replace the collaboration
-        // session so an old tab cannot retain an in-flight/local queue against stale permissions.
-        this.viewer.reload()
+        const becameReady = prev.status === 'draft' && worktree.status === 'ready'
+        const becameDraft = prev.status === 'ready' && worktree.status === 'draft'
+        if (becameDraft) this.viewPreview = false
+        if (becameReady && this.previews.get(worktree.worktreeId)?.diverged === true) {
+          this.viewPreview = true
+        }
+        const unitId = this.selectedUnitId
+        if (!this.comparisonMode && unitId !== undefined && (becameDraft || becameReady)) {
+          void this.selectWorktreeUnit(worktree.worktreeId, unitId)
+        } else {
+          // draft <-> ready changes the server-side write policy. Replace the collaboration
+          // session so an old tab cannot retain an in-flight/local queue against stale permissions.
+          this.viewer.reload()
+        }
       }
     }
     // draft -> ready: the agent just finished; nudge the user and flash that row once.
@@ -1263,8 +1274,11 @@ export class App {
     this.selectedUnitId = undefined
     await this.loadWorktreeUnits(worktreeId)
     await this.refreshPreview(worktreeId)
-    // Default to the merge preview when the worktree has fallen behind the latest version.
-    this.viewPreview = forcePreview ?? this.previews.get(worktreeId)?.diverged ?? false
+    // A ready worktree that has fallen behind opens on the evaluated merge preview.
+    const worktree = this.worktrees.get(worktreeId)
+    this.viewPreview =
+      forcePreview ??
+      (worktree?.status === 'ready' && this.previews.get(worktreeId)?.diverged === true)
     this.subscribeWorktree(worktreeId)
     this.emit()
     const pick =

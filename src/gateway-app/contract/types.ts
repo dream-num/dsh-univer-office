@@ -232,8 +232,9 @@ export interface MergePreviewResponse extends ErrorEnvelope, MergePreview {}
 
 /**
  * 单个 unit 的合并预览渲染数据(`GET /uf/<enc>/worktrees/<id>/preview/units/<unitId>`)。
- * Gateway 物化到目标 revision 后返回完整 snapshot。物化结果中的 Sheet blocks 一并返回
- * (Sheet 与 Base)；Doc、Slide、Board 省略。
+ * 只对 ready worktree 开放。主干已前进时 snapshot 是 OT 到当前 trunk head 的静态结果；
+ * 主干未前进或 Unit 为 worktree 内新建时，snapshot 是该 worktree head。
+ * Sheet blocks 在有内容时一并返回(Sheet 与 Base)；Doc、Slide、Board 省略。
  * 客户端按类型用反向 transform 还原引擎数据，只读渲染。
  */
 export interface MergePreviewUnitResponse extends ErrorEnvelope {
