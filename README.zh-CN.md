@@ -184,6 +184,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 
 - DeepSeek Harness，以及 Node.js `>=22.19.0`。
 - 文件树预览不需要额外插件：它在 DSH 自带右侧栏注册一个 tab 类型，认领以 `.univer` 结尾的 `dsh-resource://file/**` 地址。安装 `dsh-better-sidebar`（`^0.19.0`）期间，该插件会以同档位、更宽的模式接管文件地址，因此预览改为注册成它的文件预览器——两种宿主形态都覆盖，且任一时刻只有一条生效。
+- 打开由更早版本写出的 `.univer` 文件时会就地升级：先在原文件旁写一份备份，再逐个 component 迁移文件内部 schema。若某个文件的历史版本无法安全迁移，会报出受影响的 Unit 名并拒绝打开，而不会带着残缺数据继续打开。
 - 截图、PDF 打印、Slide 布局检查和 SVG 文字度量需要本机 Chromium 系浏览器。Chrome/Chromium 与 Microsoft Edge 会被自动探测；也可以通过 `browserExecutablePath` 配置项或 `UNIVER_RENDER_BROWSER` 环境变量指定浏览器可执行文件路径（例如 Windows 上的 Edge）。
 - Slide 的母版、版式页和演讲者备注不在当前编辑范围内。
 - Board 的思维导图、表格、墨迹和高级编辑，以及 Board 文件导出尚未开放。

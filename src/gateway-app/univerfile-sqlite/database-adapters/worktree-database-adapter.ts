@@ -27,9 +27,19 @@ import type {
 } from '@univerjs-pro/collaboration-worktree-service'
 import { UniverType, type IChangeset } from '@univerjs/protocol'
 import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.js'
+import { ANONYMOUS_CREATOR_ID, CREATE_TIME_SECONDS_LIMIT } from '../legacy-creation.js'
 
 const SCHEMA_COMPONENT = 'worktree'
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 3
+/** The only predecessor this adapter upgrades in place: v2 stored Units without creator information. */
+const LEGACY_SCHEMA_VERSION = 2
+/** Component version rows live in the table the Core migration creates and the adapter maintains. */
+const SCHEMA_VERSIONS_TABLE = 'collaboration_schema_versions'
+/**
+ * The Worktree migration runs before the History migration, so it reads the legacy History table
+ * with raw SQL instead of importing a History adapter, which still owns its pre-migration shape.
+ */
+const LEGACY_HISTORY_TABLE = 'collaboration_history_revisions'
 const TABLE_NAMES = [
   'collaboration_worktrees',
   'collaboration_worktree_units',
@@ -63,6 +73,7 @@ interface WorktreeUnitRow {
   readonly unit_id: string
   readonly name: string
   readonly created_at_ms: number
+  readonly creator_id: string
   readonly type: number
   readonly source: string
   readonly baseline_trunk_revision: number
@@ -347,9 +358,9 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
         )
       const insertUnit = this._database.prepare(
         `INSERT INTO collaboration_worktree_units
-           (worktree_id, unit_id, unit_order, type, name, created_at_ms, source,
+           (worktree_id, unit_id, unit_order, type, name, created_at_ms, creator_id, source,
             baseline_trunk_revision, draft_head_revision)
-         VALUES (?, ?, ?, ?, ?, ?, 'trunk', ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'trunk', ?, ?)`
       )
       input.units.forEach((unit, index) => {
         insertUnit.run(
@@ -358,7 +369,8 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           index,
           unit.type,
           metadata.unitNames[unit.unitID] ?? unit.unitID,
-          metadata.createdAtMs,
+          validTimestamp(unit.createdAt),
+          unit.creatorID,
           unit.baselineTrunkRevision as number,
           unit.draftHeadRevision
         )
@@ -404,9 +416,9 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
       this._database
         .prepare(
           `INSERT INTO collaboration_worktree_units
-             (worktree_id, unit_id, unit_order, type, name, created_at_ms, source,
+             (worktree_id, unit_id, unit_order, type, name, created_at_ms, creator_id, source,
               baseline_trunk_revision, draft_head_revision)
-           VALUES (?, ?, ?, ?, ?, ?, 'trunk', ?, ?)`
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'trunk', ?, ?)`
         )
         .run(
           unit.worktreeID,
@@ -414,7 +426,8 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           orderRow.next_order,
           unit.type,
           metadata.unitNames[unit.unitID] ?? unit.unitID,
-          metadata.createdAtMs,
+          validTimestamp(unit.createdAt),
+          unit.creatorID,
           unit.baselineTrunkRevision as number,
           unit.draftHeadRevision
         )
@@ -465,9 +478,9 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
       this._database
         .prepare(
           `INSERT INTO collaboration_worktree_units
-             (worktree_id, unit_id, unit_order, type, name, created_at_ms, source,
+             (worktree_id, unit_id, unit_order, type, name, created_at_ms, creator_id, source,
               baseline_trunk_revision, draft_head_revision)
-           VALUES (?, ?, ?, ?, ?, ?, 'worktree', 1, 1)`
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'worktree', 1, 1)`
         )
         .run(
           unit.worktreeID,
@@ -475,7 +488,8 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           orderRow.next_order,
           unit.type,
           metadata.unitNames[unit.unitID] ?? unit.unitID,
-          metadata.createdAtMs
+          validTimestamp(unit.createdAt),
+          unit.creatorID
         )
       this._database
         .prepare(
@@ -578,12 +592,16 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
         }
       }
       validateChangesetCandidate(record, input)
+      // The protocol payload is written verbatim: this adapter keeps the caller-provided `createTime`
+      // and answers with the value it actually persisted. `created_at_ms` follows the SDK's
+      // second-precision write convention, expressed in the milliseconds this column stores.
+      const createdAtMs = Math.floor(Date.now() / 1000) * 1000
       this._database
         .prepare(
           `INSERT INTO collaboration_worktree_changesets
              (worktree_id, unit_id, revision, base_revision,
-              sid, req_id, payload_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`
+              sid, req_id, created_at_ms, payload_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           worktreeID,
@@ -592,6 +610,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           changeset.baseRev,
           changeset.sid as string,
           changeset.reqId as number,
+          createdAtMs,
           encode(changeset)
         )
       const update = this._database
@@ -614,9 +633,22 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           'SQLite draft head changed inside a write transaction'
         )
       }
+      const stored = this._database
+        .prepare(
+          `SELECT payload_json
+           FROM collaboration_worktree_changesets
+           WHERE worktree_id = ? AND unit_id = ? AND revision = ?`
+        )
+        .get(worktreeID, changeset.unitID, changeset.revision) as PayloadRow | undefined
+      if (stored === undefined) {
+        throw new CollabError(
+          'INTERNAL_ERROR',
+          'SQLite draft changeset disappeared inside a write transaction'
+        )
+      }
       return {
         status: 'committed',
-        changeset: decode<IChangeset>(encode(changeset)),
+        changeset: decode<IChangeset>(stored.payload_json),
         headRevision: changeset.revision
       }
     })
@@ -927,7 +959,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
         const missingTables = TABLE_NAMES.filter((tableName) => !this._hasTable(tableName))
         if (missingTables.length > 0) {
           throw incompatibleSchema(
-            `SQLite Worktree schema v2 is incomplete: missing ${missingTables.join(', ')}`
+            `SQLite Worktree schema v${SCHEMA_VERSION} is incomplete: missing ${missingTables.join(', ')}`
           )
         }
         this._assertGatewayColumns()
@@ -957,6 +989,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           type INTEGER NOT NULL,
           name TEXT NOT NULL,
           created_at_ms INTEGER NOT NULL,
+          creator_id TEXT NOT NULL,
           source TEXT NOT NULL
             CHECK (source IN ('trunk', 'worktree')),
           baseline_trunk_revision INTEGER NOT NULL
@@ -978,6 +1011,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
           sid TEXT NOT NULL,
           req_id INTEGER NOT NULL CHECK (req_id >= 1),
+          created_at_ms INTEGER NOT NULL,
           payload_json TEXT NOT NULL,
           PRIMARY KEY (worktree_id, unit_id, revision),
           UNIQUE (worktree_id, unit_id, sid, req_id),
@@ -1032,7 +1066,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
         );
 
         INSERT INTO collaboration_schema_versions (component, version)
-        VALUES ('worktree', 2);
+        VALUES ('worktree', 3);
       `)
     })
   }
@@ -1056,17 +1090,22 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
   private _assertGatewayColumns(): void {
     const worktreeColumns = this._tableColumns('collaboration_worktrees')
     const unitColumns = this._tableColumns('collaboration_worktree_units')
+    const changesetColumns = this._tableColumns('collaboration_worktree_changesets')
     const missingWorktree = ['agent_id', 'name', 'created_at_ms', 'merged_at_ms'].filter(
       (column) => !worktreeColumns.has(column)
     )
-    const missingUnit = ['name', 'created_at_ms'].filter((column) => !unitColumns.has(column))
+    const missingUnit = ['name', 'created_at_ms', 'creator_id'].filter(
+      (column) => !unitColumns.has(column)
+    )
+    const missingChangeset = ['created_at_ms'].filter((column) => !changesetColumns.has(column))
     const missing = [
       ...missingWorktree.map((column) => `collaboration_worktrees.${column}`),
-      ...missingUnit.map((column) => `collaboration_worktree_units.${column}`)
+      ...missingUnit.map((column) => `collaboration_worktree_units.${column}`),
+      ...missingChangeset.map((column) => `collaboration_worktree_changesets.${column}`)
     ]
     if (missing.length > 0) {
       throw incompatibleSchema(
-        `SQLite Worktree database v2 is missing application columns: ${missing.join(', ')}`
+        `SQLite Worktree database v${SCHEMA_VERSION} is missing application columns: ${missing.join(', ')}`
       )
     }
   }
@@ -1094,7 +1133,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
   private _getUnitRow(worktreeID: string, unitID: string): WorktreeUnitRow | null {
     const row = this._database
       .prepare(
-        `SELECT worktree_id, unit_id, type, name, created_at_ms, source,
+        `SELECT worktree_id, unit_id, type, name, created_at_ms, creator_id, source,
                 baseline_trunk_revision, draft_head_revision, ready_draft_head_revision,
                 merge_result_json
          FROM collaboration_worktree_units
@@ -1107,7 +1146,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
   private _getUnitRows(worktreeID: string): readonly WorktreeUnitRow[] {
     return this._database
       .prepare(
-        `SELECT worktree_id, unit_id, type, name, created_at_ms, source,
+        `SELECT worktree_id, unit_id, type, name, created_at_ms, creator_id, source,
                 baseline_trunk_revision, draft_head_revision, ready_draft_head_revision,
                 merge_result_json
          FROM collaboration_worktree_units
@@ -1265,6 +1304,8 @@ function rowToUnitRecord(row: WorktreeUnitRow): WorktreeUnitRecord {
     source,
     ...(source === 'trunk' ? { baselineTrunkRevision: row.baseline_trunk_revision } : {}),
     draftHeadRevision: row.draft_head_revision,
+    creatorID: row.creator_id,
+    createdAt: row.created_at_ms,
     ...(row.ready_draft_head_revision === null
       ? {}
       : { readyDraftHeadRevision: row.ready_draft_head_revision }),
@@ -1495,4 +1536,175 @@ function isBinaryEncoding(value: unknown): value is Record<typeof BINARY_TAG, st
     Object.keys(value).length === 1 &&
     typeof (value as Record<string, unknown>)[BINARY_TAG] === 'string'
   )
+}
+
+/**
+ * Upgrade the Worktree component schema in place. Call before constructing the adapter.
+ * A missing component row means a fresh database, which the adapter initializes directly.
+ */
+export function migrateUniverfileWorktreeSchema(database: Database.Database): void {
+  if (!hasTable(database, SCHEMA_VERSIONS_TABLE)) {
+    // No component has initialized this database yet, so the adapter creates the v3 schema itself.
+    return
+  }
+  // Records that carry no time are backfilled with the instant the migration started, taken once so
+  // that the whole upgrade shares one origin.
+  const migrationStartedAtMs = Date.now()
+
+  // One transaction covers the DDL, both backfills and the version row, so a failure anywhere leaves
+  // the database at v2 for a later retry instead of a half-upgraded Worktree component.
+  runUniverfileSQLiteTransaction(database, () => {
+    const row = database
+      .prepare(
+        `SELECT version
+         FROM collaboration_schema_versions
+         WHERE component = ?`
+      )
+      .get(SCHEMA_COMPONENT) as SchemaVersionRow | undefined
+    if (row === undefined || row.version === SCHEMA_VERSION) return
+    if (row.version !== LEGACY_SCHEMA_VERSION) {
+      throw incompatibleSchema(`SQLite Worktree schema version ${row.version} is not supported`)
+    }
+    const missingTables = TABLE_NAMES.filter((tableName) => !hasTable(database, tableName))
+    if (missingTables.length > 0) {
+      throw incompatibleSchema(
+        `SQLite Worktree schema v${LEGACY_SCHEMA_VERSION} is incomplete: missing ${missingTables.join(', ')}`
+      )
+    }
+    // `ALTER TABLE ADD COLUMN` cannot add a NOT NULL column without a constant default, so these
+    // placeholders exist only until the backfill below replaces them. v2 already owns a Unit
+    // `created_at_ms`, but it holds a Gateway-side timestamp: v3 redefines that column as the SDK
+    // Unit createdAt, which is why every Unit row is rewritten rather than only the new column.
+    addColumnIfMissing(
+      database,
+      'collaboration_worktree_units',
+      'creator_id',
+      `TEXT NOT NULL DEFAULT '${ANONYMOUS_CREATOR_ID}'`
+    )
+    addColumnIfMissing(
+      database,
+      'collaboration_worktree_units',
+      'created_at_ms',
+      'INTEGER NOT NULL DEFAULT 0'
+    )
+    addColumnIfMissing(
+      database,
+      'collaboration_worktree_changesets',
+      'created_at_ms',
+      'INTEGER NOT NULL DEFAULT 0'
+    )
+    migrateWorktreeUnitsToV3(database, migrationStartedAtMs)
+    migrateWorktreeChangesetsToV3(database, migrationStartedAtMs)
+    database
+      .prepare(
+        `UPDATE collaboration_schema_versions
+         SET version = ?
+         WHERE component = ?`
+      )
+      .run(SCHEMA_VERSION, SCHEMA_COMPONENT)
+  })
+}
+
+/**
+ * v2 Units carry no creator information. Trunk-backed Units copy what the Core migration restored
+ * from the same legacy History table, and that History entry for revision 1 supplies whatever the
+ * trunk record lacks: the changelog makes it the default creation information for Units joined from
+ * trunk. History is read with raw SQL because it still owns its pre-migration shape, and a database
+ * without a History component skips that step instead of failing.
+ */
+function migrateWorktreeUnitsToV3(database: Database.Database, migrationStartedAtMs: number): void {
+  const hasLegacyHistory = hasTable(database, LEGACY_HISTORY_TABLE)
+  const historyCreatedAt = hasLegacyHistory
+    ? `(SELECT committed_at FROM ${LEGACY_HISTORY_TABLE}
+         WHERE unit_id = collaboration_worktree_units.unit_id AND revision = 1)`
+    : 'NULL'
+  const historyCreatorID = hasLegacyHistory
+    ? `(SELECT user_id FROM ${LEGACY_HISTORY_TABLE}
+         WHERE unit_id = collaboration_worktree_units.unit_id AND revision = 1)`
+    : 'NULL'
+  database
+    .prepare(
+      `UPDATE collaboration_worktree_units
+       SET created_at_ms = COALESCE(
+             CASE
+               WHEN source = 'trunk' THEN (
+                 SELECT created_at_ms FROM collaboration_units
+                 WHERE unit_id = collaboration_worktree_units.unit_id
+               )
+             END,
+             ${historyCreatedAt},
+             ?
+           ),
+           creator_id = COALESCE(
+             CASE
+               WHEN source = 'trunk' THEN (
+                 SELECT creator_id FROM collaboration_units
+                 WHERE unit_id = collaboration_worktree_units.unit_id
+               )
+             END,
+             ${historyCreatorID},
+             ?
+           )`
+    )
+    .run(migrationStartedAtMs, ANONYMOUS_CREATOR_ID)
+}
+
+/**
+ * Legacy draft changesets record their creation time in the protocol `createTime`. This repository's
+ * submit paths write `Date.now()` milliseconds there while the SDK submit entry fills Unix seconds,
+ * so the unit is decided by magnitude instead of a fixed factor, exactly like the Core migration.
+ * A value that carries no usable time falls back to the History entry of the same revision, and then
+ * to the migration start time.
+ */
+function migrateWorktreeChangesetsToV3(
+  database: Database.Database,
+  migrationStartedAtMs: number
+): void {
+  const historyCommittedAt = hasTable(database, LEGACY_HISTORY_TABLE)
+    ? `(SELECT committed_at FROM ${LEGACY_HISTORY_TABLE}
+         WHERE unit_id = collaboration_worktree_changesets.unit_id
+           AND revision = collaboration_worktree_changesets.revision)`
+    : 'NULL'
+  database
+    .prepare(
+      `UPDATE collaboration_worktree_changesets
+       SET created_at_ms = COALESCE(
+             CASE
+               WHEN json_type(payload_json, '$.createTime') IN ('integer', 'real')
+                 AND json_extract(payload_json, '$.createTime') >= 0
+               THEN CASE
+                 WHEN json_extract(payload_json, '$.createTime') >= ${CREATE_TIME_SECONDS_LIMIT}
+                 THEN CAST(json_extract(payload_json, '$.createTime') AS INTEGER)
+                 ELSE CAST(json_extract(payload_json, '$.createTime') AS INTEGER) * 1000
+               END
+             END,
+             ${historyCommittedAt},
+             ?
+           )`
+    )
+    .run(migrationStartedAtMs)
+}
+
+function hasTable(database: Database.Database, tableName: string): boolean {
+  return Boolean(
+    database.prepare(`SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?`).get(tableName)
+  )
+}
+
+function tableColumnNames(database: Database.Database, tableName: string): ReadonlySet<string> {
+  return new Set(
+    (database.prepare(`PRAGMA table_info(${tableName})`).all() as unknown as ColumnRow[]).map(
+      ({ name }) => name
+    )
+  )
+}
+
+function addColumnIfMissing(
+  database: Database.Database,
+  tableName: string,
+  columnName: string,
+  definition: string
+): void {
+  if (tableColumnNames(database, tableName).has(columnName)) return
+  database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition};`)
 }

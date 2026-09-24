@@ -29,6 +29,7 @@ pnpm run update:univer-sdk --sdk_version <exact-version>
 - `format` and `format:check` are repository-wide. Do not create unrelated formatting churn. For a narrow change, check supported files directly with `pnpm exec oxfmt --check <files>`.
 - `pnpm run build` builds Host/Client, Worker, Gateway, Render Machine, and Viewer. Use `build:lib`, `build:worker`, `build:gateway`, `build:render`, or `build:viewer` for a narrower build.
 - `pnpm run update:univer-sdk` re-pins the Univer SDK cohort to one exact version in every manifest, leaves self-versioned packages untouched, strips any transitive binding declarations (the wrappers own those versions), and drops SDK entries from `pnpm-workspace.yaml` overrides; run `pnpm install` and the full build afterwards.
+- Before any cohort version change, read the Collaboration SDK migration notes for the target version; they live in a private repository that the configured GitHub credentials already reach, so ask for the location instead of recording a link here. Those notes are authoritative for the component schema versions the Gateway adapters own, so a version bump is only complete once the adapters and `src/gateway-app/univerfile-sqlite/migration/` match them.
 - Smoke tests consume `lib/` and `artifacts/`. Always build the affected target from the current source before running its smoke test.
 
 Choose the narrowest validation that proves the change:
@@ -44,6 +45,8 @@ Choose the narrowest validation that proves the change:
 | Cross-layer or release change                                                                 | None separately                  | `pnpm test` (builds every target first)                         |
 
 Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before every handoff. Report the exact commands that completed successfully.
+
+`pnpm run typecheck` does not cover `src/gateway-app/**`: the root `tsconfig.json` excludes it and `tsconfig.viewer.json` includes only its `contract/`. Gateway type errors therefore surface in the smoke tests rather than in the typecheck, so treat `pnpm run build:gateway` plus `pnpm run test:integration` as the Gateway type gate. A relative import that omits its file extension (`from './univerfile-sqlite'`) resolves at runtime but makes every type it re-exports `any`, which silently disables checking at the call sites; always write the explicit `.ts`/`.js` path this repository otherwise requires.
 
 For review-panel layout changes, also run `pnpm run test:client:layout`. This source-level browser test uses the installed render browser to check containment, fullscreen, iframe continuity, and cleanup; it supplements the built Client smoke test.
 

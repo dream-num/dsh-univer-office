@@ -10,7 +10,7 @@ export interface UniverfileBackup {
 
 export function createUniverfileBackup(
   filename: string,
-  sourceFormat: 'v0' | 'v1'
+  sourceFormat: 'v0' | 'v1' | 'v2'
 ): UniverfileBackup {
   const backupPath = join(
     dirname(filename),

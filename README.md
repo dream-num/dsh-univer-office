@@ -184,6 +184,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 
 - DeepSeek Harness and Node.js `>=22.19.0`.
 - The file-tree preview needs no extra plugin: it registers a tab type on DSH's right sidebar and claims `dsh-resource://file/**` addresses ending in `.univer`. While `dsh-better-sidebar` (`^0.19.0`) is installed it takes over file addresses at the same priority with a broader pattern, so the preview is registered as one of its file viewers instead — both shapes are covered, and only one ever applies.
+- Opening a `.univer` file written by an older version upgrades it in place: a backup is written beside the original first, then the file's internal schemas are migrated one component at a time. A file whose version history cannot be migrated safely is refused with an error naming the affected Unit, instead of being opened with partial data.
 - Screenshots, PDF printing, Slide layout checks, and SVG text measurement need a local Chromium-family browser. Chrome/Chromium and Microsoft Edge are detected automatically; set the `browserExecutablePath` option or the `UNIVER_RENDER_BROWSER` environment variable to point at a specific executable (for example Edge on Windows).
 - Slide master pages, layout pages, and speaker notes are outside the current editing scope.
 - Board mind maps, tables, ink, advanced editing, and file export are not yet supported.

@@ -1,4 +1,4 @@
-import type { GatewaySemanticErrorCode } from './contract'
+import type { GatewaySemanticErrorCode } from './contract/index.js'
 
 /** Gateway-owned semantic failure that crosses the HTTP contract boundary. */
 export class GatewaySemanticError extends Error {

@@ -1,4 +1,4 @@
-import type { WorktreeLifecycleEvent } from '../contract'
+import type { WorktreeLifecycleEvent } from '../contract/index.js'
 
 /** A live lifecycle-event connection; the connection owns wire serialization. */
 export interface EventConnection {

@@ -70,7 +70,13 @@ let browser
 try {
   const resolution = await resolveUniverRenderBrowser()
   assert.equal(resolution.status, 'found', 'a browser is required for layout validation')
-  browser = await launch({ executablePath: resolution.executablePath, headless: true })
+  browser = await launch({
+    executablePath: resolution.executablePath,
+    headless: true,
+    // The same flags integration-smoke uses: the launch must succeed where the suite runs as root,
+    // because the browser's own sandbox is unavailable there.
+    args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage']
+  })
   for (const [index, ancestor] of cases.entries()) {
     const page = await browser.newPage()
     try {

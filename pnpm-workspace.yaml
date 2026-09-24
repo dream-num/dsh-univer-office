@@ -82,3 +82,13 @@ minimumReleaseAgeExclude:
   - '@deepseek-ai/dsh-session-format-v1-to-v2@0.1.6-alpha.2'
   - '@deepseek-ai/dsh-session-format-v2-to-v3@0.1.6-alpha.2'
   - '@deepseek-ai/dsh-session-format@0.1.6-alpha.2'
+
+# `@univerjs-pro/docs-table-ui@1.0.0` declares `react-dom` as a direct dependency pinned to 19.3.0
+# while every other Univer package accepts React 18 as a peer. The package itself only uses React 18
+# APIs (`forwardRef`, `createElement`; no React 19-only hooks), so that declaration is a packaging
+# mistake rather than a requirement. Left alone, pnpm installs React 19's react-dom beside React
+# 18's react and the render page throws while reading React internals (`ReactSharedInternals` is
+# undefined). Remove this entry once the application moves to React 19, or once upstream stops
+# pinning `react-dom` — leaving it in place would silently block that upgrade.
+overrides:
+  react-dom: 18.3.1

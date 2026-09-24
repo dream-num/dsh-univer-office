@@ -7,6 +7,7 @@ import {
 } from '../../connection.js'
 import { UniverfileSQLiteDatabaseAdapter } from '../../database-adapters/collaboration-database-adapter.js'
 import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../../database-adapters/worktree-database-adapter.js'
+import { ANONYMOUS_CREATOR_ID, toUnixMilliseconds } from '../../legacy-creation.js'
 
 const LEGACY_PREFIX = '__collaboration_migration_v0_'
 const BINARY_TAG = '__univerCollaborationBinary'
@@ -268,8 +269,8 @@ function migrateTrunk(database: Database.Database): void {
   const unitById = new Map(units.map((unit) => [unit.unit_id, unit]))
   const insertUnit = database.prepare(
     `INSERT INTO collaboration_units
-       (unit_id, type, name, head_revision, created_at_ms, soft_deleted_at_ms)
-     VALUES (?, ?, ?, ?, ?, ?)`
+       (unit_id, type, name, head_revision, creator_id, created_at_ms, soft_deleted_at_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
   )
   for (const unit of units) {
     requireText(unit.unit_id, 'legacy Unit id')
@@ -280,6 +281,9 @@ function migrateTrunk(database: Database.Database): void {
       unit.type,
       unit.name,
       unit.head_rev,
+      // Pre-collaboration files record no author for a Unit, so the migration names the one the
+      // component schema requires instead of inventing an identity.
+      ANONYMOUS_CREATOR_ID,
       parseTimestamp(unit.created_at, `legacy Unit ${unit.unit_id} created_at`),
       unit.deleted_at === null
         ? null
@@ -522,7 +526,9 @@ function migrateWorktree(
         name: unit.name,
         source: 'trunk' as const,
         baselineRevision: baseline[unitId]!,
-        createdAt
+        // A Unit joined from trunk keeps the trunk Unit's creation time: that is the value the
+        // Worktree migration derives for this column, and the Worktree's own timestamp is not it.
+        createdAt: parseTimestamp(unit.created_at, `legacy Unit ${unitId} created_at`)
       }
     }),
     ...[...created.values()].map((unit) => ({
@@ -534,10 +540,10 @@ function migrateWorktree(
 
   const insertUnit = database.prepare(
     `INSERT INTO collaboration_worktree_units
-       (worktree_id, unit_id, unit_order, type, name, created_at_ms, source,
+       (worktree_id, unit_id, unit_order, type, name, created_at_ms, creator_id, source,
         baseline_trunk_revision, draft_head_revision, ready_draft_head_revision,
         merge_result_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
   activeUnits.forEach((unit, order) => {
     const unitChangesets = changesetsByUnit.get(unit.unitId) ?? []
@@ -552,6 +558,8 @@ function migrateWorktree(
       unit.type,
       unit.name,
       unit.createdAt,
+      // Pre-collaboration files record no author, so every Unit names the required placeholder.
+      ANONYMOUS_CREATOR_ID,
       unit.source,
       unit.baselineRevision,
       draftHead,
@@ -622,8 +630,12 @@ function migrateActiveWorktreeChangesets(
 ): void {
   const insert = database.prepare(
     `INSERT INTO collaboration_worktree_changesets
-       (worktree_id, unit_id, revision, base_revision, sid, req_id, payload_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+       (worktree_id, unit_id, revision, base_revision, sid, req_id, payload_json, created_at_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+  const worktreeCreatedAtMs = parseTimestamp(
+    worktree.created_at,
+    `Worktree ${worktree.worktree_id} created_at`
   )
   for (const unit of activeUnits) {
     const usedIdentities = new Set<string>()
@@ -637,7 +649,10 @@ function migrateActiveWorktreeChangesets(
         row.base_rev,
         identity.sid,
         identity.reqId,
-        encode(changeset)
+        encode(changeset),
+        // The legacy payload carries the commit time the current schema also stores in its own
+        // column; a file that predates a usable value falls back to the Worktree's creation time.
+        toUnixMilliseconds(row.create_time) ?? worktreeCreatedAtMs
       )
     }
   }
@@ -688,8 +703,8 @@ function migrateChangesets(
 ): void {
   const insert = database.prepare(
     `INSERT INTO ${targetTable}
-       (unit_id, revision, base_revision, sid, req_id, payload_json)
-     VALUES (?, ?, ?, ?, ?, ?)`
+       (unit_id, revision, base_revision, sid, req_id, payload_json, created_at_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
   )
   const usedByUnit = new Map<string, Set<string>>()
   for (const row of rows) {
@@ -704,7 +719,11 @@ function migrateChangesets(
       row.base_rev,
       identity.sid,
       identity.reqId,
-      encode(toChangeset(row, identity))
+      encode(toChangeset(row, identity)),
+      // The legacy payload carries the commit time the current schema also stores in its own column.
+      // A file that predates a usable value falls back to the Unit's creation time.
+      toUnixMilliseconds(row.create_time) ??
+        parseTimestamp(unit.created_at, `legacy Unit ${row.unit_id} created_at`)
     )
   }
 }

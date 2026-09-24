@@ -209,7 +209,11 @@ export class CollabService {
         type: unit.type,
         source: 'trunk',
         baselineTrunkRevision: unit.headRev,
-        draftHeadRevision: unit.headRev
+        draftHeadRevision: unit.headRev,
+        // A Worktree Unit joined from trunk keeps the trunk Unit's creation identity, which the
+        // SDK requires of every Unit record.
+        creatorID: unit.creatorID,
+        createdAt: unit.createdAtMs
       }))
     })
     return requireWorktree(this.runtime, worktreeId)
@@ -271,7 +275,9 @@ export class CollabService {
     )
     return {
       changesets: [...result.changesets],
-      latestRevision: result.latestRevision
+      // The SDK stopped reporting the head revision with a changeset range; the
+      // Worktree unit summary already carries the draft head this call describes.
+      latestRevision: unit.headRev
     }
   }
 
@@ -1271,10 +1277,16 @@ class TrunkStorageCompatibility {
         },
         callOptions('local')
       )
+      // A changeset range no longer reports the head revision, so read it from the
+      // adapter the SDK now exposes for unit metadata.
+      const unit = await this._runtime.trunkService.dbAdapter.getUnit(
+        databaseContext(callOptions('local')),
+        request.unitID
+      )
       return {
         error: { code: 1, message: '' },
         changesets: result.changesets,
-        latestRevision: result.latestRevision
+        latestRevision: unit?.headRevision ?? 0
       }
     } catch (error) {
       return {

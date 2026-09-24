@@ -12,14 +12,19 @@ import {
   type RecoverUnitsDatabaseInput,
   type RecoverUnitsDatabaseResult,
   type SaveSnapshotInput,
+  type SnapshotInfo,
   type UnitRecord
 } from '@univerjs-pro/collaboration-service'
 import type { IChangeset, ISheetBlock, ISnapshot, UniverType } from '@univerjs/protocol'
 import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.js'
+import { ANONYMOUS_CREATOR_ID, toUnixMilliseconds } from '../legacy-creation.js'
 
 const BINARY_TAG = '__univerCollaborationBinary'
 const CORE_SCHEMA_COMPONENT = 'core'
-const CORE_SCHEMA_VERSION = 1
+const CORE_SCHEMA_VERSION = 2
+/** Scratch tables for the v1 → v2 rebuild; they exist only inside the migration transaction. */
+const CORE_UNITS_REBUILD_TABLE = 'collaboration_units_migrating_v2'
+const CORE_CHANGESETS_REBUILD_TABLE = 'collaboration_changesets_migrating_v2'
 const CORE_TABLE_NAMES = [
   'collaboration_units',
   'collaboration_unit_tombstones',
@@ -39,7 +44,65 @@ const PRE_DATABASE_V1_TABLE_NAMES = [
   'worktree_snapshots'
 ] as const
 
+/**
+ * Core v2 DDL shared by `_initializeSchema` and the v1 → v2 migration: the rebuild reuses these
+ * definitions so an upgraded database exposes exactly the schema a freshly created one does.
+ */
+function coreUnitsTableDdl(tableName: string): string {
+  return `CREATE TABLE ${tableName} (
+    unit_id TEXT PRIMARY KEY,
+    type INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    head_revision INTEGER NOT NULL CHECK (head_revision >= 1),
+    creator_id TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL,
+    soft_deleted_at_ms INTEGER
+  );`
+}
+
+function coreChangesetsTableDdl(tableName: string): string {
+  return `CREATE TABLE ${tableName} (
+    unit_id TEXT NOT NULL,
+    revision INTEGER NOT NULL CHECK (revision >= 2),
+    base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
+    sid TEXT NOT NULL,
+    req_id INTEGER NOT NULL CHECK (req_id >= 1),
+    payload_json TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL,
+    PRIMARY KEY (unit_id, revision),
+    UNIQUE (unit_id, sid, req_id),
+    FOREIGN KEY (unit_id)
+      REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
+  );`
+}
+
+/** Dropped with `collaboration_changesets`, so the rebuild has to recreate it. */
+const CORE_CHANGESETS_REVISION_INDEX_DDL = `CREATE INDEX collaboration_changesets_revision_range
+  ON collaboration_changesets(unit_id, revision ASC);`
+
 interface UnitRow {
+  readonly unit_id: string
+  readonly type: number
+  readonly name: string
+  readonly head_revision: number
+  readonly creator_id: string
+  readonly created_at_ms: number
+  readonly soft_deleted_at_ms: number | null
+}
+
+interface SnapshotRow {
+  readonly unit_id: string
+  readonly revision: number
+  readonly type: number
+  readonly payload_json: string
+}
+
+interface PayloadRow {
+  readonly payload_json: string
+}
+
+/** `collaboration_units` as the v1 schema stored it, before `creator_id` existed. */
+interface LegacyUnitRow {
   readonly unit_id: string
   readonly type: number
   readonly name: string
@@ -48,8 +111,22 @@ interface UnitRow {
   readonly soft_deleted_at_ms: number | null
 }
 
-interface PayloadRow {
+/** `collaboration_changesets` as the v1 schema stored it, before `created_at_ms` existed. */
+interface LegacyChangesetRow {
+  readonly unit_id: string
+  readonly revision: number
+  readonly base_revision: number
+  readonly sid: string
+  readonly req_id: number
   readonly payload_json: string
+}
+
+interface LegacyHistoryCreatorRow {
+  readonly user_id: string
+}
+
+interface LegacyHistoryCommitRow {
+  readonly committed_at: number
 }
 
 interface SchemaVersionRow {
@@ -79,6 +156,7 @@ export interface UniverfileUnitMetadata {
   readonly name?: string
   /** Merge may create several Worktree Units in trunk under one SDK call. */
   readonly unitNames?: Readonly<Record<string, string>>
+  /** Worktree lifecycle timestamp. Trunk Unit creation time comes from `UnitRecord.createdAt`. */
   readonly createdAtMs?: number
 }
 
@@ -88,6 +166,9 @@ export interface UniverfileUnitSummary {
   readonly name: string
   readonly headRev: number
   readonly createdAt: string
+  /** Creation identity the SDK requires of a Unit record; a Worktree Unit joined from trunk copies it. */
+  readonly creatorID: string
+  readonly createdAtMs: number
 }
 
 /**
@@ -127,7 +208,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
     this._assertOpen()
     const row = this._database
       .prepare(
-        `SELECT unit_id, type, name, head_revision, created_at_ms, soft_deleted_at_ms
+        `SELECT unit_id, type, name, head_revision, creator_id, created_at_ms, soft_deleted_at_ms
          FROM collaboration_units
          WHERE unit_id = ? AND soft_deleted_at_ms IS NULL`
       )
@@ -139,7 +220,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
     this._assertOpen()
     const rows = this._database
       .prepare(
-        `SELECT unit_id, type, name, head_revision, created_at_ms, soft_deleted_at_ms
+        `SELECT unit_id, type, name, head_revision, creator_id, created_at_ms, soft_deleted_at_ms
          FROM collaboration_units
          WHERE soft_deleted_at_ms IS NULL
          ORDER BY created_at_ms ASC, unit_id ASC`
@@ -178,33 +259,21 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
     options?: { readonly revision?: number }
   ): Promise<ISnapshot | null> {
     this._assertOpen()
-    const requestedRevision = options?.revision
-    if (requestedRevision !== undefined && requestedRevision < 0) {
-      throw invalidRequest('Snapshot revision cannot be negative')
-    }
-
-    const unit = this._getActiveUnitRow(unitID)
-    if (!unit) {
-      return null
-    }
-    const targetRevision =
-      requestedRevision === undefined || requestedRevision === 0
-        ? unit.head_revision
-        : Math.min(requestedRevision, unit.head_revision)
-    const row = this._database
-      .prepare(
-        `SELECT collaboration_snapshots.payload_json
-         FROM collaboration_snapshots
-         JOIN collaboration_units
-           ON collaboration_units.unit_id = collaboration_snapshots.unit_id
-         WHERE collaboration_snapshots.unit_id = ?
-           AND collaboration_snapshots.revision <= ?
-           AND collaboration_units.soft_deleted_at_ms IS NULL
-         ORDER BY collaboration_snapshots.revision DESC
-         LIMIT 1`
-      )
-      .get(unitID, targetRevision) as PayloadRow | undefined
+    const row = this._selectSnapshotRow(unitID, options?.revision)
     return row ? decode<ISnapshot>(row.payload_json) : null
+  }
+
+  async getSnapshotInfo(
+    _context: DatabaseContext,
+    unitID: string,
+    options?: { readonly revision?: number }
+  ): Promise<SnapshotInfo | null> {
+    this._assertOpen()
+    const row = this._selectSnapshotRow(unitID, options?.revision)
+    // `collaboration_snapshots.revision` is written from `ISnapshot.rev` by this adapter and by the
+    // legacy readers, so the identity fields come from the row itself instead of decoding a
+    // snapshot payload that can carry whole workbooks.
+    return row ? { unitID: row.unit_id, type: row.type as UniverType, rev: row.revision } : null
   }
 
   async getChangesets(
@@ -288,13 +357,20 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
       }
 
       const metadata = readUnitMetadata(context, input.record.unitID)
+      // The SDK record owns the Unit's creation identity; the CLI metadata only names it.
       this._database
         .prepare(
           `INSERT INTO collaboration_units
-             (unit_id, type, name, head_revision, created_at_ms, soft_deleted_at_ms)
-           VALUES (?, ?, ?, 1, ?, NULL)`
+             (unit_id, type, name, head_revision, creator_id, created_at_ms, soft_deleted_at_ms)
+           VALUES (?, ?, ?, 1, ?, ?, NULL)`
         )
-        .run(input.record.unitID, input.record.type, metadata.name, metadata.createdAtMs)
+        .run(
+          input.record.unitID,
+          input.record.type,
+          metadata.name,
+          input.record.creatorID,
+          input.record.createdAt
+        )
       this._writeSheetBlocks(input.record.unitID, blocks)
       this._database
         .prepare(
@@ -404,7 +480,13 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   ): Promise<CommitChangesetResult> {
     this._assertOpen()
     validateSubmissionIdentity(input.changeset)
-    const payload = encode(input.changeset)
+    // The SDK submit entry fills `createTime` with whole Unix seconds when the caller omitted it,
+    // while this repository's own submit paths write `Date.now()` milliseconds, so the value is
+    // kept as received and only its magnitude decides the unit when the column is derived.
+    const createTime = input.changeset.createTime ?? Date.now()
+    const savedChangeset: IChangeset = { ...input.changeset, createTime }
+    const payload = encode(savedChangeset)
+    const createdAtMs = toUnixMilliseconds(createTime) ?? Date.now()
 
     return this._transaction(() => {
       const { changeset } = input
@@ -425,8 +507,8 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
       this._database
         .prepare(
           `INSERT INTO collaboration_changesets
-             (unit_id, revision, base_revision, sid, req_id, payload_json)
-           VALUES (?, ?, ?, ?, ?, ?)`
+             (unit_id, revision, base_revision, sid, req_id, payload_json, created_at_ms)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           changeset.unitID,
@@ -434,7 +516,8 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
           changeset.baseRev,
           changeset.sid as string,
           changeset.reqId as number,
-          payload
+          payload,
+          createdAtMs
         )
       const update = this._database
         .prepare(
@@ -563,7 +646,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
         const missingTables = CORE_TABLE_NAMES.filter((tableName) => !this._hasTable(tableName))
         if (missingTables.length > 0) {
           throw incompatibleSchema(
-            `SQLite collaboration core schema v1 is incomplete: missing ${missingTables.join(', ')}`
+            `SQLite collaboration core schema v2 is incomplete: missing ${missingTables.join(', ')}`
           )
         }
         this._assertGatewayColumns()
@@ -576,14 +659,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
       }
 
       this._database.exec(`
-        CREATE TABLE collaboration_units (
-          unit_id TEXT PRIMARY KEY,
-          type INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          head_revision INTEGER NOT NULL CHECK (head_revision >= 1),
-          created_at_ms INTEGER NOT NULL,
-          soft_deleted_at_ms INTEGER
-        );
+        ${coreUnitsTableDdl('collaboration_units')}
 
         CREATE TABLE collaboration_unit_tombstones (
           unit_id TEXT PRIMARY KEY,
@@ -600,18 +676,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
             REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
         );
 
-        CREATE TABLE collaboration_changesets (
-          unit_id TEXT NOT NULL,
-          revision INTEGER NOT NULL CHECK (revision >= 2),
-          base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
-          sid TEXT NOT NULL,
-          req_id INTEGER NOT NULL CHECK (req_id >= 1),
-          payload_json TEXT NOT NULL,
-          PRIMARY KEY (unit_id, revision),
-          UNIQUE (unit_id, sid, req_id),
-          FOREIGN KEY (unit_id)
-            REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
-        );
+        ${coreChangesetsTableDdl('collaboration_changesets')}
 
         CREATE TABLE collaboration_sheet_blocks (
           unit_id TEXT NOT NULL,
@@ -633,19 +698,57 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
 
         CREATE INDEX collaboration_snapshots_nearest_revision
           ON collaboration_snapshots(unit_id, revision DESC);
-        CREATE INDEX collaboration_changesets_revision_range
-          ON collaboration_changesets(unit_id, revision ASC);
+        ${CORE_CHANGESETS_REVISION_INDEX_DDL}
 
         INSERT INTO collaboration_schema_versions (component, version)
-        VALUES ('core', 1);
+        VALUES ('core', 2);
       `)
     })
+  }
+
+  /**
+   * Resolves the snapshot `getSnapshot` and `getSnapshotInfo` have to agree on: the closest stored
+   * snapshot at or below the requested revision, defaulting to the Unit head.
+   */
+  private _selectSnapshotRow(
+    unitID: string,
+    requestedRevision: number | undefined
+  ): SnapshotRow | null {
+    if (requestedRevision !== undefined && requestedRevision < 0) {
+      throw invalidRequest('Snapshot revision cannot be negative')
+    }
+
+    const unit = this._getActiveUnitRow(unitID)
+    if (!unit) {
+      return null
+    }
+    const targetRevision =
+      requestedRevision === undefined || requestedRevision === 0
+        ? unit.head_revision
+        : Math.min(requestedRevision, unit.head_revision)
+    const row = this._database
+      .prepare(
+        `SELECT collaboration_snapshots.unit_id,
+                collaboration_snapshots.revision,
+                collaboration_snapshots.type,
+                collaboration_snapshots.payload_json
+         FROM collaboration_snapshots
+         JOIN collaboration_units
+           ON collaboration_units.unit_id = collaboration_snapshots.unit_id
+         WHERE collaboration_snapshots.unit_id = ?
+           AND collaboration_snapshots.revision <= ?
+           AND collaboration_units.soft_deleted_at_ms IS NULL
+         ORDER BY collaboration_snapshots.revision DESC
+         LIMIT 1`
+      )
+      .get(unitID, targetRevision) as SnapshotRow | undefined
+    return row ?? null
   }
 
   private _getActiveUnitRow(unitID: string): UnitRow | null {
     const row = this._database
       .prepare(
-        `SELECT unit_id, type, name, head_revision, created_at_ms, soft_deleted_at_ms
+        `SELECT unit_id, type, name, head_revision, creator_id, created_at_ms, soft_deleted_at_ms
          FROM collaboration_units
          WHERE unit_id = ? AND soft_deleted_at_ms IS NULL`
       )
@@ -656,7 +759,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   private _getStoredUnitRow(unitID: string): UnitRow | null {
     const row = this._database
       .prepare(
-        `SELECT unit_id, type, name, head_revision, created_at_ms, soft_deleted_at_ms
+        `SELECT unit_id, type, name, head_revision, creator_id, created_at_ms, soft_deleted_at_ms
          FROM collaboration_units
          WHERE unit_id = ?`
       )
@@ -673,15 +776,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   }
 
   private _hasTable(tableName: string): boolean {
-    return Boolean(
-      this._database
-        .prepare(
-          `SELECT 1
-           FROM sqlite_schema
-           WHERE type = 'table' AND name = ?`
-        )
-        .get(tableName)
-    )
+    return hasTable(this._database, tableName)
   }
 
   private _hasAnyCoreTable(): boolean {
@@ -742,6 +837,243 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   }
 }
 
+/**
+ * Upgrade the Core component schema in place. Call before constructing the adapter.
+ * A missing component row means a fresh database, which the adapter initializes directly.
+ *
+ * Must not run inside a caller-owned transaction while foreign key enforcement is on: the v1 → v2
+ * rebuild has to switch enforcement off, which SQLite only accepts outside a transaction.
+ */
+export function migrateUniverfileCoreSchema(database: Database.Database): void {
+  if (!hasTable(database, 'collaboration_schema_versions')) {
+    // No component has initialized this database yet, so the adapter creates the v2 schema itself.
+    return
+  }
+  // Decided up front so a database that is already current never touches foreign key enforcement.
+  const version = readCoreSchemaVersion(database)
+  if (version === undefined || version === CORE_SCHEMA_VERSION) {
+    return
+  }
+  if (version !== 1) {
+    throw incompatibleSchema(`SQLite collaboration core schema version ${version} is not supported`)
+  }
+
+  // Both new columns are NOT NULL, which `ALTER TABLE ADD COLUMN` cannot add without a constant
+  // default, so the affected tables are rebuilt. With foreign keys enforced, `DROP TABLE
+  // collaboration_units` performs an implicit DELETE FROM that cascades into snapshots,
+  // change-sets, sheet blocks, and resources. That pragma has no effect inside a transaction, so
+  // enforcement is switched around the migration transaction and restored afterwards.
+  const foreignKeysEnforced = isForeignKeyEnforcementEnabled(database)
+  if (foreignKeysEnforced) {
+    if (database.inTransaction) {
+      throw new Error(
+        'Core schema migration must run outside a transaction while foreign keys are enforced'
+      )
+    }
+    database.exec('PRAGMA foreign_keys = OFF;')
+  }
+  // Change-sets that record no time are backfilled with the instant the migration started, taken
+  // once so the whole upgrade shares one origin.
+  const migrationStartedAtMs = Date.now()
+  try {
+    runUniverfileSQLiteTransaction(database, () => {
+      // Another process may have upgraded the component between the check above and this write
+      // lock, and the rebuild rewrites creation columns, so the decision is taken again here.
+      if (readCoreSchemaVersion(database) !== 1) {
+        return
+      }
+
+      migrateCoreUnitsToV2(database)
+      migrateCoreChangesetsToV2(database, migrationStartedAtMs)
+      database
+        .prepare(
+          `UPDATE collaboration_schema_versions
+           SET version = ?
+           WHERE component = ?`
+        )
+        .run(CORE_SCHEMA_VERSION, CORE_SCHEMA_COMPONENT)
+    })
+  } finally {
+    if (foreignKeysEnforced) {
+      database.exec('PRAGMA foreign_keys = ON;')
+    }
+  }
+}
+
+function readCoreSchemaVersion(database: Database.Database): number | undefined {
+  const row = database
+    .prepare(
+      `SELECT version
+       FROM collaboration_schema_versions
+       WHERE component = ?`
+    )
+    .get(CORE_SCHEMA_COMPONENT) as SchemaVersionRow | undefined
+  return row?.version
+}
+
+/**
+ * Rebuilds `collaboration_units` with the v2 `creator_id`. The creator is the `user_id` the legacy
+ * History row for revision 1 recorded; Core migrates before History, so that v1 table is still
+ * readable here, and a database without it falls back to the anonymous creator.
+ */
+function migrateCoreUnitsToV2(database: Database.Database): void {
+  const legacyCreator = hasTable(database, 'collaboration_history_revisions')
+    ? database.prepare(
+        `SELECT user_id
+         FROM collaboration_history_revisions
+         WHERE unit_id = ? AND revision = 1`
+      )
+    : undefined
+  const units = database
+    .prepare(
+      `SELECT unit_id, type, name, head_revision, created_at_ms, soft_deleted_at_ms
+       FROM collaboration_units`
+    )
+    .all() as unknown as LegacyUnitRow[]
+
+  database.exec(`
+    DROP TABLE IF EXISTS ${CORE_UNITS_REBUILD_TABLE};
+    ${coreUnitsTableDdl(CORE_UNITS_REBUILD_TABLE)}
+  `)
+  const insert = database.prepare(
+    `INSERT INTO ${CORE_UNITS_REBUILD_TABLE}
+       (unit_id, type, name, head_revision, creator_id, created_at_ms, soft_deleted_at_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  )
+  for (const unit of units) {
+    insert.run(
+      unit.unit_id,
+      unit.type,
+      unit.name,
+      unit.head_revision,
+      readLegacyCreatorID(legacyCreator, unit.unit_id) ?? ANONYMOUS_CREATOR_ID,
+      unit.created_at_ms,
+      unit.soft_deleted_at_ms
+    )
+  }
+
+  database.exec(`
+    DROP TABLE collaboration_units;
+    ALTER TABLE ${CORE_UNITS_REBUILD_TABLE} RENAME TO collaboration_units;
+  `)
+}
+
+/**
+ * Rebuilds `collaboration_changesets` with the v2 `created_at_ms`. A payload `createTime` wins over
+ * the legacy History `committed_at`, and the migration start time covers rows that record neither.
+ */
+function migrateCoreChangesetsToV2(
+  database: Database.Database,
+  migrationStartedAtMs: number
+): void {
+  const legacyCommitTime = hasTable(database, 'collaboration_history_revisions')
+    ? database.prepare(
+        `SELECT committed_at
+         FROM collaboration_history_revisions
+         WHERE unit_id = ? AND revision = ?`
+      )
+    : undefined
+
+  database.exec(`
+    DROP TABLE IF EXISTS ${CORE_CHANGESETS_REBUILD_TABLE};
+    ${coreChangesetsTableDdl(CORE_CHANGESETS_REBUILD_TABLE)}
+  `)
+  const insert = database.prepare(
+    `INSERT INTO ${CORE_CHANGESETS_REBUILD_TABLE}
+       (unit_id, revision, base_revision, sid, req_id, payload_json, created_at_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  )
+  // Payloads can carry whole commands, so the legacy rows are streamed instead of collected first.
+  const rows = database
+    .prepare(
+      `SELECT unit_id, revision, base_revision, sid, req_id, payload_json
+       FROM collaboration_changesets`
+    )
+    .iterate() as unknown as IterableIterator<LegacyChangesetRow>
+  for (const row of rows) {
+    insert.run(
+      row.unit_id,
+      row.revision,
+      row.base_revision,
+      row.sid,
+      row.req_id,
+      row.payload_json,
+      readChangesetCreatedAtMs(row.payload_json) ??
+        readLegacyCommitTimeMs(legacyCommitTime, row.unit_id, row.revision) ??
+        migrationStartedAtMs
+    )
+  }
+
+  database.exec(`
+    DROP TABLE collaboration_changesets;
+    ALTER TABLE ${CORE_CHANGESETS_REBUILD_TABLE} RENAME TO collaboration_changesets;
+    ${CORE_CHANGESETS_REVISION_INDEX_DDL}
+  `)
+}
+
+/**
+ * Reads the creation time a legacy change-set payload carries. Only that field is needed, so the
+ * payload is parsed without the binary reviver a full decode applies.
+ */
+function readChangesetCreatedAtMs(payloadJson: string): number | undefined {
+  const parsed: unknown = JSON.parse(payloadJson)
+  if (typeof parsed !== 'object' || parsed === null) {
+    return undefined
+  }
+  const createTime = (parsed as { readonly createTime?: unknown }).createTime
+  return typeof createTime === 'number' ? toUnixMilliseconds(createTime) : undefined
+}
+
+/** Reads the creator the legacy History table recorded for revision 1, which created the Unit. */
+function readLegacyCreatorID(
+  statement: Database.Statement | undefined,
+  unitID: string
+): string | undefined {
+  if (statement === undefined) {
+    return undefined
+  }
+  const row = statement.get(unitID) as LegacyHistoryCreatorRow | undefined
+  if (row === undefined || typeof row.user_id !== 'string' || row.user_id.length === 0) {
+    return undefined
+  }
+  return row.user_id
+}
+
+/** Reads the legacy History commit time of one revision, which is already Unix milliseconds. */
+function readLegacyCommitTimeMs(
+  statement: Database.Statement | undefined,
+  unitID: string,
+  revision: number
+): number | undefined {
+  if (statement === undefined) {
+    return undefined
+  }
+  const row = statement.get(unitID, revision) as LegacyHistoryCommitRow | undefined
+  if (row === undefined || !Number.isSafeInteger(row.committed_at) || row.committed_at < 0) {
+    return undefined
+  }
+  return row.committed_at
+}
+
+function hasTable(database: Database.Database, tableName: string): boolean {
+  return Boolean(
+    database
+      .prepare(
+        `SELECT 1
+         FROM sqlite_schema
+         WHERE type = 'table' AND name = ?`
+      )
+      .get(tableName)
+  )
+}
+
+function isForeignKeyEnforcementEnabled(database: Database.Database): boolean {
+  const row = database.prepare('PRAGMA foreign_keys').get() as
+    | { readonly foreign_keys: number }
+    | undefined
+  return row?.foreign_keys === 1
+}
+
 function validateOptions(options: UniverfileSQLiteDatabaseAdapterOptions): void {
   if (!options.filename) {
     throw invalidRequest('SQLite filename is required')
@@ -789,7 +1121,9 @@ function rowToUnitRecord(row: UnitRow): UnitRecord {
   return {
     unitID: row.unit_id,
     type: row.type as UniverType,
-    headRevision: row.head_revision
+    headRevision: row.head_revision,
+    creatorID: row.creator_id,
+    createdAt: row.created_at_ms
   }
 }
 
@@ -799,14 +1133,13 @@ function rowToUnitSummary(row: UnitRow): UniverfileUnitSummary {
     type: row.type as UniverType,
     name: row.name,
     headRev: row.head_revision,
-    createdAt: new Date(row.created_at_ms).toISOString()
+    createdAt: new Date(row.created_at_ms).toISOString(),
+    creatorID: row.creator_id,
+    createdAtMs: row.created_at_ms
   }
 }
 
-function readUnitMetadata(
-  context: DatabaseContext,
-  unitID: string
-): { readonly name: string; readonly createdAtMs: number } {
+function readUnitMetadata(context: DatabaseContext, unitID: string): { readonly name: string } {
   const value = context.customData[UNIVERFILE_UNIT_METADATA_KEY] as
     | UniverfileUnitMetadata
     | undefined
@@ -816,13 +1149,7 @@ function readUnitMetadata(
       : typeof value?.name === 'string' && value.name.length > 0
         ? value.name
         : unitID
-  const createdAtMs =
-    value?.createdAtMs !== undefined &&
-    Number.isSafeInteger(value.createdAtMs) &&
-    value.createdAtMs >= 0
-      ? value.createdAtMs
-      : Date.now()
-  return { name, createdAtMs }
+  return { name }
 }
 
 function readOptionalUnitName(context: DatabaseContext, unitID: string): string | undefined {

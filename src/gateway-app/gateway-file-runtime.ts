@@ -25,10 +25,8 @@ import {
   type UniverfileSQLiteHistoryDatabaseAdapter,
   type UniverfileUpgradeResult,
   type UniverfileSQLiteWorktreeDatabaseAdapter
-} from './univerfile-sqlite'
-import { reconcileUniverfileHistory } from './history/reconcile-history.js'
+} from './univerfile-sqlite/index.js'
 import { createSdkCollabLogger } from './sdk-logger.js'
-
 export interface GatewayFileRuntimeOptions {
   /** `.univer` SQLite filename, or `:memory:` for tests. */
   readonly dbPath?: string
@@ -50,15 +48,12 @@ export class GatewayFileRuntime {
   public readonly trunkService: UniverCollabService
   public readonly worktreeService: UniverCollabWorktreeService
   public readonly historyService: UniverHistoryService
-  public readonly historyReady: Promise<void>
 
   private readonly _univerfile: UniverfileSQLite
   private readonly _ticketStore: MemorySessionTicketStore
   private readonly _trunkEndpoint: UniverCollabEndpoint
   private readonly _worktreeEndpoint: UniverCollabWorktreeEndpoint
   private readonly _historyEndpoint: UniverHistoryEndpoint
-  private readonly _historyAttachment: { dispose(): void }
-  private readonly _historySettlement: Promise<void>
   private readonly _transport: INodeTransport
   private readonly _connectionIds = new Set<string>()
   private _disposed = false
@@ -93,15 +88,8 @@ export class GatewayFileRuntime {
         dbAdapter: this.historyAdapter,
         logger: createSdkCollabLogger()
       })
-      this._historyAttachment = this.historyService.attach(this.trunkService)
-      this.historyReady = reconcileUniverfileHistory({
-        trunkAdapter: this.trunkAdapter,
-        historyAdapter: this.historyAdapter,
-        historyService: this.historyService
-      })
-      // Own the async reconciliation immediately so a startup failure cannot become an unhandled
-      // rejection before the first request observes `historyReady`.
-      this._historySettlement = this.historyReady.catch(() => undefined)
+      // The SDK subscribes to collaboration events itself and owns derived-index maintenance,
+      // including the lazy rebuild it performs when a Unit has no History records yet.
       this._ticketStore = new MemorySessionTicketStore()
       this._trunkEndpoint = new UniverCollabEndpoint(this.trunkService, {
         ticketStore: this._ticketStore
@@ -115,10 +103,6 @@ export class GatewayFileRuntime {
       this._transport.use(async (context, next) => {
         context.userID = headerValue(context.incomingMessage.headers['x-user-id'])
         context.customData.gateway = { userId: context.userID }
-        await next()
-      })
-      this._transport.use(async (_context, next) => {
-        await this.historyReady
         await next()
       })
       this._transport.register(this._historyEndpoint)
@@ -177,10 +161,7 @@ export class GatewayFileRuntime {
   public async dispose(): Promise<void> {
     if (this._disposed) return
     this._disposed = true
-    // A failed derived-index rebuild must not prevent the runtime from releasing its resources.
-    await this._historySettlement
     await this._transport.dispose()
-    this._historyAttachment.dispose()
     await this.historyService.dispose()
     await this.worktreeService.dispose()
     await this.trunkService.dispose()

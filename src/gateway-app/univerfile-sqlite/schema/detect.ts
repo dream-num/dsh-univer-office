@@ -4,6 +4,7 @@ import {
   ASSET_V1_TABLES,
   CORE_V1_TABLES,
   HISTORY_V1_TABLES,
+  HISTORY_V2_TABLES,
   V0_TABLES,
   WORKTREE_COMMON_TABLES,
   WORKTREE_V1_ONLY_TABLES
@@ -56,9 +57,12 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
     if (unknown.length > 0) {
       throw unsupported(`unknown schema components: ${unknown.join(', ')}`)
     }
-    if (versions.get('core') !== 1) throw unsupported('core schema version must be v1')
+    const coreVersion = versions.get('core')
+    if (coreVersion !== 1 && coreVersion !== 2) {
+      throw unsupported(`core schema version ${String(coreVersion)} is not supported`)
+    }
     const worktreeVersion = versions.get('worktree')
-    if (worktreeVersion !== 1 && worktreeVersion !== 2) {
+    if (worktreeVersion !== 1 && worktreeVersion !== 2 && worktreeVersion !== 3) {
       throw unsupported(`worktree schema version ${String(worktreeVersion)} is not supported`)
     }
 
@@ -71,10 +75,13 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
       throw unsupported('assets schema must be complete, or absent on a Gateway v1 file')
     }
 
+    // History v1 kept one row per revision; v2 keeps one row per segment start.
     const historyVersion = versions.get('history')
-    const presentHistoryTables = HISTORY_V1_TABLES.filter((table) => tables.has(table))
+    const historyTables = historyVersion === 2 ? HISTORY_V2_TABLES : HISTORY_V1_TABLES
+    const presentHistoryTables = historyTables.filter((table) => tables.has(table))
     const hasCompleteHistorySchema =
-      historyVersion === 1 && presentHistoryTables.length === HISTORY_V1_TABLES.length
+      (historyVersion === 1 || historyVersion === 2) &&
+      presentHistoryTables.length === historyTables.length
     const hasNoHistorySchema = historyVersion === undefined && presentHistoryTables.length === 0
     if (!hasCompleteHistorySchema && !hasNoHistorySchema) {
       throw unsupported('history schema must be complete or absent')
@@ -82,7 +89,7 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
 
     const required: string[] = [...CORE_V1_TABLES, ...WORKTREE_COMMON_TABLES]
     if (hasCompleteAssetSchema) required.push(...ASSET_V1_TABLES)
-    if (hasCompleteHistorySchema) required.push(...HISTORY_V1_TABLES)
+    if (hasCompleteHistorySchema) required.push(...historyTables)
     if (worktreeVersion === 1) required.push(...WORKTREE_V1_ONLY_TABLES)
     const missing = required.filter((table) => !tables.has(table))
     if (missing.length > 0) {

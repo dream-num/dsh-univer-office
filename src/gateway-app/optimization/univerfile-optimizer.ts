@@ -9,7 +9,7 @@ import {
   type OptimizeUniverfileHistory,
   type OptimizeUniverfileReport,
   type OptimizeUniverfileWorktrees
-} from '../contract'
+} from '../contract/index.js'
 import { type DatabaseContext, UniverUnitRuntime } from '@univerjs-pro/collaboration-service'
 import type { UniverType } from '@univerjs/protocol'
 import { externalizeEmbeddedImages } from '../assets/externalize-embedded-images.js'
@@ -21,7 +21,7 @@ import {
   runUniverfileSQLiteTransaction,
   upgradeUniverfileSQLite,
   UniverfileSQLiteDatabaseAdapter
-} from '../univerfile-sqlite'
+} from '../univerfile-sqlite/index.js'
 
 const BINARY_TAG = '__univerCollaborationBinary'
 
@@ -274,7 +274,8 @@ async function materializeCurrentHeads(connection: UniverfileSQLiteConnection): 
     filename: connection.filename,
     connection
   })
-  const runtime = new UniverUnitRuntime({ dbAdapter: adapter })
+  // The runtime now takes a read-only reader; IDatabaseAdapter satisfies that contract.
+  const runtime = new UniverUnitRuntime({ reader: adapter })
   const context = optimizationDatabaseContext()
   const units = connection.database
     .prepare(

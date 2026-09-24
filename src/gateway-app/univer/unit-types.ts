@@ -18,7 +18,7 @@ import {
   UNIT_TYPE_SHEET,
   UNIT_TYPE_SLIDE,
   type UnitType
-} from '../contract'
+} from '../contract/index.js'
 
 const DEFAULT_SHEET_ID = 'sheet-1'
 const DEFAULT_ROW_COUNT = 1000
