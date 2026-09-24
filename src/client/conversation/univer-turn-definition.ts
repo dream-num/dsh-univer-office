@@ -75,22 +75,43 @@ export const univerTurnDefinition = {
     return null
   },
   start(_context, match): UniverTurnState {
-    if (match.event.type !== 'turn/start')
-      throw new Error('univerTurn start match must be turn/start')
-    return { turn: match.event.data.turn, files: [] }
+    // Fuse: a thrown start must never take the session event feed down.
+    try {
+      if (match.event.type !== 'turn/start')
+        throw new Error('univerTurn start match must be turn/start')
+      return { turn: match.event.data.turn, files: [] }
+    } catch (error) {
+      console.warn('[dsh-univer-office] univerTurn start failed; using an empty turn state', error)
+      // The empty state never reaches buildLocationData (files is empty), so the
+      // placeholder turn value is inert.
+      return { turn: 0, files: [] }
+    }
   },
   update(context, match): UniverTurnState {
-    if (match.event.type === 'tool/call') return addCall(context.state, match.event.data)
-    if (match.event.type === 'tool/result') return applyResult(context.state, match.event.data)
-    return context.state
+    // Fuse: a single malformed tool event must degrade this definition only — a
+    // throw here crashes the session-controller event feed and blanks every
+    // conversation transcript (observed on the DSH 0.1.7 tool-result change).
+    try {
+      if (match.event.type === 'tool/call') return addCall(context.state, match.event.data)
+      if (match.event.type === 'tool/result') return applyResult(context.state, match.event.data)
+      return context.state
+    } catch (error) {
+      console.warn('[dsh-univer-office] univerTurn update failed; keeping previous state', error)
+      return context.state
+    }
   },
   buildLocationData(context, scope) {
-    if (scope !== 'turn' || context.state === undefined) return null
-    return {
-      kind: 'turn',
-      turn: context.state.turn,
-      key: 'univerTurn',
-      value: { files: context.state.files }
+    try {
+      if (scope !== 'turn' || context.state === undefined) return null
+      return {
+        kind: 'turn',
+        turn: context.state.turn,
+        key: 'univerTurn',
+        value: { files: context.state.files }
+      }
+    } catch (error) {
+      console.warn('[dsh-univer-office] univerTurn location data failed; skipping', error)
+      return null
     }
   }
 } satisfies ConversationNodeDefinition<UniverTurnState>

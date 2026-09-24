@@ -8,8 +8,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import {
   UNIVER_CONFIG_ENTRY_ID,
-  UNIVER_SETTINGS_NAMESPACE,
-  type UniverSettings
+  UNIVER_SETTINGS_NAMESPACE
 } from '../shared/settings.ts'
 import { betterSidebarOf } from './better-sidebar.ts'
 import { PreviewCard } from './components/preview-card.tsx'
@@ -31,7 +30,9 @@ import { settingsStyles } from './styles/settings.ts'
 import { worktreeStyles } from './styles/worktree.ts'
 import { viewerLocaleOf, type ViewerLocale } from './viewer-locale.ts'
 
-export const inject = ['slots', 'locale', 'conversation']
+// `uiConversation` must be declared: 0.1.7 only places declared services on the
+// context, and apply() registers the Univer turn definition through it (#96).
+export const inject = ['slots', 'locale', 'conversation', 'uiConversation']
 
 interface UiConversationEvents {
   register(definition: ConversationNodeDefinition): () => void
@@ -121,15 +122,6 @@ export function apply(ctx: ClientContext): void {
   })
   ctx.inject(['betterSidebar'], (sidebarCtx: ClientContext) => {
     sidebarCtx.effect(() => registerUniverFileViewer(sidebarCtx), 'univer: univer file viewer')
-  })
-  ctx.inject(['settingsScope'], (settingsCtx: ClientContext) => {
-    registerSettings(
-      settingsCtx,
-      preferences,
-      settingsCtx.settingsScope.bind<UniverSettings>({
-        namespace: UNIVER_SETTINGS_NAMESPACE
-      })
-    )
   })
   ctx.inject(['configForms'], (settingsCtx: ClientContext) => {
     // The bundle patch owns this entry id; modern DSH projects its live Config.
