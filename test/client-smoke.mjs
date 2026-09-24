@@ -256,7 +256,10 @@ const sidebarViewers = []
 const nativeTabTypes = []
 /** Gateway phase the fake host reports; a stopped Gateway cannot project Viewer URLs. */
 let gatewayPhase = 'running'
-const modernSettings = process.env.UNIVER_SETTINGS_API === 'configForms'
+// DSH 0.1.7 hosts expose settings only through configForms (issue #96); the
+// settingsScope API belongs to 0.1.6-alpha.1 and older, which the 0.3.x line
+// no longer supports (injecting it would pend the whole web boot).
+const modernSettings = true
 let settingsWriteFailure
 const settingsEffects = []
 const SETTINGS_DEFAULTS = { autoOpenLivePreview: true, conversationReviewCards: true }
@@ -425,8 +428,8 @@ if (localeDicts === null || localeDicts.ns !== 'univer')
   throw new Error('locale dictionaries not registered')
 if (conversationDefinition === null || conversationDefinition.kind !== 'univerTurn')
   throw new Error('Conversation definition not registered')
-if (pluginExports.inject.join(',') !== 'slots,locale,conversation')
-  throw new Error('Client must depend only on Conversation services of the supported DSH line')
+if (pluginExports.inject.join(',') !== 'slots,locale,conversation,uiConversation')
+  throw new Error('Client must declare Conversation services plus uiConversation (issue #96: 0.1.7 only places declared services on the context)')
 if (
   dockEntry.options.locale !== 'univer' ||
   tailEntry.options.locale !== 'univer' ||
@@ -1786,80 +1789,44 @@ if (q('.uvf_panelPlaceholder') !== null)
 reactRoot.unmount()
 reviewRoot.unmount()
 
-// ---- legacy hosts (≤ 0.1.6-alpha.1): chain turnTail + settings.plugin.item ----
+// ---- DSH 0.1.7 host: settingsScope no longer exists (issue #96) ----
+// Injecting it would pend the client entry and fail the whole web boot, so the
+// client must complete every registration through configForms alone. The
+// turnTail chain fallback above still covers hosts that declare the slot as a
+// chain, independent of which settings API the host exposes.
 {
-  const legacyEntries = []
-  const legacyInjectKeys = []
-  const legacyCtx = {
+  const modern70Entries = []
+  let sawSettingsScopeInjection = false
+  const modern70Ctx = {
     ...fakeCtx,
     inject(services, callback) {
       const key = services.join(',')
-      if (key === 'configForms') return () => {}
-      if (key !== 'settingsScope' && key !== 'betterSidebar' && key !== 'sidebarRightTabs')
-        throw new Error(`unexpected ctx.inject(${JSON.stringify(services)})`)
-      return callback(legacyCtx)
+      if (key === 'settingsScope') {
+        sawSettingsScopeInjection = true
+        throw new Error('client must not inject settingsScope on a DSH 0.1.7 host')
+      }
+      if (key === 'configForms') return callback(fakeCtx)
+      return fakeCtx.inject(services, callback)
     },
     slots: {
       register(options, Component) {
-        // Hosts up to 0.1.6-alpha.1 reject a chain-slot registration without a selector.
-        if (options.name === 'conversation.chat.turnTail' && options.select === undefined)
-          throw new Error('chain slot "conversation.chat.turnTail" requires options.select')
-        legacyEntries.push({ options, Component })
+        modern70Entries.push({ options, Component })
         return () => {}
       },
       inject(key, callback) {
-        legacyInjectKeys.push(key)
-        if (
-          key !== 'conversation.input.dock' &&
-          key !== 'conversation.chat.turnTail' &&
-          key !== 'plugins.bundle.config' &&
-          key !== 'settings.plugin.item' &&
-          key !== 'sidebar.right.pane.tab'
-        )
-          throw new Error(`unexpected slots.inject("${key}")`)
-        return callback()
+        return fakeCtx.slots.inject(key, callback)
       }
     }
   }
-  pluginExports.apply(legacyCtx)
-  const legacyTail = legacyEntries.find(
-    (entry) => entry.options.name === 'conversation.chat.turnTail'
-  )
-  if (
-    legacyTail === undefined ||
-    typeof legacyTail.options.select !== 'function' ||
-    legacyTail.options.priority !== -10 ||
-    'id' in legacyTail.options
-  )
-    throw new Error('legacy hosts must receive the chain-contract turnTail registration')
-  const legacySettings = legacyEntries.find(
-    (entry) => entry.options.name === 'settings.plugin.item'
-  )
-  if (legacySettings === undefined || legacySettings.options.key !== 'univer-office')
-    throw new Error('legacy hosts must receive the settings.plugin.item registration')
-  for (const key of ['plugins.bundle.config', 'settings.plugin.item']) {
-    if (!legacyInjectKeys.includes(key))
-      throw new Error(`legacy host must probe both settings slots: missing ${key}`)
-  }
-  // The chain host passes {...owner, matched}; the component resolves its own
-  // match from the owner turn and must render the same review cards.
-  const legacyRootEl = document.createElement('div')
-  document.body.appendChild(legacyRootEl)
-  const legacyRoot = createRoot(legacyRootEl)
-  legacyRoot.render(
-    React.createElement(legacyTail.Component, {
-      key: 'legacy',
-      ...tailProps,
-      ...ownerProps(3, [turnFile(DEMO_FILE, WORKTREE)]),
-      matched: { turn: 3, files: [turnFile(DEMO_FILE, WORKTREE)] }
-    })
-  )
-  await waitFor(
-    'chain 契约下预览卡片正常渲染',
-    () => legacyRootEl.querySelector('.uvf_panel') !== null
-  )
-  legacyRoot.unmount()
-  legacyRootEl.remove()
+  const before70 = slotEntries.length
+  pluginExports.apply(modern70Ctx)
+  if (sawSettingsScopeInjection)
+    throw new Error('client attempted a settingsScope injection on a DSH 0.1.7 host')
+  const fresh70 = slotEntries.slice(before70)
+  if (!fresh70.some((entry) => entry.options.name === 'plugins.bundle.config'))
+    throw new Error('DSH 0.1.7 host must receive the plugins.bundle.config settings card')
+  if (!modern70Entries.some((entry) => entry.options.name === 'conversation.chat.turnTail'))
+    throw new Error('DSH 0.1.7 host must receive the list-contract turnTail registration')
 }
 
 // ---- on-demand .univer file viewer: click-to-preview with no agent write ----
