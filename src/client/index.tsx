@@ -31,7 +31,7 @@ import { settingsStyles } from './styles/settings.ts'
 import { worktreeStyles } from './styles/worktree.ts'
 import { viewerLocaleOf, type ViewerLocale } from './viewer-locale.ts'
 
-export const inject = ['slots', 'locale', 'conversation']
+export const inject = ['slots', 'locale', 'conversation', 'uiConversation']
 
 interface UiConversationEvents {
   register(definition: ConversationNodeDefinition): () => void

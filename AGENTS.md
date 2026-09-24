@@ -44,6 +44,8 @@ Choose the narrowest validation that proves the change:
 | Gateway, Worker, persistence, worktree lifecycle, Render Machine, or a cross-process protocol | Build every affected application | `pnpm run test:integration`                                     |
 | Cross-layer or release change                                                                 | None separately                  | `pnpm test` (builds every target first)                         |
 
+For DSH compatibility changes, build `lib/` first, then use an independently installed target DSH package: `UNIVER_DSH_RUNTIME_ROOT=/absolute/path/to/dsh pnpm run test:client` checks its Cordis lifecycle, and `UNIVER_DSH_RUNTIME_ROOT=/absolute/path/to/dsh node test/host-settings-profile.mjs` checks real Profile settings in a temporary deployment. The latter checks live updates and persistence across restarts.
+
 Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before every handoff. Report the exact commands that completed successfully.
 
 `pnpm run typecheck` does not cover `src/gateway-app/**`: the root `tsconfig.json` excludes it and `tsconfig.viewer.json` includes only its `contract/`. Gateway type errors therefore surface in the smoke tests rather than in the typecheck, so treat `pnpm run build:gateway` plus `pnpm run test:integration` as the Gateway type gate. A relative import that omits its file extension (`from './univerfile-sqlite'`) resolves at runtime but makes every type it re-exports `any`, which silently disables checking at the call sites; always write the explicit `.ts`/`.js` path this repository otherwise requires.

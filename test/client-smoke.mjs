@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { join, dirname, isAbsolute } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 
@@ -425,7 +425,7 @@ if (localeDicts === null || localeDicts.ns !== 'univer')
   throw new Error('locale dictionaries not registered')
 if (conversationDefinition === null || conversationDefinition.kind !== 'univerTurn')
   throw new Error('Conversation definition not registered')
-if (pluginExports.inject.join(',') !== 'slots,locale,conversation')
+if (pluginExports.inject.join(',') !== 'slots,locale,conversation,uiConversation')
   throw new Error('Client must depend only on Conversation services of the supported DSH line')
 if (
   dockEntry.options.locale !== 'univer' ||
@@ -1966,6 +1966,53 @@ reviewRoot.unmount()
 server.close()
 for (const dispose of settingsEffects.toReversed()) if (typeof dispose === 'function') dispose()
 if (settingsListeners.size !== 0) throw new Error('settings subscriptions survived unload')
+
+// Use Cordis itself to exercise dependency visibility and optional child fibers.
+// Set UNIVER_DSH_RUNTIME_ROOT to a separately installed DSH package directory
+// to run the same lifecycle regression against that release's Cordis.
+const runtimeRequire = process.env.UNIVER_DSH_RUNTIME_ROOT
+  ? createRequire(join(process.env.UNIVER_DSH_RUNTIME_ROOT, 'package.json'))
+  : repoRequire
+const { Context } = await import(pathToFileURL(runtimeRequire.resolve('@deepseek-ai/cordis')).href)
+const context = new Context()
+const liveEntries = new Set()
+const lifecycleSlots = {
+  inject(_name, callback) {
+    return context.effect(callback)
+  },
+  register(options) {
+    liveEntries.add(options)
+    return () => liveEntries.delete(options)
+  }
+}
+try {
+  context.provide('slots', lifecycleSlots)
+  context.provide('locale', fakeCtx.locale)
+  context.provide('conversation', {})
+  const fiber = context.plugin(pluginExports)
+  await fiber
+  if (fiber.state !== 0) throw new Error('Client must wait for uiConversation before activating')
+  context.provide('uiConversation', { events: conversationEventRegistry })
+  await fiber
+  if (fiber.state !== 2)
+    throw new Error('Absent optional services must not block Client activation')
+  if (!Array.from(liveEntries).some((entry) => entry.name === 'conversation.chat.turnTail'))
+    throw new Error('Real Cordis activation must register turn previews')
+  if (settingsListeners.size !== 0) throw new Error('Absent settings must not attach preferences')
+  context.provide(
+    modernSettings ? 'configForms' : 'settingsScope',
+    modernSettings ? fakeCtx.get('configForms') : fakeCtx.settingsScope
+  )
+  await waitFor('late Cordis settings attachment', () => settingsListeners.size === 1)
+  if (settingsListeners.size !== 1) throw new Error('Late settings must attach preferences once')
+  if (!Array.from(liveEntries).some((entry) => entry.name === 'plugins.bundle.config'))
+    throw new Error('Late settings must register the settings card')
+  await fiber.dispose()
+  if (settingsListeners.size !== 0) throw new Error('Real Cordis unload leaked preferences')
+} finally {
+  await context.fiber.dispose()
+}
+if (liveEntries.size !== 0) throw new Error('Real Cordis teardown leaked slot registrations')
 console.log(
   `client smoke OK (uiConversation Conversation API, ${modernSettings ? 'configForms' : 'settingsScope'})`
 )

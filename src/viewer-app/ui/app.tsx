@@ -1,6 +1,7 @@
 import {
   GATEWAY_CAPABILITY_UNIVERFILE_VIEWER,
   WorktreeControlClient,
+  decodeUniverfile,
   fetchGatewayDescriptor,
   type MergePreview,
   type MergePreviewUnitResponse,
@@ -457,7 +458,7 @@ export class App {
   /** Display label for the sidebar header (file name without the .univer suffix). */
   public get univerfileName(): string {
     return (
-      this.cfg.univerfile
+      this.univerfilePath
         .split(/[\\/]/u)
         .pop()
         ?.replace(/\.univer$/iu, '') ?? 'univerfile'
@@ -465,7 +466,14 @@ export class App {
   }
 
   public get univerfilePath(): string {
-    return this.cfg.univerfile
+    if (this.cfg.gatewayFileKey === undefined) return this.cfg.univerfile
+    // Decode only the display label; requests retain the authorized opaque key.
+    try {
+      return decodeUniverfile(this.cfg.gatewayFileKey)
+    } catch {
+      // A malformed deep link still reaches the normal resource error surface.
+      return this.cfg.univerfile
+    }
   }
 
   /** The React content pane binds its host element here; the viewer renders inside it. */

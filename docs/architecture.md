@@ -376,6 +376,8 @@ Client 通过 `univerTurnDefinition` 按 `callId` 配对结构化工具调用与
 
 两条路径互不依赖：没有 `sidebarRightTabs` 时原生注册被跳过，没有 `betterSidebar` 时预览器注册被跳过，两者都不阻塞其余 Client 表面。两条路径共用同一个预览正文组件，因此加载态、Host 明确确认文件不存在、Gateway 未运行、Viewer 目标解析只实现一次。预览器声明 `fetchStrategy: 'none'`，因为 `.univer` 是二进制容器：任何按字节读取的策略都会落到通用下载面板，而 Viewer URL 只能由 Host 授权后投影。它复用回合卡片的同一份 `FileState` 轮询解析 Viewer 目标，以主线 URL 打开完整 Viewer，版本切换与 worktree 审阅统一由 Viewer 管理，外层不再维护版本选择或重复提供切换控件。完整 Viewer 首次打开未指定 worktree 或 Unit 的文件链接时，若主线没有 Unit，则按 worktree 列表顺序进入第一个 draft 或 ready worktree；没有活跃 worktree 时保留空状态，显式目标与 embedded scope 不受此默认导航影响；`useGatewayStatus` 额外暴露 Gateway 阶段，使未运行的 Gateway 变成可操作的启动入口而不是永久加载态。
 
+Client 显式注入 `uiConversation` 后才注册回合定义；旧版 `settingsScope` 与新版 `configForms` 作为可选子 fiber 注入。缺少任一设置服务不得阻塞主 Client 激活，迟加载后订阅偏好，卸载时撤销订阅。
+
 Client 必须满足：
 
 - 会话 ID 与 workspace scope 是所有状态查询的组成部分；
