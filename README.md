@@ -107,7 +107,7 @@ Every content type supports isolated draft editing, side-by-side semantic compar
 
 ### 1. Install the plugin
 
-Supports stable DSH `0.1.x` releases starting with `0.1.5`. Supported prereleases are `0.1.5` starting with `rc.1`, `0.1.6` starting with `alpha.1`, and `0.1.7` starting with `alpha.2`.
+Verified with DSH `0.1.5-rc.3`, `0.1.7-alpha.2`, and `0.1.7-rc.1`.
 
 If DSH is running, first press **Ctrl+C** in the terminal that started it. You can run the installation command while DSH is running, but the current DSH process will not load the new plugin automatically.
 
