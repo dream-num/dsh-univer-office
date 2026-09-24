@@ -665,11 +665,10 @@ async function handleWorktrees(
         error: { code: data.error === undefined ? 1 : 0, message: data.error ?? '' },
         type: data.type,
         snapshot: encodeSnapshotForWire(data.snapshot),
-        ...(data.sheetBlocks === undefined ? {} : { sheetBlocks: data.sheetBlocks }),
-        changesets: data.changesets
+        ...(data.sheetBlocks === undefined ? {} : { sheetBlocks: data.sheetBlocks })
       })
     } catch (error) {
-      sendJson(res, 200, { error: toErrorDetail(error), changesets: [] })
+      sendJson(res, 200, { error: toErrorDetail(error) })
     }
     return
   }

@@ -55,7 +55,6 @@ export interface MergePreviewUnitData {
   type: number
   snapshot?: ISnapshot
   sheetBlocks?: IDeserializedSheetBlock[]
-  changesets: IChangeset[]
   error?: string
 }
 

@@ -311,7 +311,9 @@ Gateway 还为 trunk revision 组合 Collaboration SDK History Service 与 Endpo
 
 worktree Compare 由 Gateway 创建有界的固定比较会话：右侧始终是路由指定的 draft 或 ready worktree，左侧默认是 trunk，也可选择同一文件中的另一个活跃 worktree。会话在创建时固定两侧 Unit heads，并为每个 Unit 记录 paired、left-only 或 right-only；后续读取只从这些固定 revision 物化最终 snapshot 与 changeset，不随 live head 漂移。Gateway 使用同版本 Univer Pro History 计算产品语义差异，并通过 `/diff` 返回带版本号、分页、筛选、稳定实体身份与产品定位信息的 JSON；新增或删除的整 Unit 使用镜像空侧的 snapshot 比较。任一 live head 变化只把结果标记为 stale，Viewer 必须由用户显式刷新以创建新会话。
 
-它不得复用或终止外部启动的 Gateway。内置 Gateway 默认从 `9080` 启动，端口被占用时逐次加一；只有结构化确认端口占用时才能继续尝试下一端口，其他启动失败必须立即返回。健康检查需要验证 Viewer 身份，不能把任意返回 HTTP 200 的本地服务误认为 Gateway。
+merge preview 的 Unit 读取由 Gateway 使用 Collaboration SDK `UnitSnapshotMaterializer` 将 worktree 的 snapshot、Sheet blocks 和 confirmed changesets 物化到目标 revision。HTTP 返回完整 snapshot；物化结果中的 Sheet blocks 一并返回，Sheet 与 Base 会带上，Doc、Slide、Board 省略。Viewer 只还原引擎数据，并在 Sheet 加载后计算公式。计算超时或触发失败时仍展示已物化的 snapshot，不解析或重放协同 mutation。
+
+插件启动的内置 Gateway 不得复用或终止外部启动的 Gateway。它默认从 `9080` 启动，端口被占用时逐次加一；只有结构化确认端口占用时才能继续尝试下一端口，其他启动失败必须立即返回。健康检查需要验证 Viewer 身份，不能把任意返回 HTTP 200 的本地服务误认为 Gateway。
 
 ## 8. webServer Consumer 与浏览器协议
 

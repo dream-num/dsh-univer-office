@@ -62,6 +62,7 @@ import {
   type UnitType
 } from '@univer/collab-gateway-contract'
 import { isProxyServedViewer, resolveWebSocketUrl } from './config'
+import { startPreviewSheetFormulaCalculation } from './preview-formula'
 import {
   blockLocalEditingCommands,
   enforceSheetViewerReadOnlyPermissions,
@@ -310,8 +311,6 @@ export interface PreviewViewerOptions {
   snapshot: unknown
   /** Deserialized sheet/base blocks; fed to the collaboration snapshot transformers. */
   sheetBlocks?: unknown[]
-  /** Protocol changesets ({ mutations: { id, data }[] }) to replay on top of the snapshot. */
-  changesets: unknown[]
   /** Which language the Univer UI renders in; see {@link ViewerOptions.locale}. */
   locale: LocaleType
   /** Initial Univer appearance. Later changes use ViewerHandle.setDarkMode without rebuilding. */
@@ -320,10 +319,10 @@ export interface PreviewViewerOptions {
 
 /**
  * Mount a read-only Univer that renders a worktree's merge preview for one unit, with NO
- * collaboration / network / socket plugins. The gateway computed the merged result as
- * snapshot + changesets (the same data a fresh client would load after the merge actually lands);
- * here we rebuild engine data from the snapshot (sheet also needs its sheet blocks), replay the
- * changesets' mutations locally, then lock editing. Disposable and non-collaborative: it never
+ * collaboration / network / socket plugins. The gateway materializes the target revision as a
+ * complete snapshot. Here we rebuild engine data from it (Sheet and Base also need their
+ * sheet blocks), then lock editing. Sheet formula calculation is best-effort: a timeout or a
+ * trigger failure still leaves the snapshot mounted. Disposable and non-collaborative: it never
  * opens comb and never writes back. Switching unit/worktree is done by disposing and recreating.
  */
 export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<ViewerHandle> {
@@ -384,13 +383,19 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
     throw new Error(`Unsupported preview unit type: ${String(opts.unitType)}`)
   }
 
-  // Replay the merged changesets' mutations onto the freshly-built model — no undo, local only.
   const commandService = univer.__getInjector().get(ICommandService)
-  for (const cs of opts.changesets as Array<{ mutations?: Array<{ id: string; data: string }> }>) {
-    for (const m of cs.mutations ?? []) {
-      const params = (typeof m.data === 'string' ? JSON.parse(m.data) : m.data) as object
-      commandService.syncExecuteCommand(m.id, params, { onlyLocal: true })
-    }
+  if (opts.unitType === UNIT_TYPE_SHEET) {
+    // The snapshot carries formulas but may not carry their calculated results.
+    const sessions = univer.__getInjector().get(FormulaCalculationSessionService)
+    await startPreviewSheetFormulaCalculation(
+      () =>
+        commandService.executeCommand(
+          SetTriggerFormulaCalculationStartMutation.id,
+          { commands: [], forceCalculation: true },
+          { onlyLocal: true }
+        ),
+      () => sessions.waitForLatestApplied(15_000)
+    )
   }
 
   if (opts.unitType === UNIT_TYPE_SLIDE && slidePageSize !== undefined) {

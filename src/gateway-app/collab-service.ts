@@ -28,9 +28,9 @@ import type {
   IDeserializedSheetBlock,
   ISheetBlock,
   IMutation,
-  ISnapshot
+  ISnapshot,
+  UniverType
 } from '@univerjs/protocol'
-import { UniverType } from '@univerjs/protocol'
 import type { Duplex } from 'node:stream'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type {
@@ -755,30 +755,28 @@ export class CollabService {
       if (deleted) {
         return {
           type: deleted.type,
-          changesets: [],
           error: `Unit ${unitId} is deleted in Worktree ${worktreeId}`
         }
       }
       throw new Error(`Unit ${unitId} is not part of Worktree ${worktreeId}`)
     }
-    const result = await this.runtime.worktreeService.getUnitLoadData(
-      {
-        worktreeID: worktreeId,
-        unitID: unitId,
-        type: unit.type,
-        revision: 0
-      },
-      callOptions('local')
+    const loadData = await this._getWorktreeLoadDataWithBlocks(
+      worktreeId,
+      unitId,
+      unit.type,
+      unit.headRev
     )
-    const sheetBlocks =
-      unit.type === UniverType.UNIVER_SHEET
-        ? await this._readWorktreeSheetBlocks(worktreeId, unitId, unit.type, result.snapshot)
-        : undefined
-    return {
-      type: unit.type,
-      snapshot: result.snapshot,
-      ...(sheetBlocks === undefined ? {} : { sheetBlocks }),
-      changesets: [...result.changesets]
+    const materializer = new UnitSnapshotMaterializer()
+    try {
+      const materialized = await materializer.materializeSnapshot(loadData)
+      const sheetBlocks = deserializeSheetBlocks(materialized.sheetBlocks)
+      return {
+        type: unit.type,
+        snapshot: materialized.snapshot,
+        ...(sheetBlocks === undefined ? {} : { sheetBlocks })
+      }
+    } finally {
+      await materializer.dispose()
     }
   }
 
@@ -972,20 +970,12 @@ export class CollabService {
     const materializer = new UnitSnapshotMaterializer()
     try {
       const materialized = await materializer.materializeSnapshot(loadData)
+      const sheetBlocks = deserializeSheetBlocks(materialized.sheetBlocks)
       return {
         present: true,
         revision: unit.revision,
         snapshot: materialized.snapshot,
-        ...(materialized.sheetBlocks.length === 0
-          ? {}
-          : {
-              sheetBlocks: materialized.sheetBlocks.map((block) => ({
-                id: block.id,
-                startRow: block.startRow,
-                endRow: block.endRow,
-                data: JSON.parse(new TextDecoder().decode(block.data)) as object
-              }))
-            })
+        ...(sheetBlocks === undefined ? {} : { sheetBlocks })
       }
     } finally {
       await materializer.dispose()
@@ -1178,21 +1168,6 @@ export class CollabService {
     })
   }
 
-  private async _readWorktreeSheetBlocks(
-    worktreeId: string,
-    unitId: string,
-    type: UniverType,
-    snapshot: ISnapshot
-  ): Promise<IDeserializedSheetBlock[]> {
-    const blocks = await this._readWorktreeSerializedSheetBlocks(worktreeId, unitId, type, snapshot)
-    return blocks.map((block) => ({
-      id: block.id,
-      startRow: block.startRow,
-      endRow: block.endRow,
-      data: JSON.parse(new TextDecoder().decode(block.data)) as object
-    }))
-  }
-
   private async _readWorktreeSerializedSheetBlocks(
     worktreeId: string,
     unitId: string,
@@ -1367,6 +1342,18 @@ class WorktreeCatalogCompatibility {
       .find((worktree) => worktree.worktreeId === worktreeId)
     return row ? toWorktreeRecord(row) : undefined
   }
+}
+
+function deserializeSheetBlocks(
+  blocks: readonly ISheetBlock[]
+): IDeserializedSheetBlock[] | undefined {
+  if (blocks.length === 0) return undefined
+  return blocks.map((block) => ({
+    id: block.id,
+    startRow: block.startRow,
+    endRow: block.endRow,
+    data: JSON.parse(new TextDecoder().decode(block.data)) as object
+  }))
 }
 
 function callOptions(

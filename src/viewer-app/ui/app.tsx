@@ -165,7 +165,7 @@ class ViewerController {
   }
 
   /**
-   * Read-only merge-preview render of one unit, from the gateway's computed `{snapshot, changesets}`
+   * Read-only merge-preview render of one unit, from the gateway's materialized snapshot
    * (no collaboration). Always rebuilds: preview data is re-fetched on unit switch and recompute.
    */
   public async showPreview(
@@ -266,7 +266,6 @@ class ViewerController {
           unitType: job.unit.type,
           snapshot: job.data.snapshot,
           ...(job.data.sheetBlocks === undefined ? {} : { sheetBlocks: job.data.sheetBlocks }),
-          changesets: job.data.changesets,
           locale: this.getLocale(),
           darkMode: this.getDarkMode()
         })

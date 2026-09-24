@@ -1177,6 +1177,29 @@ try {
   if (comparisonEdit.result?.committed !== true || comparisonEdit.result?.value !== 'compared') {
     throw new Error(`comparison edit failed: ${JSON.stringify(comparisonEdit)}`)
   }
+  await assertMaterializedPreview(origin, gatewayKey, comparisonWorktreeId, unitId, {
+    label: 'Sheet merge preview',
+    blocks: 'required',
+    text: 'worktree diff'
+  })
+  const baseEdit = await service.executeUnitContent({
+    ...scoped,
+    worktreeId: comparisonWorktreeId,
+    unitId: baseUnitId,
+    code: 'const table = base.getTableById("table-1"); if (!table) throw new Error("missing table"); const records = table.addRecords([{ values: { [table.getPrimaryFieldId()]: "preview record" } }]); return records.length;'
+  })
+  if (baseEdit.result?.committed !== true || baseEdit.result?.value !== 1) {
+    throw new Error(`base preview edit failed: ${JSON.stringify(baseEdit)}`)
+  }
+  await assertMaterializedPreview(origin, gatewayKey, comparisonWorktreeId, baseUnitId, {
+    label: 'Base merge preview',
+    blocks: 'required',
+    text: 'preview record'
+  })
+  await assertMaterializedPreview(origin, gatewayKey, comparisonWorktreeId, docUnitId, {
+    label: 'Doc merge preview',
+    blocks: 'absent'
+  })
   const pinnedComparison = await verifyWorktreeComparison(
     origin,
     gatewayKey,
@@ -1498,6 +1521,40 @@ async function fetchHistoryChangesets(exchangeBase, unitId, startRevision, endRe
   )
   if (!response.ok) throw new Error(`History changeset request failed: ${await response.text()}`)
   return response.json()
+}
+
+async function assertMaterializedPreview(origin, gatewayKey, worktreeId, unitId, expectation) {
+  const response = await fetch(
+    `${origin}/uf/${gatewayKey}/worktrees/${encodeURIComponent(worktreeId)}/preview/units/${encodeURIComponent(unitId)}`
+  )
+  const preview = await response.json()
+  const referenced = referencedSheetBlockIds(preview.snapshot)
+  const returned = new Set(
+    Array.isArray(preview.sheetBlocks) ? preview.sheetBlocks.map((block) => block?.id) : []
+  )
+  const missing = referenced.filter((id) => !returned.has(id))
+  const blocks = preview.sheetBlocks
+  if (
+    preview.error?.code !== 1 ||
+    preview.snapshot?.unitID !== unitId ||
+    'changesets' in preview ||
+    missing.length > 0 ||
+    (expectation.blocks === 'required' && (!Array.isArray(blocks) || blocks.length === 0)) ||
+    (expectation.blocks === 'absent' && blocks !== undefined) ||
+    (expectation.text !== undefined && !JSON.stringify(blocks).includes(expectation.text))
+  ) {
+    throw new Error(
+      `${expectation.label} did not return the materialized head: ${JSON.stringify(preview)}`
+    )
+  }
+}
+
+function referencedSheetBlockIds(snapshot) {
+  const blockMeta = snapshot?.workbook?.blockMeta
+  if (blockMeta === null || typeof blockMeta !== 'object') return []
+  return Object.values(blockMeta).flatMap((meta) =>
+    Array.isArray(meta?.blocks) ? meta.blocks : []
+  )
 }
 
 async function verifyWorktreeComparison(viewerOrigin, gatewayKey, worktreeId, unitId) {

@@ -232,17 +232,16 @@ export interface MergePreviewResponse extends ErrorEnvelope, MergePreview {}
 
 /**
  * 单个 unit 的合并预览渲染数据(`GET /uf/<enc>/worktrees/<id>/preview/units/<unitId>`)。
- * snapshot / changesets / sheetBlocks 在契约里保持不透明(协议形态);只有 sheet 带 sheetBlocks。
- * 客户端按类型用反向 transform 还原引擎数据并回放 changesets,只读渲染。
+ * Gateway 物化到目标 revision 后返回完整 snapshot。物化结果中的 Sheet blocks 一并返回
+ * (Sheet 与 Base)；Doc、Slide、Board 省略。
+ * 客户端按类型用反向 transform 还原引擎数据，只读渲染。
  */
 export interface MergePreviewUnitResponse extends ErrorEnvelope {
   type: UnitType
-  /** 渲染基准 snapshot(协议 ISnapshot);冲突单元为最新版本 snapshot。 */
+  /** 目标 revision 的完整 snapshot(协议 ISnapshot)。 */
   snapshot?: unknown
-  /** sheet 的 sheet blocks(内联);doc/slide 省略。 */
+  /** Sheet / Base 的 sheet blocks(内联)；没有 block 的 Unit 省略。 */
   sheetBlocks?: unknown[]
-  /** 叠加在 snapshot 上的 changesets(协议形态);冲突单元仅含最新版本到 head 的部分。 */
-  changesets: unknown[]
 }
 
 // ---- pinned Unit comparison (worktree-diff) ----

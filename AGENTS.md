@@ -40,7 +40,7 @@ Choose the narrowest validation that proves the change:
 | DSH Client                                                                                    | `pnpm run build:lib`             | `pnpm run test:client`                                          |
 | Bundled skills                                                                                | None                             | `pnpm run test:skills`                                          |
 | Product telemetry or lifecycle packaging                                                      | `pnpm run build:lib`             | `pnpm run test:telemetry`                                       |
-| Viewer UI                                                                                     | `pnpm run build:viewer`          | Add `test:integration` when behavior crosses a process boundary |
+| Viewer UI                                                                                     | `pnpm run build:viewer`          | `pnpm run test:preview-formula`; add `test:integration` when behavior crosses a process boundary |
 | Gateway, Worker, persistence, worktree lifecycle, Render Machine, or a cross-process protocol | Build every affected application | `pnpm run test:integration`                                     |
 | Cross-layer or release change                                                                 | None separately                  | `pnpm test` (builds every target first)                         |
 

@@ -125,7 +125,7 @@ export class WorktreeControlClient {
     return this.getJson<MergePreviewResponse>(`${this.base}/worktrees/${worktreeId}/preview`)
   }
 
-  /** 单个 unit 的只读合并预览渲染数据(snapshot + changesets,sheet 含 sheetBlocks)。 */
+  /** 单个 unit 的只读合并预览渲染数据(完整 snapshot，Sheet 与 Base 含 sheetBlocks)。 */
   public getMergePreviewUnit(
     worktreeId: string,
     unitId: string
