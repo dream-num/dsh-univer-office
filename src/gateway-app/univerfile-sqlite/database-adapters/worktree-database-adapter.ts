@@ -27,8 +27,6 @@ import type {
 } from '@univerjs-pro/collaboration-worktree-service'
 import { UniverType, type IChangeset } from '@univerjs/protocol'
 import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
-import { currentUnixSeconds } from './collaboration-database-adapter.ts'
-
 const SCHEMA_COMPONENT = 'worktree'
 const SCHEMA_VERSION = 3
 const TABLE_NAMES = [
@@ -564,8 +562,11 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
     validateSubmissionIdentity(input.changeset)
     return this._transaction(() => {
       const { worktreeID } = input
-      const createTime = currentUnixSeconds()
-      const changeset: IChangeset = { ...input.changeset, createTime }
+      const createdAt = Date.now()
+      const changeset: IChangeset = {
+        ...input.changeset,
+        createTime: Math.floor(createdAt / 1000)
+      }
       const worktree = this._getWorktreeRow(worktreeID)
       const unit = this._getUnitRow(worktreeID, changeset.unitID)
       if (!worktree || !unit) return { status: 'not-found' }
@@ -599,7 +600,7 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
           changeset.sid as string,
           changeset.reqId as number,
           encode(changeset),
-          createTime * 1000
+          createdAt
         )
       const update = this._database
         .prepare(
@@ -1370,7 +1371,7 @@ function validateUnitIdentity(unit: WorktreeUnitRecord): void {
   }
 }
 
-/** `created_at_ms` repeats the payload `createTime` in Unix milliseconds, as the SDK schema does. */
+/** `created_at_ms` stores the commit time in Unix milliseconds; payload `createTime` is its whole seconds. */
 export function worktreeChangesetsTableSql(tableName: string): string {
   return `CREATE TABLE ${tableName} (
           worktree_id TEXT NOT NULL,
