@@ -1770,6 +1770,21 @@ async function verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey,
     await page.click(compareToggle)
     await page.waitForSelector('[data-unit-comparison-viewer="true"]')
     await page.waitForSelector('[data-testid="comparison-source-title"]')
+    // Scroll sync can run after the comparison shell mounts, once a pane viewport scrolls
+    // and the peer sheet has not reached Rendered yet. Stay past that window.
+    await new Promise((resolve) => setTimeout(resolve, 1_500))
+    const survivor = await page.evaluate(() => ({
+      appChildren: document.getElementById('app')?.childElementCount ?? 0,
+      comparison: document.querySelector('[data-unit-comparison-viewer="true"]') !== null
+    }))
+    const scrollCrash = browserMessages.find(
+      (message) => message.startsWith('pageerror:') && message.includes('[redi]:')
+    )
+    if (survivor.appChildren === 0 || !survivor.comparison || scrollCrash !== undefined) {
+      throw new Error(
+        `Compare cleared the viewer: ${JSON.stringify(survivor)}; crash=${String(scrollCrash)}`
+      )
+    }
   } catch (error) {
     const state = await page.evaluate(() => ({
       bodyText: document.body.innerText.slice(0, 2_000),

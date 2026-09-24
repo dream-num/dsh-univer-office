@@ -22,6 +22,7 @@ import { FWorkbook, type FWorksheet } from '@univerjs/sheets/facade'
 import {
   ISheetSelectionRenderService,
   SetScrollOperation,
+  SheetScrollManagerService,
   SheetSkeletonManagerService
 } from '@univerjs/sheets-ui'
 import { useUnitComparisonViewerMessages } from '../i18n/messages.js'
@@ -91,8 +92,8 @@ export function ReadonlyUniverWorkbookView(input: {
     selectedKindRef.current = input.selectedKind ?? null
     selectedRangeRef.current = input.selectedRange ?? null
     activeSheetIdRef.current = input.activeSheetId ?? null
-  // The viewport subscription outlives worksheet changes; use the current sheet's callback.
-  onScrollChangeRef.current = input.onScrollChange
+    // The viewport subscription outlives worksheet changes; use the current sheet's callback.
+    onScrollChangeRef.current = input.onScrollChange
     gapConfigRef.current = input.gapConfig ?? null
     highlightsRef.current = input.highlights ?? []
   }, [
@@ -462,13 +463,33 @@ export function ReadonlyUniverWorkbookView(input: {
   }, [input.controlledSelection])
 
   useEffect(() => {
-    applyControlledScroll({
-      controlledScroll: input.controlledScroll ?? null,
-      currentWorkbookId: currentWorkbookIdRef.current,
-      lastAppliedScrollKeyRef,
-      lastEmittedScrollKeyRef,
-      univer: univerRef.current
-    })
+    let animationFrameId: number | null = null
+    let disposed = false
+    const attempt = (remainingFrames: number): void => {
+      if (disposed) return
+      if (
+        applyControlledScroll({
+          controlledScroll: input.controlledScroll ?? null,
+          currentWorkbookId: currentWorkbookIdRef.current,
+          lastAppliedScrollKeyRef,
+          lastEmittedScrollKeyRef,
+          univer: univerRef.current
+        }) ||
+        remainingFrames <= 0
+      ) {
+        return
+      }
+      // The peer pane can emit a scroll while this pane's render unit exists but
+      // SheetScrollManagerService is still waiting for the Rendered lifecycle.
+      animationFrameId = requestAnimationFrame(() => {
+        attempt(remainingFrames - 1)
+      })
+    }
+    attempt(90)
+    return () => {
+      disposed = true
+      if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
+    }
   }, [input.controlledScroll])
 
   if (renderError !== null) {
@@ -682,23 +703,23 @@ function applyControlledSelection(input: {
   }
 }
 
-function applyControlledScroll(input: {
+export function applyControlledScroll(input: {
   controlledScroll: ReadonlyWorkbookControlledScroll | null
   currentWorkbookId: string | null
   lastAppliedScrollKeyRef: MutableRefObject<string | null>
   lastEmittedScrollKeyRef: MutableRefObject<string | null>
   univer: Univer | null
-}): void {
+}): boolean {
   const scroll = input.controlledScroll
-  if (input.univer === null || input.currentWorkbookId === null || scroll === null) {
-    return
-  }
+  if (scroll === null) return true
+  if (input.univer === null || input.currentWorkbookId === null) return false
   if (
     input.lastAppliedScrollKeyRef.current === scroll.key ||
     input.lastEmittedScrollKeyRef.current === scroll.key
   ) {
-    return
+    return true
   }
+  if (!hasSheetScrollManager(input.univer, input.currentWorkbookId)) return false
 
   const commandService = input.univer.__getInjector().get(ICommandService)
   input.lastAppliedScrollKeyRef.current = scroll.key
@@ -710,6 +731,19 @@ function applyControlledScroll(input: {
     sheetViewStartColumn: scroll.sheetViewStartColumn,
     sheetViewStartRow: scroll.sheetViewStartRow
   })
+  return true
+}
+
+function hasSheetScrollManager(univer: Univer, workbookId: string): boolean {
+  const renderUnit = univer.__getInjector().get(IRenderManagerService).getRenderUnitById(workbookId)
+  if (renderUnit == null) return false
+  try {
+    // Desktop sheet UI registers SheetScrollManagerService at Rendered. Before that, `.with`
+    // throws even though the render unit and viewport already exist.
+    return renderUnit.with(SheetScrollManagerService) != null
+  } catch {
+    return false
+  }
 }
 
 function attachReadonlyPaneEvents(input: {
