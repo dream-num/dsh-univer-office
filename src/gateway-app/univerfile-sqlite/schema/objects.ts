@@ -36,7 +36,7 @@ export const HISTORY_V1_TABLES = ['collaboration_history_revisions'] as const
 /** History v2 keeps one row per segment start instead of one row per revision. */
 export const HISTORY_V2_TABLES = ['collaboration_history_records'] as const
 
-export const CURRENT_V2_TABLES = [
+export const CURRENT_V3_TABLES = [
   'collaboration_schema_versions',
   ...CORE_V1_TABLES,
   ...WORKTREE_COMMON_TABLES,
@@ -44,7 +44,7 @@ export const CURRENT_V2_TABLES = [
   ...HISTORY_V2_TABLES
 ] as const
 
-export const CURRENT_V2_INDEXES = [
+export const CURRENT_V3_INDEXES = [
   'collaboration_snapshots_nearest_revision',
   'collaboration_changesets_revision_range',
   'collaboration_worktree_changesets_revision',

@@ -526,7 +526,7 @@ export class CollabService {
           this._externalizeImages(params, unitId, worktreeId)
         )
       ),
-      createTime: Date.now()
+      createTime: Math.floor(Date.now() / 1000)
     }
     const result = await this.runtime.worktreeService.submitChangeset(
       { worktreeID: worktreeId, changeset },

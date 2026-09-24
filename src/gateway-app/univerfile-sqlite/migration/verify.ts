@@ -20,14 +20,14 @@ export interface UniverfileVerification {
   readonly assets: number
 }
 
-export function verifyV2Candidate(filename: string): UniverfileVerification {
+export function verifyV3Candidate(filename: string): UniverfileVerification {
   let connection: UniverfileSQLiteConnection | undefined
   let trunk: UniverfileSQLiteDatabaseAdapter | undefined
   let worktrees: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
   let history: UniverfileSQLiteHistoryDatabaseAdapter | undefined
   try {
-    if (detectUniverfileSQLiteFormat(filename) !== 'v2') {
-      throw new Error('candidate did not identify as v2')
+    if (detectUniverfileSQLiteFormat(filename) !== 'v3') {
+      throw new Error('candidate did not identify as v3')
     }
     connection = new UniverfileSQLiteConnection({ filename })
     const integrityRow = connection.database.prepare('PRAGMA integrity_check').get() as
@@ -74,7 +74,7 @@ export function verifyV2Candidate(filename: string): UniverfileVerification {
   } catch (error) {
     throw new UniverfileSQLiteError(
       'VERIFICATION_FAILED',
-      `v2 candidate verification failed: ${error instanceof Error ? error.message : String(error)}`,
+      `v3 candidate verification failed: ${error instanceof Error ? error.message : String(error)}`,
       { cause: error }
     )
   } finally {

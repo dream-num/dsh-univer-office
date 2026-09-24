@@ -1,6 +1,6 @@
 import type Database from 'libsql'
 import { runUniverfileSQLiteTransaction } from '../connection.js'
-import { CURRENT_V2_INDEXES, CURRENT_V2_TABLES } from '../schema/objects.js'
+import { CURRENT_V3_INDEXES, CURRENT_V3_TABLES } from '../schema/objects.js'
 
 interface SchemaObjectRow {
   readonly name: string
@@ -8,8 +8,8 @@ interface SchemaObjectRow {
   readonly type: 'index' | 'table' | 'trigger' | 'view'
 }
 
-const CURRENT_TABLES = new Set<string>(CURRENT_V2_TABLES)
-const CURRENT_INDEXES = new Set<string>(CURRENT_V2_INDEXES)
+const CURRENT_TABLES = new Set<string>(CURRENT_V3_TABLES)
+const CURRENT_INDEXES = new Set<string>(CURRENT_V3_INDEXES)
 
 /**
  * Removes source-only SQLite objects after their supported content has been migrated.
@@ -18,7 +18,7 @@ const CURRENT_INDEXES = new Set<string>(CURRENT_V2_INDEXES)
  * the current owned schema so retired caches and unrelated application tables cannot influence a
  * later format detection or adapter initialization.
  */
-export function pruneCandidateToCurrentV2Schema(database: Database.Database): void {
+export function pruneCandidateToCurrentV3Schema(database: Database.Database): void {
   const objects = database
     .prepare(
       `SELECT type, name, sql

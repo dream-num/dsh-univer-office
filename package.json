@@ -78,6 +78,7 @@
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.client.json && tsc --project tsconfig.viewer.json --noEmit && tsc --project tsconfig.render.json --noEmit",
+    "test:migration": "node test/univerfile-migration.mjs",
     "test:integration": "node test/integration-smoke.mjs",
     "test:host": "node test/host-smoke.mjs",
     "test:client": "node test/client-smoke.mjs",
@@ -85,7 +86,7 @@
     "test:comparison": "pnpm --filter @univer/unit-comparison-viewer test",
     "test:skills": "node test/skills-smoke.mjs",
     "test:telemetry": "node test/telemetry-smoke.mjs",
-    "test": "pnpm run build && pnpm run test:host && pnpm run test:integration && pnpm run test:client && pnpm run test:client:layout && pnpm run test:comparison && pnpm run test:skills && pnpm run test:telemetry",
+    "test": "pnpm run build && pnpm run test:host && pnpm run test:migration && pnpm run test:integration && pnpm run test:client && pnpm run test:client:layout && pnpm run test:comparison && pnpm run test:skills && pnpm run test:telemetry",
     "verify:public-dependencies": "node scripts/verify-public-runtime-dependencies.mjs",
     "prepublishOnly": "pnpm run build && pnpm run test"
   },

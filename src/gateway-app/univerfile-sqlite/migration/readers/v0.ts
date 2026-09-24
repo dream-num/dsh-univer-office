@@ -7,7 +7,7 @@ import {
 } from '../../connection.js'
 import { UniverfileSQLiteDatabaseAdapter } from '../../database-adapters/collaboration-database-adapter.js'
 import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../../database-adapters/worktree-database-adapter.js'
-import { ANONYMOUS_CREATOR_ID, toUnixMilliseconds } from '../../legacy-creation.js'
+import { ANONYMOUS_CREATOR_ID, toUnixMilliseconds } from '../legacy-creation.ts'
 
 const LEGACY_PREFIX = '__collaboration_migration_v0_'
 const BINARY_TAG = '__univerCollaborationBinary'
@@ -168,7 +168,7 @@ export type V0CandidateMigrationResult =
  * copying, deleting or replacing the database file. This also avoids libsql's nondeterministic
  * same-process file-handle release on Windows.
  */
-export function migrateV0CandidateToV2(
+export function migrateV0CandidateToV3(
   connection: UniverfileSQLiteConnection
 ): V0CandidateMigrationResult {
   const { database, filename } = connection
@@ -189,10 +189,10 @@ export function migrateV0CandidateToV2(
 
     runUniverfileSQLiteTransaction(database, () => {
       renameLegacyTables(database)
-      initializeDatabaseV2(filename, connection)
+      initializeDatabaseV3(filename, connection)
       migrateTrunk(database)
       migrateWorktrees(database)
-      validateDatabaseV2(filename, connection)
+      validateDatabaseV3(filename, connection)
       for (const tableName of [...legacyTableNames()].reverse()) {
         database.exec(`DROP TABLE ${legacyTable(tableName)};`)
       }
@@ -245,7 +245,7 @@ function renameLegacyTables(database: Database.Database): void {
   }
 }
 
-function initializeDatabaseV2(filename: string, connection: UniverfileSQLiteConnection): void {
+function initializeDatabaseV3(filename: string, connection: UniverfileSQLiteConnection): void {
   const trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection })
   let worktree: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
   try {
@@ -1007,7 +1007,7 @@ function countMergingWorktrees(database: Database.Database, table: string): numb
   return Number(row.count)
 }
 
-function validateDatabaseV2(filename: string, connection: UniverfileSQLiteConnection): void {
+function validateDatabaseV3(filename: string, connection: UniverfileSQLiteConnection): void {
   let trunk: UniverfileSQLiteDatabaseAdapter | undefined
   let worktree: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
   try {

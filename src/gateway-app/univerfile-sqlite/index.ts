@@ -15,16 +15,6 @@ export type {
   UpgradeUniverfileSQLiteOptions
 } from './migration/upgrade.js'
 export {
-  CURRENT_COMPONENT_VERSIONS,
-  hasPendingComponentMigrations,
-  migrateUniverfileComponentSchemas,
-  readUniverfileComponentVersions
-} from './migration/component-schemas.js'
-export type {
-  ComponentSchemaMigration,
-  UniverfileComponent
-} from './migration/component-schemas.js'
-export {
   UNIVERFILE_UNIT_METADATA_KEY,
   UniverfileSQLiteDatabaseAdapter
 } from './database-adapters/collaboration-database-adapter.js'

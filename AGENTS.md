@@ -48,6 +48,8 @@ Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before ev
 
 `pnpm run typecheck` does not cover `src/gateway-app/**`: the root `tsconfig.json` excludes it and `tsconfig.viewer.json` includes only its `contract/`. Gateway type errors therefore surface in the smoke tests rather than in the typecheck, so treat `pnpm run build:gateway` plus `pnpm run test:integration` as the Gateway type gate. A relative import that omits its file extension (`from './univerfile-sqlite'`) resolves at runtime but makes every type it re-exports `any`, which silently disables checking at the call sites; always write the explicit `.ts`/`.js` path this repository otherwise requires.
 
+For `.univer` schema or migration changes, also run `pnpm run test:migration`. This source-level regression suite checks legacy files, atomic replacement, failure cleanup, concurrent opens, optimization, and History readback.
+
 For review-panel layout changes, also run `pnpm run test:client:layout`. This source-level browser test uses the installed render browser to check containment, fullscreen, iframe continuity, and cleanup; it supplements the built Client smoke test.
 
 ## 3. Architecture and Cordis boundaries

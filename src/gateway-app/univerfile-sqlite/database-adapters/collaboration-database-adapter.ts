@@ -17,14 +17,15 @@ import {
 } from '@univerjs-pro/collaboration-service'
 import type { IChangeset, ISheetBlock, ISnapshot, UniverType } from '@univerjs/protocol'
 import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.js'
-import { ANONYMOUS_CREATOR_ID, toUnixMilliseconds } from '../legacy-creation.js'
+import {
+  coreUnitsTableDdl,
+  coreChangesetsTableDdl,
+  CORE_CHANGESETS_REVISION_INDEX_DDL
+} from '../schema/core.ts'
 
 const BINARY_TAG = '__univerCollaborationBinary'
 const CORE_SCHEMA_COMPONENT = 'core'
 const CORE_SCHEMA_VERSION = 2
-/** Scratch tables for the v1 → v2 rebuild; they exist only inside the migration transaction. */
-const CORE_UNITS_REBUILD_TABLE = 'collaboration_units_migrating_v2'
-const CORE_CHANGESETS_REBUILD_TABLE = 'collaboration_changesets_migrating_v2'
 const CORE_TABLE_NAMES = [
   'collaboration_units',
   'collaboration_unit_tombstones',
@@ -43,42 +44,6 @@ const PRE_DATABASE_V1_TABLE_NAMES = [
   'worktree_changesets',
   'worktree_snapshots'
 ] as const
-
-/**
- * Core v2 DDL shared by `_initializeSchema` and the v1 → v2 migration: the rebuild reuses these
- * definitions so an upgraded database exposes exactly the schema a freshly created one does.
- */
-function coreUnitsTableDdl(tableName: string): string {
-  return `CREATE TABLE ${tableName} (
-    unit_id TEXT PRIMARY KEY,
-    type INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    head_revision INTEGER NOT NULL CHECK (head_revision >= 1),
-    creator_id TEXT NOT NULL,
-    created_at_ms INTEGER NOT NULL,
-    soft_deleted_at_ms INTEGER
-  );`
-}
-
-function coreChangesetsTableDdl(tableName: string): string {
-  return `CREATE TABLE ${tableName} (
-    unit_id TEXT NOT NULL,
-    revision INTEGER NOT NULL CHECK (revision >= 2),
-    base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
-    sid TEXT NOT NULL,
-    req_id INTEGER NOT NULL CHECK (req_id >= 1),
-    payload_json TEXT NOT NULL,
-    created_at_ms INTEGER NOT NULL,
-    PRIMARY KEY (unit_id, revision),
-    UNIQUE (unit_id, sid, req_id),
-    FOREIGN KEY (unit_id)
-      REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
-  );`
-}
-
-/** Dropped with `collaboration_changesets`, so the rebuild has to recreate it. */
-const CORE_CHANGESETS_REVISION_INDEX_DDL = `CREATE INDEX collaboration_changesets_revision_range
-  ON collaboration_changesets(unit_id, revision ASC);`
 
 interface UnitRow {
   readonly unit_id: string
@@ -99,34 +64,6 @@ interface SnapshotRow {
 
 interface PayloadRow {
   readonly payload_json: string
-}
-
-/** `collaboration_units` as the v1 schema stored it, before `creator_id` existed. */
-interface LegacyUnitRow {
-  readonly unit_id: string
-  readonly type: number
-  readonly name: string
-  readonly head_revision: number
-  readonly created_at_ms: number
-  readonly soft_deleted_at_ms: number | null
-}
-
-/** `collaboration_changesets` as the v1 schema stored it, before `created_at_ms` existed. */
-interface LegacyChangesetRow {
-  readonly unit_id: string
-  readonly revision: number
-  readonly base_revision: number
-  readonly sid: string
-  readonly req_id: number
-  readonly payload_json: string
-}
-
-interface LegacyHistoryCreatorRow {
-  readonly user_id: string
-}
-
-interface LegacyHistoryCommitRow {
-  readonly committed_at: number
 }
 
 interface SchemaVersionRow {
@@ -480,13 +417,11 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   ): Promise<CommitChangesetResult> {
     this._assertOpen()
     validateSubmissionIdentity(input.changeset)
-    // The SDK submit entry fills `createTime` with whole Unix seconds when the caller omitted it,
-    // while this repository's own submit paths write `Date.now()` milliseconds, so the value is
-    // kept as received and only its magnitude decides the unit when the column is derived.
-    const createTime = input.changeset.createTime ?? Date.now()
+    // Match the SDK adapters: persist the server commit time in protocol seconds and return it.
+    const createTime = Math.floor(Date.now() / 1000)
     const savedChangeset: IChangeset = { ...input.changeset, createTime }
     const payload = encode(savedChangeset)
-    const createdAtMs = toUnixMilliseconds(createTime) ?? Date.now()
+    const createdAtMs = createTime * 1000
 
     return this._transaction(() => {
       const { changeset } = input
@@ -837,224 +772,6 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   }
 }
 
-/**
- * Upgrade the Core component schema in place. Call before constructing the adapter.
- * A missing component row means a fresh database, which the adapter initializes directly.
- *
- * Must not run inside a caller-owned transaction while foreign key enforcement is on: the v1 → v2
- * rebuild has to switch enforcement off, which SQLite only accepts outside a transaction.
- */
-export function migrateUniverfileCoreSchema(database: Database.Database): void {
-  if (!hasTable(database, 'collaboration_schema_versions')) {
-    // No component has initialized this database yet, so the adapter creates the v2 schema itself.
-    return
-  }
-  // Decided up front so a database that is already current never touches foreign key enforcement.
-  const version = readCoreSchemaVersion(database)
-  if (version === undefined || version === CORE_SCHEMA_VERSION) {
-    return
-  }
-  if (version !== 1) {
-    throw incompatibleSchema(`SQLite collaboration core schema version ${version} is not supported`)
-  }
-
-  // Both new columns are NOT NULL, which `ALTER TABLE ADD COLUMN` cannot add without a constant
-  // default, so the affected tables are rebuilt. With foreign keys enforced, `DROP TABLE
-  // collaboration_units` performs an implicit DELETE FROM that cascades into snapshots,
-  // change-sets, sheet blocks, and resources. That pragma has no effect inside a transaction, so
-  // enforcement is switched around the migration transaction and restored afterwards.
-  const foreignKeysEnforced = isForeignKeyEnforcementEnabled(database)
-  if (foreignKeysEnforced) {
-    if (database.inTransaction) {
-      throw new Error(
-        'Core schema migration must run outside a transaction while foreign keys are enforced'
-      )
-    }
-    database.exec('PRAGMA foreign_keys = OFF;')
-  }
-  // Change-sets that record no time are backfilled with the instant the migration started, taken
-  // once so the whole upgrade shares one origin.
-  const migrationStartedAtMs = Date.now()
-  try {
-    runUniverfileSQLiteTransaction(database, () => {
-      // Another process may have upgraded the component between the check above and this write
-      // lock, and the rebuild rewrites creation columns, so the decision is taken again here.
-      if (readCoreSchemaVersion(database) !== 1) {
-        return
-      }
-
-      migrateCoreUnitsToV2(database)
-      migrateCoreChangesetsToV2(database, migrationStartedAtMs)
-      database
-        .prepare(
-          `UPDATE collaboration_schema_versions
-           SET version = ?
-           WHERE component = ?`
-        )
-        .run(CORE_SCHEMA_VERSION, CORE_SCHEMA_COMPONENT)
-    })
-  } finally {
-    if (foreignKeysEnforced) {
-      database.exec('PRAGMA foreign_keys = ON;')
-    }
-  }
-}
-
-function readCoreSchemaVersion(database: Database.Database): number | undefined {
-  const row = database
-    .prepare(
-      `SELECT version
-       FROM collaboration_schema_versions
-       WHERE component = ?`
-    )
-    .get(CORE_SCHEMA_COMPONENT) as SchemaVersionRow | undefined
-  return row?.version
-}
-
-/**
- * Rebuilds `collaboration_units` with the v2 `creator_id`. The creator is the `user_id` the legacy
- * History row for revision 1 recorded; Core migrates before History, so that v1 table is still
- * readable here, and a database without it falls back to the anonymous creator.
- */
-function migrateCoreUnitsToV2(database: Database.Database): void {
-  const legacyCreator = hasTable(database, 'collaboration_history_revisions')
-    ? database.prepare(
-        `SELECT user_id
-         FROM collaboration_history_revisions
-         WHERE unit_id = ? AND revision = 1`
-      )
-    : undefined
-  const units = database
-    .prepare(
-      `SELECT unit_id, type, name, head_revision, created_at_ms, soft_deleted_at_ms
-       FROM collaboration_units`
-    )
-    .all() as unknown as LegacyUnitRow[]
-
-  database.exec(`
-    DROP TABLE IF EXISTS ${CORE_UNITS_REBUILD_TABLE};
-    ${coreUnitsTableDdl(CORE_UNITS_REBUILD_TABLE)}
-  `)
-  const insert = database.prepare(
-    `INSERT INTO ${CORE_UNITS_REBUILD_TABLE}
-       (unit_id, type, name, head_revision, creator_id, created_at_ms, soft_deleted_at_ms)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  )
-  for (const unit of units) {
-    insert.run(
-      unit.unit_id,
-      unit.type,
-      unit.name,
-      unit.head_revision,
-      readLegacyCreatorID(legacyCreator, unit.unit_id) ?? ANONYMOUS_CREATOR_ID,
-      unit.created_at_ms,
-      unit.soft_deleted_at_ms
-    )
-  }
-
-  database.exec(`
-    DROP TABLE collaboration_units;
-    ALTER TABLE ${CORE_UNITS_REBUILD_TABLE} RENAME TO collaboration_units;
-  `)
-}
-
-/**
- * Rebuilds `collaboration_changesets` with the v2 `created_at_ms`. A payload `createTime` wins over
- * the legacy History `committed_at`, and the migration start time covers rows that record neither.
- */
-function migrateCoreChangesetsToV2(
-  database: Database.Database,
-  migrationStartedAtMs: number
-): void {
-  const legacyCommitTime = hasTable(database, 'collaboration_history_revisions')
-    ? database.prepare(
-        `SELECT committed_at
-         FROM collaboration_history_revisions
-         WHERE unit_id = ? AND revision = ?`
-      )
-    : undefined
-
-  database.exec(`
-    DROP TABLE IF EXISTS ${CORE_CHANGESETS_REBUILD_TABLE};
-    ${coreChangesetsTableDdl(CORE_CHANGESETS_REBUILD_TABLE)}
-  `)
-  const insert = database.prepare(
-    `INSERT INTO ${CORE_CHANGESETS_REBUILD_TABLE}
-       (unit_id, revision, base_revision, sid, req_id, payload_json, created_at_ms)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  )
-  // Payloads can carry whole commands, so the legacy rows are streamed instead of collected first.
-  const rows = database
-    .prepare(
-      `SELECT unit_id, revision, base_revision, sid, req_id, payload_json
-       FROM collaboration_changesets`
-    )
-    .iterate() as unknown as IterableIterator<LegacyChangesetRow>
-  for (const row of rows) {
-    insert.run(
-      row.unit_id,
-      row.revision,
-      row.base_revision,
-      row.sid,
-      row.req_id,
-      row.payload_json,
-      readChangesetCreatedAtMs(row.payload_json) ??
-        readLegacyCommitTimeMs(legacyCommitTime, row.unit_id, row.revision) ??
-        migrationStartedAtMs
-    )
-  }
-
-  database.exec(`
-    DROP TABLE collaboration_changesets;
-    ALTER TABLE ${CORE_CHANGESETS_REBUILD_TABLE} RENAME TO collaboration_changesets;
-    ${CORE_CHANGESETS_REVISION_INDEX_DDL}
-  `)
-}
-
-/**
- * Reads the creation time a legacy change-set payload carries. Only that field is needed, so the
- * payload is parsed without the binary reviver a full decode applies.
- */
-function readChangesetCreatedAtMs(payloadJson: string): number | undefined {
-  const parsed: unknown = JSON.parse(payloadJson)
-  if (typeof parsed !== 'object' || parsed === null) {
-    return undefined
-  }
-  const createTime = (parsed as { readonly createTime?: unknown }).createTime
-  return typeof createTime === 'number' ? toUnixMilliseconds(createTime) : undefined
-}
-
-/** Reads the creator the legacy History table recorded for revision 1, which created the Unit. */
-function readLegacyCreatorID(
-  statement: Database.Statement | undefined,
-  unitID: string
-): string | undefined {
-  if (statement === undefined) {
-    return undefined
-  }
-  const row = statement.get(unitID) as LegacyHistoryCreatorRow | undefined
-  if (row === undefined || typeof row.user_id !== 'string' || row.user_id.length === 0) {
-    return undefined
-  }
-  return row.user_id
-}
-
-/** Reads the legacy History commit time of one revision, which is already Unix milliseconds. */
-function readLegacyCommitTimeMs(
-  statement: Database.Statement | undefined,
-  unitID: string,
-  revision: number
-): number | undefined {
-  if (statement === undefined) {
-    return undefined
-  }
-  const row = statement.get(unitID, revision) as LegacyHistoryCommitRow | undefined
-  if (row === undefined || !Number.isSafeInteger(row.committed_at) || row.committed_at < 0) {
-    return undefined
-  }
-  return row.committed_at
-}
-
 function hasTable(database: Database.Database, tableName: string): boolean {
   return Boolean(
     database
@@ -1065,13 +782,6 @@ function hasTable(database: Database.Database, tableName: string): boolean {
       )
       .get(tableName)
   )
-}
-
-function isForeignKeyEnforcementEnabled(database: Database.Database): boolean {
-  const row = database.prepare('PRAGMA foreign_keys').get() as
-    | { readonly foreign_keys: number }
-    | undefined
-  return row?.foreign_keys === 1
 }
 
 function validateOptions(options: UniverfileSQLiteDatabaseAdapterOptions): void {

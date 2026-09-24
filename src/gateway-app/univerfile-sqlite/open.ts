@@ -45,7 +45,7 @@ export function createUniverfileSQLite(
     throw new UniverfileSQLiteError('FILE_EXISTS', `.univer file already exists: ${filename}`)
   }
   try {
-    return openCurrent(filename, { status: 'unchanged', format: 'v2' }, options.busyTimeoutMs)
+    return openCurrent(filename, { status: 'unchanged', format: 'v3' }, options.busyTimeoutMs)
   } catch (error) {
     if (filename !== ':memory:' && existsSync(filename)) unlinkSync(filename)
     throw error

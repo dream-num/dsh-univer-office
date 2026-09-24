@@ -1,5 +1,4 @@
-import { randomUUID } from 'node:crypto'
-import { copyFileSync, existsSync, mkdtempSync, renameSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdtempSync, renameSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, extname, join, resolve } from 'node:path'
 import type Database from 'libsql'
@@ -17,9 +16,9 @@ import { GatewaySemanticError } from '../errors.js'
 import {
   UniverfileSQLiteAssetStore,
   UniverfileSQLiteConnection,
-  detectUniverfileSQLiteFormat,
   runUniverfileSQLiteTransaction,
   upgradeUniverfileSQLite,
+  detectUniverfileSQLiteFormat,
   UniverfileSQLiteDatabaseAdapter
 } from '../univerfile-sqlite/index.js'
 
@@ -141,24 +140,12 @@ export async function optimizeUniverfilePath(
   input: OptimizeUniverfileCopyInput
 ): Promise<OptimizeUniverfileReport> {
   validateInput(input)
-  const sourceFormat = detectUniverfileSQLiteFormat(input.sourcePath)
-  const workingDirectory =
-    sourceFormat === 'v2' ? undefined : mkdtempSync(join(tmpdir(), 'univer-optimize-source-'))
-  const workingPath =
-    workingDirectory === undefined ? input.sourcePath : join(workingDirectory, 'source.univer')
-  let sourceConnection: UniverfileSQLiteConnection | undefined
+  detectUniverfileSQLiteFormat(input.sourcePath)
+  const sourceConnection = new UniverfileSQLiteConnection({ filename: input.sourcePath })
   try {
-    if (workingDirectory !== undefined) {
-      copyFileSync(input.sourcePath, workingPath)
-      upgradeUniverfileSQLite(workingPath)
-    }
-    sourceConnection = new UniverfileSQLiteConnection({ filename: workingPath })
     return await optimizeUniverfileCopy(sourceConnection, input)
   } finally {
-    sourceConnection?.dispose()
-    if (workingDirectory !== undefined) {
-      rmSync(workingDirectory, { recursive: true, force: true })
-    }
+    sourceConnection.dispose()
   }
 }
 
@@ -170,16 +157,16 @@ export async function optimizeUniverfileCopy(
   validateInput(input)
   assertIntegrity(sourceConnection.database)
   const beforeBytes = statSync(input.sourcePath).size
-  const dryRunDirectory = input.dryRun
-    ? mkdtempSync(join(tmpdir(), 'univer-optimize-dry-run-'))
-    : undefined
   const outputPath = input.outputPath
-  const temporaryPath = input.dryRun
-    ? join(dryRunDirectory as string, 'source.univer')
-    : `${outputPath as string}.optimize-${randomUUID()}.tmp`
+  const temporaryDirectory = mkdtempSync(
+    join(input.dryRun ? tmpdir() : dirname(outputPath as string), 'univer-optimize-')
+  )
+  const temporaryPath = join(temporaryDirectory, 'source.univer')
   let outputConnection: UniverfileSQLiteConnection | undefined
   try {
     sourceConnection.database.prepare('VACUUM INTO ?').run(temporaryPath)
+    // The snapshot is disposable; the original stays untouched even when migration fails.
+    upgradeUniverfileSQLite(temporaryPath)
     outputConnection = new UniverfileSQLiteConnection({ filename: temporaryPath })
     const before = countHistory(outputConnection.database)
     rejectActiveWorktreesForHistoryReset(outputConnection.database, input.history)
@@ -237,9 +224,7 @@ export async function optimizeUniverfileCopy(
     if (existsSync(temporaryPath)) rmSync(temporaryPath, { force: true })
     throw error
   } finally {
-    if (dryRunDirectory !== undefined) {
-      rmSync(dryRunDirectory, { recursive: true, force: true })
-    }
+    rmSync(temporaryDirectory, { recursive: true, force: true })
   }
 }
 
@@ -357,9 +342,7 @@ function resetCurrentHistory(database: Database.Database): void {
   })
 
   runUniverfileSQLiteTransaction(database, () => {
-    if (tableExists(database, 'collaboration_history_revisions')) {
-      database.exec('DELETE FROM collaboration_history_revisions;')
-    }
+    database.exec('DELETE FROM collaboration_history_records;')
     database.exec(`
       DELETE FROM collaboration_changesets;
       DELETE FROM collaboration_units WHERE soft_deleted_at_ms IS NOT NULL;
@@ -390,6 +373,9 @@ function assertNoTerminalWorktrees(database: Database.Database): void {
 }
 
 function assertResetHistory(database: Database.Database): void {
+  if (countRows(database, 'collaboration_history_records') !== 0) {
+    throw new Error('OPTIMIZE_HISTORY_RESET_FAILED: History segments remain after reset')
+  }
   if (countRows(database, 'collaboration_worktrees') !== 0) {
     throw new Error('OPTIMIZE_HISTORY_RESET_FAILED: worktrees remain after reset')
   }

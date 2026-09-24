@@ -1,12 +1,3 @@
-/**
- * Creation metadata that every writer of the current component schemas derives from legacy data.
- *
- * `IChangeset.createTime` carries no declared unit: the SDK submit entry fills whole Unix seconds
- * when the caller omits the value, while this repository's own submit paths write `Date.now()`
- * milliseconds. The magnitude therefore decides how a stored value is read, and the Core adapter,
- * the Worktree adapter and the v0 reader all have to agree on it.
- */
-
 /** Creator recorded for Units whose legacy History row is gone or never existed. */
 export const ANONYMOUS_CREATOR_ID = 'anonymous'
 
