@@ -1669,7 +1669,7 @@ async function verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey,
     )
     for (const width of [1440, 1130, 960, 800, 680, 560, 480]) {
       await page.setViewport({ width, height: 720, deviceScaleFactor: 1 })
-      const layout = await measureWorktreeTopbar(page)
+      const layout = await measureWorktreeTopbar(page, width)
       if (
         layout.overflow ||
         layout.overlap ||
@@ -1705,53 +1705,70 @@ async function verifyViewerWorktreeComparison(browser, viewerOrigin, gatewayKey,
   }
 }
 
-async function measureWorktreeTopbar(page) {
-  return page.evaluate(async () => {
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-    const topbar = document.querySelector('.topbar')
-    const title = document.querySelector('[data-testid="worktree-title"]')
-    const switcher = document.querySelector('[data-testid="view-diff-center"]')
-    const actions = document.querySelector('[data-testid="worktree-actions"]')
-    if (topbar === null || title === null || switcher === null || actions === null) {
-      throw new Error('worktree topbar controls are missing')
+async function measureWorktreeTopbar(page, width) {
+  return page.evaluate(async (width) => {
+    const measure = () => {
+      const topbar = document.querySelector('.topbar')
+      const title = document.querySelector('[data-testid="worktree-title"]')
+      const switcher = document.querySelector('[data-testid="view-diff-center"]')
+      const actions = document.querySelector('[data-testid="worktree-actions"]')
+      if (topbar === null || title === null || switcher === null || actions === null) {
+        throw new Error('worktree topbar controls are missing')
+      }
+      const topbarRect = topbar.getBoundingClientRect()
+      const titleRect = title.getBoundingClientRect()
+      const switcherRect = switcher.getBoundingClientRect()
+      const actionsRect = actions.getBoundingClientRect()
+      const outside = (rect) => rect.left < topbarRect.left - 1 || rect.right > topbarRect.right + 1
+      const controls = [...topbar.querySelectorAll('button')].map((element) =>
+        element.getBoundingClientRect()
+      )
+      const preview = topbar.querySelector('[data-header-preview]')?.getBoundingClientRect()
+      return {
+        centerOffset:
+          switcherRect.left + switcherRect.width / 2 - topbarRect.left - topbarRect.width / 2,
+        previewAboveView:
+          preview !== undefined &&
+          preview.top + preview.height / 2 < switcherRect.top + switcherRect.height / 2 - 1,
+        overlap: controls.some((a, i) =>
+          controls
+            .slice(i + 1)
+            .some(
+              (b) =>
+                Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
+                Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1
+            )
+        ),
+        actionsHeight: actionsRect.height,
+        actionsTop: actionsRect.top,
+        height: topbarRect.height,
+        overflow:
+          document.documentElement.scrollWidth > document.documentElement.clientWidth ||
+          [titleRect, switcherRect, actionsRect, ...controls].some(outside),
+        switcherHeight: switcherRect.height,
+        switcherTop: switcherRect.top,
+        switcherWidth: switcherRect.width,
+        titleTop: titleRect.top,
+        width: topbarRect.width
+      }
     }
-    const topbarRect = topbar.getBoundingClientRect()
-    const titleRect = title.getBoundingClientRect()
-    const switcherRect = switcher.getBoundingClientRect()
-    const actionsRect = actions.getBoundingClientRect()
-    const outside = (rect) => rect.left < topbarRect.left - 1 || rect.right > topbarRect.right + 1
-    const controls = [...topbar.querySelectorAll('button')].map((element) =>
-      element.getBoundingClientRect()
-    )
-    const preview = topbar.querySelector('[data-header-preview]')?.getBoundingClientRect()
-    return {
-      centerOffset:
-        switcherRect.left + switcherRect.width / 2 - topbarRect.left - topbarRect.width / 2,
-      previewAboveView:
-        preview !== undefined &&
-        preview.top + preview.height / 2 < switcherRect.top + switcherRect.height / 2 - 1,
-      overlap: controls.some((a, i) =>
-        controls
-          .slice(i + 1)
-          .some(
-            (b) =>
-              Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
-              Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1
-          )
-      ),
-      actionsHeight: actionsRect.height,
-      actionsTop: actionsRect.top,
-      height: topbarRect.height,
-      overflow:
-        document.documentElement.scrollWidth > document.documentElement.clientWidth ||
-        [titleRect, switcherRect, actionsRect, ...controls].some(outside),
-      switcherHeight: switcherRect.height,
-      switcherTop: switcherRect.top,
-      switcherWidth: switcherRect.width,
-      titleTop: titleRect.top,
-      width: topbarRect.width
+    let stableFrames = 0
+    let layout
+    // ResizeObserver and React may commit the new header mode after the viewport changes.
+    for (let frame = 0; frame < 120; frame += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      layout = measure()
+      const fits =
+        !layout.overflow &&
+        !layout.overlap &&
+        !layout.previewAboveView &&
+        layout.switcherWidth <= 220 &&
+        (width !== 1440 || (layout.height <= 64 && Math.abs(layout.centerOffset) <= 1))
+      stableFrames = fits ? stableFrames + 1 : 0
+      if (stableFrames >= 3) return layout
     }
-  })
+    return layout
+  }, width)
 }
 
 async function verifyAllowAllAuthz(exchangeBase, unitId) {
