@@ -4,7 +4,7 @@
 //
 //   pnpm run build:lib     → lib/index.js (host) + lib/client.js (client bundle)
 //   pnpm run build:worker  → artifacts/unit-content-worker.mjs
-//   pnpm run build:gateway → artifacts/gateway.cjs
+//   pnpm run build:gateway → artifacts/gateway.cjs and artifacts/upgrade-worker.cjs
 //   pnpm run build:render  → artifacts/render-machine/
 //   pnpm run build:viewer  → artifacts/viewer/
 //   pnpm run build         → all five applications
@@ -181,6 +181,21 @@ if (target === 'all' || target === 'gateway') {
     sourcemap: false
   })
   console.log('built', gatewayOut)
+  const upgradeWorkerOut = 'artifacts/upgrade-worker.cjs'
+  await build({
+    entryPoints: ['src/gateway-app/univerfile-sqlite/migration/upgrade-worker.ts'],
+    outfile: upgradeWorkerOut,
+    bundle: true,
+    packages: 'bundle',
+    alias: { '@univerjs-pro/exchange-node': require.resolve('@univerjs-pro/exchange-node') },
+    external: gatewayExternal,
+    platform: 'node',
+    target: 'node22',
+    format: 'cjs',
+    legalComments: 'none',
+    sourcemap: false
+  })
+  console.log('built', upgradeWorkerOut)
 }
 
 if (target === 'all' || target === 'render') {
