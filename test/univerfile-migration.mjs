@@ -164,7 +164,15 @@ try {
     const backups = files.filter((name) => name.startsWith(`failed-${failure}.univer.backup-`))
     assert.equal(backups.length, 1)
     assert.deepEqual(await readFile(join(workspace, backups[0])), before)
-    assert.ok(!files.some((name) => name.includes('.upgrade-') || name.endsWith('.upgrade.lock')))
+    assert.throws(() => api.openUniverfileSQLite(file), {
+      code: failure === 'foreign-key' ? 'UPGRADE_FAILED' : 'VERIFICATION_FAILED'
+    })
+    const afterRetry = await readdir(workspace)
+    const retried = afterRetry.filter((name) => name.startsWith(`failed-${failure}.univer.backup-`))
+    assert.deepEqual(retried, backups)
+    assert.ok(
+      !afterRetry.some((name) => name.includes('.upgrade-') || name.endsWith('.upgrade.lock'))
+    )
   }
 
   // An occupied upgrade lock rejects without touching source or creating a candidate.
