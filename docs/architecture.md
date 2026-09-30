@@ -299,6 +299,11 @@ live session 的 `cwd` 内；后续 `/uf` 与隧道请求不设置或读取插�
 可直接调用 Gateway 文件 API，访问范围由 Host 进程的文件权限决定；该契约同样适用于远程部署。
 `/univer-api` 与模型工具保留 session/workspace 校验。`computeFileState` 投影同源相对路径
 `/univer-viewer/?file=<key>`，`/univer-api/state` 在路由层为每个投影 URL 追加 sessionId。
+桌面 Viewer 以 `location.protocol === 'dsh-app:'` 区分运行环境，启动时从受 connection 门保护的
+`/univer-viewer/runtime-config` 获取真实 Host 地址。该地址使用接收 HTTP 请求的 socket 实际监听
+端口生成，不采信客户端 Host/query；Viewer 验证它为 `http://127.0.0.1:<port>`，配置不可用时
+明确失败。协作与生命周期 WS 均连接该 Host 的固定隧道，由桌面壳注入 DSH 认证；普通浏览器
+沿用页面 origin（HTTPS 对应 WSS），不使用 loopback 配置。运行时配置禁止缓存，不包含凭据。
 Gateway 本身始终只监听 loopback，不对外暴露。完整契约见
 `docs/viewer-same-origin-deployment.md`。
 

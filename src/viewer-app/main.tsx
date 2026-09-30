@@ -9,6 +9,7 @@ import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { applyDocumentAppearance, resolveAppearance, setAppearance } from './appearance'
 import { readLocation } from './core/config'
+import { initializeDesktopTransport } from './core/desktop-transport.ts'
 import { applyDocumentLang, resolveLang, setLang, t } from './i18n'
 import { App } from './ui/app'
 import { BootCard, FatalNotice } from './ui/boot'
@@ -47,6 +48,8 @@ async function bootstrap(): Promise<void> {
     )
     return
   }
+
+  await initializeDesktopTransport()
 
   const app =
     loc.gatewayFileKey !== null
@@ -94,4 +97,6 @@ async function bootstrap(): Promise<void> {
 
 // Do not top-level await locale loading. Locale chunks can share entry-module helpers after
 // bundling, so the entry must finish evaluating before those dynamic imports can resolve.
-void bootstrap()
+void bootstrap().catch((error: unknown) => {
+  mount(appRoot, <FatalNotice text={t().boot.fatal(String(error))} />)
+})

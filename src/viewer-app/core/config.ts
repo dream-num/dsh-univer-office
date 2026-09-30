@@ -1,5 +1,6 @@
 import { encodeUniverfile } from '@univer/collab-gateway-contract'
 import { VIEWER_BASE, VIEWER_WS_TUNNEL } from '../../shared/wire/viewer'
+import { viewerStreamBaseUrl } from './desktop-transport.ts'
 
 /** Server origin + the .univer being viewed (passed to WorktreeControlClient / viewer). */
 export interface AppConfig {
@@ -104,17 +105,15 @@ export function isProxyServedViewer(): boolean {
 /**
  * Rewrite a WebSocket endpoint through the fixed same-origin tunnel (`?target=<path>`) when
  * proxy-served: DSH upgrades register exact paths only, while the Gateway's `/uf/...` endpoints
- * are file-scoped and dynamic. The input protocol family (http/ws, relative) is preserved.
+ * are file-scoped and dynamic. Desktop uses the Host's explicit loopback transport address.
  */
 export function resolveWebSocketUrl(url: string): string {
   if (!isProxyServedViewer()) return url
   const target = new URL(url, location.origin)
-  // Anchor the tunnel on the serving origin: the endpoint URL must never make the browser
-  // dial a foreign (e.g. loopback) host even if a runtime config ever returns absolute URLs.
-  const tunnel = new URL(VIEWER_WS_TUNNEL, location.origin)
+  // Endpoint input chooses only the Gateway path, never the network authority.
+  const tunnel = new URL(VIEWER_WS_TUNNEL, viewerStreamBaseUrl())
   tunnel.searchParams.set('target', `${target.pathname}${target.search}`)
-  if (target.protocol === 'wss:') tunnel.protocol = 'wss:'
-  else if (target.protocol === 'ws:') tunnel.protocol = 'ws:'
+  tunnel.protocol = tunnel.protocol === 'https:' ? 'wss:' : 'ws:'
   return tunnel.toString()
 }
 

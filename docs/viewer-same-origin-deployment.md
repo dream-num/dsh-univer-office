@@ -19,11 +19,12 @@ loopback，Host/Worker 内部流量不变。
 模型/Provider/Worker → loopback Gateway（不变）
 ```
 
-DSH WebServer 上由本插件注册三个路由：
+DSH WebServer 上由本插件注册以下路由（运行时配置位于 Viewer prefix 内）：
 
 | 路由 | 类型 | 职责 |
 | --- | --- | --- |
 | `/univer-viewer` | HTTP prefix | Viewer 文档与静态资源，原样转发到 Gateway 同路径 |
+| `/univer-viewer/runtime-config` | HTTP GET | 通过 connection 鉴权后返回当前 Host loopback 地址；使用 socket 实际监听端口，禁止缓存，无凭据 |
 | `/uf` | HTTP prefix | Gateway 领域 API（snapshot/changeset/upload/authz 等），通过 DSH 鉴权后转发 |
 | `/univer-viewer/ws` | 精确路径 upgrade | WebSocket 隧道：`?target=/uf/...` 携带真实上游路径，外层其余 query 参数（端点协议，如 comb 握手的 `sessionTicket`）逐字转发上游 |
 
@@ -31,6 +32,15 @@ DSH WebServer 的 upgrade 注册只支持精确路径，而 Gateway 的 WS 端�
 （`/uf/<key>[/worktrees/<id>]/universer-api/comb/connect` 与 `/uf/<key>[/worktrees/<id>]/events`），
 因此 Viewer 在代理模式下把两类 WS URL 改写为隧道形式；HTTP `/uf/*` 路径保持原样，
 `collaboration-client` 按 `location.origin` 拼出的 URL 无需改动即可命中代理。
+
+## 桌面 WebSocket 地址
+
+普通浏览器使用页面 origin 构建 WS/WSS 隧道地址。`dsh-app:` 页面中的 Viewer 启动时先读取
+`/univer-viewer/runtime-config`，验证 `desktopStreamBaseUrl` 是无凭据、无路径/query/hash 的
+`http://127.0.0.1:<port>`，再把协作和生命周期连接都指向该 Host 的 `/univer-viewer/ws`。
+端口来自当前 HTTP socket，不写死端口或采信请求 Host；桌面壳按当前 Host 地址注入认证 cookie。
+配置获取或验证失败时展示启动错误，不回退到无效的 `ws://app`。HTTP 仍使用 `dsh-app:` 转发，
+浏览器远程部署始终沿用公开站点地址。此配置独立于 iframe 主页面的桌面 preload/boot 接口。
 
 ## 浏览器鉴权与文档范围校验
 
@@ -87,6 +97,7 @@ session/workspace 校验。DSH 桌面壳会删除响应的 Set-Cookie，并把�
 ## 测试
 
 - `test/host-smoke.mjs`：配置面（`viewerBaseUrl` 不存在、投影为相对路径）。
+- `test/viewer-transport.mjs`：浏览器 HTTPS/WSS、桌面真实 Host 地址、协作与生命周期路径、配置缺失及非法地址拒绝。
 - `test/integration-smoke.mjs`：真实 Gateway + 真实路由 handler：文档范围内 200、不设置
   插件 cookie、范围外文档 403；`/uf` GET 与 descriptor 在无 cookie、只有 DSH cookie、旧的
   外会话或畸形 cookie 下均放行；无 cookie 的 POST 创建 worktree 后读取持久状态；无 cookie

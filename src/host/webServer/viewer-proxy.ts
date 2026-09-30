@@ -3,7 +3,8 @@ import http from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocket, WebSocketServer } from 'ws'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
-import { VIEWER_BASE, VIEWER_WS_TUNNEL } from '../../shared/wire/viewer.ts'
+import type { ViewerRuntimeConfig } from '../../shared/wire/viewer.ts'
+import { VIEWER_BASE, VIEWER_RUNTIME_CONFIG, VIEWER_WS_TUNNEL } from '../../shared/wire/viewer.ts'
 import { resolveAuthorizedFile } from './session-scope.ts'
 
 /** Trust surface consumed from the DSH `connection` service (its package is browser-side). */
@@ -50,6 +51,29 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
     }
     const url = new URL(req.url ?? '/', 'http://localhost')
     const pathname = url.pathname
+    if (pathname === VIEWER_RUNTIME_CONFIG) {
+      if (req.method !== 'GET') {
+        res.writeHead(405, { allow: 'GET' })
+        res.end()
+        return
+      }
+      // The accepted socket supplies the actual DSH port, including an OS-assigned port.
+      // Never derive a desktop network target from the browser's Host header or query.
+      const port = req.socket.localPort
+      if (port === undefined) {
+        reject(res, 502)
+        return
+      }
+      const config: ViewerRuntimeConfig = {
+        desktopStreamBaseUrl: `http://127.0.0.1:${String(port)}`
+      }
+      res.writeHead(200, {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store'
+      })
+      res.end(JSON.stringify(config))
+      return
+    }
     if (pathname === VIEWER_BASE || pathname === `${VIEWER_BASE}/`) {
       // The Viewer document carries the addressing parameters: authorize the file against the
       // named live session. Subsequent Gateway traffic relies on DSH browser authentication.

@@ -214,7 +214,29 @@ try {
     if (gatedDocument.status !== 401) {
       throw new Error(`connection fence must gate the Viewer proxy: ${gatedDocument.status}`)
     }
+    const gatedConfig = await fetch(`${proxyOrigin}/univer-viewer/runtime-config`)
+    if (gatedConfig.status !== 401) {
+      throw new Error(`connection fence must gate Viewer transport config: ${gatedConfig.status}`)
+    }
     gateRejection = undefined
+
+    const transportConfig = await fetch(`${proxyOrigin}/univer-viewer/runtime-config`)
+    const transport = await transportConfig.json()
+    if (
+      !transportConfig.ok ||
+      transport.desktopStreamBaseUrl !== proxyOrigin ||
+      transportConfig.headers.get('cache-control') !== 'no-store'
+    ) {
+      throw new Error(
+        'Viewer transport config must return the actual dynamic Host port without caching'
+      )
+    }
+    const configMutation = await fetch(`${proxyOrigin}/univer-viewer/runtime-config`, {
+      method: 'POST'
+    })
+    if (configMutation.status !== 405) {
+      throw new Error('Viewer transport config must reject mutations')
+    }
 
     const unscopedDocument = await fetch(`${proxyOrigin}/univer-viewer/?file=${proxyFileKey}`)
     if (unscopedDocument.status !== 403) {
