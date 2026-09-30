@@ -2,8 +2,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import http from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocket, WebSocketServer } from 'ws'
-import { SessionId, type SessionStore } from '@deepseek-ai/dsh-session'
-import { VIEWER_BASE, VIEWER_SESSION_COOKIE, VIEWER_WS_TUNNEL } from '../../shared/wire/viewer.ts'
+import type { SessionStore } from '@deepseek-ai/dsh-session'
+import { VIEWER_BASE, VIEWER_WS_TUNNEL } from '../../shared/wire/viewer.ts'
 import { resolveAuthorizedFile } from './session-scope.ts'
 
 /** Trust surface consumed from the DSH `connection` service (its package is browser-side). */
@@ -27,12 +27,6 @@ export interface ViewerProxy {
   readonly dispose: () => void
 }
 
-/** Upper bound on sessions remembered per browser so scope checking stays a constant small set. */
-const MAX_SCOPED_SESSIONS = 8
-const COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
-/** How often a live tunnel re-checks that its authorizing sessions still exist. */
-const SESSION_REVALIDATE_MS = 5 * 60 * 1000
-
 function reject(res: ServerResponse, status: 401 | 403 | 404 | 502): void {
   res.writeHead(status, { 'content-type': 'text/plain; charset=utf-8' })
   res.end()
@@ -40,7 +34,7 @@ function reject(res: ServerResponse, status: 401 | 403 | 404 | 502): void {
 
 /**
  * Same-origin proxy for the Viewer surface. Browser requests arrive on the DSH origin, pass the
- * `connection` trust fence, pass the per-request session scope check, and are forwarded verbatim
+ * `connection` trust fence, and are forwarded verbatim after document-only session scope checks
  * to the loopback Gateway. See docs/viewer-same-origin-deployment.md for the contract.
  */
 export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
@@ -58,7 +52,7 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
     const pathname = url.pathname
     if (pathname === VIEWER_BASE || pathname === `${VIEWER_BASE}/`) {
       // The Viewer document carries the addressing parameters: authorize the file against the
-      // named live session, then bind this browser to that session scope for later /uf requests.
+      // named live session. Subsequent Gateway traffic relies on DSH browser authentication.
       const file = url.searchParams.get('file')
       const sessionId = url.searchParams.get('sessionId')
       if (
@@ -74,10 +68,9 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
         reject(res, 403)
         return
       }
-      res.setHeader('set-cookie', upsertScopeCookie(req, sessionId))
     } else if (pathname.startsWith(`${VIEWER_BASE}/`)) {
       // Static Viewer assets are public code once the browser fence passed; no scope check.
-    } else if (!(await authorizeUfRequest(url, req, sessions))) {
+    } else if (fileKeyOfUfPath(pathname) === null) {
       reject(res, url.pathname === '/uf' || url.pathname.startsWith('/uf/') ? 403 : 404)
       return
     }
@@ -112,20 +105,11 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
       return
     }
     const fileKey = fileKeyOfUfPath(target)
-    const sessionIds = readScopeCookie(req)
-    if (fileKey === null || sessionIds.length === 0) {
+    if (fileKey === null) {
       fail(403)
       return
     }
-    void (async () => {
-      for (const sessionId of sessionIds) {
-        if (await isFileInSessionScope(decodeFileKey(fileKey), sessionId, sessions)) {
-          bridgeTunnel(req, socket, head, target, gatewayOrigin, sessionIds)
-          return
-        }
-      }
-      fail(403)
-    })().catch(() => fail(403))
+    bridgeTunnel(req, socket, head, target, gatewayOrigin)
   }
 
   const bridgeTunnel = (
@@ -133,8 +117,7 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
     socket: Duplex,
     head: Buffer,
     target: string,
-    resolveOrigin: () => Promise<string>,
-    sessionIds: readonly string[]
+    resolveOrigin: () => Promise<string>
   ): void => {
     void (async () => {
       const upstreamUrl = new URL(target, rewriteLoopback(await resolveOrigin()))
@@ -158,16 +141,9 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
                 upstreamUrl,
                 protocols.split(',').map((protocol) => protocol.trim())
               )
-        // A tunnel must not outlive the sessions that authorized it; revalidate periodically
-        // and close when none of the bound sessions is live any more.
-        const revalidate = setInterval(() => {
-          const alive = sessionIds.some((id) => sessions.get(SessionId(id)) !== undefined)
-          if (!alive) close()
-        }, SESSION_REVALIDATE_MS)
         const close = (): void => {
           if (closed) return
           closed = true
-          clearInterval(revalidate)
           bridges.delete(close)
           try {
             client.close()
@@ -299,7 +275,7 @@ function isGatewayFileKey(value: string): boolean {
   return /^[A-Za-z0-9_-]+$/u.test(value)
 }
 
-/** The file is in scope when it resolves inside at least one of the named live sessions' workspaces. */
+/** The Viewer document must address a file inside the named live session workspace. */
 async function isFileInSessionScope(
   path: string,
   sessionId: string,
@@ -311,60 +287,6 @@ async function isFileInSessionScope(
   } catch {
     return false
   }
-}
-
-/** `/uf` API request: authorize the addressed file against the browser's bound session scope. */
-async function authorizeUfRequest(
-  url: URL,
-  req: IncomingMessage,
-  sessions: SessionStore
-): Promise<boolean> {
-  const fileKey = fileKeyOfUfPath(url.pathname)
-  if (fileKey === null) return false
-  const sessionIds = readScopeCookie(req)
-  if (sessionIds.length === 0) return false
-  for (const sessionId of sessionIds) {
-    if (await isFileInSessionScope(decodeFileKey(fileKey), sessionId, sessions)) return true
-  }
-  return false
-}
-
-function parseRequestCookies(rawCookies: string | undefined): Map<string, string> {
-  const cookies = new Map<string, string>()
-  for (const segment of (rawCookies ?? '').split(';')) {
-    const at = segment.indexOf('=')
-    if (at === -1) continue
-    cookies.set(segment.slice(0, at).trim(), segment.slice(at + 1).trim())
-  }
-  return cookies
-}
-
-/** Read the session ids this browser is currently scoped to (empty when unbound or malformed). */
-function readScopeCookie(req: IncomingMessage): string[] {
-  const raw = parseRequestCookies(req.headers.cookie).get(VIEWER_SESSION_COOKIE)
-  if (raw === undefined || raw.length === 0) return []
-  const ids: string[] = []
-  for (const segment of raw.split(',')) {
-    // A malformed segment must fail closed (empty scope), never throw into the caller:
-    // the upgrade path has no error boundary above it.
-    try {
-      const id = decodeURIComponent(segment)
-      if (id.length > 0) ids.push(id)
-    } catch {
-      /* malformed percent-encoding; skip the segment */
-    }
-  }
-  return ids
-}
-
-/** Bind this browser to the session's scope, keeping the most recent bounded set of sessions. */
-function upsertScopeCookie(req: IncomingMessage, sessionId: string): string {
-  const previous = readScopeCookie(req).filter((id) => id !== sessionId)
-  const ids = [sessionId, ...previous].slice(0, MAX_SCOPED_SESSIONS)
-  return (
-    `${VIEWER_SESSION_COOKIE}=${ids.map((id) => encodeURIComponent(id)).join(',')}` +
-    `; Path=/; HttpOnly; SameSite=Strict; Max-Age=${String(COOKIE_MAX_AGE_SECONDS)}`
-  )
 }
 
 function headerValue(value: string | string[] | undefined): string | undefined {

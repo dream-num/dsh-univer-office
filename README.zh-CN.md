@@ -213,7 +213,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `skills` | `true` | 启用内置任务指引 |
 | `telemetry` | `true` | 发送匿名产品遥测 |
 
-Viewer 页面、HTTP API 与 WebSocket 协作流量由插件直接挂载在 DSH WebServer origin 上（`/univer-viewer/...` 与 `/uf/...`），远程部署沿用现有 DSH 访问入口即可，无需额外反向代理配置。每个浏览器请求先通过 `connection` 服务完成 DSH 浏览器鉴权，再限定到指定 live session 的范围；Gateway 始终只监听 loopback，不对外暴露。（原 `viewerBaseUrl` 配置已随本次变更移除，保留时会被忽略。）
+Viewer 页面、HTTP API 与 WebSocket 协作流量由插件直接挂载在 DSH WebServer origin 上（`/univer-viewer/...` 与 `/uf/...`），远程部署沿用现有 DSH 访问入口即可，无需额外反向代理配置。每个浏览器请求均通过 `connection` 服务完成 DSH 浏览器鉴权。Viewer 文档打开与 `/univer-api` 请求还会校验指定会话的 workspace；后续 `/uf` API 与 WebSocket 请求不依赖插件会话 cookie，也不重复 workspace 校验。已通过鉴权的浏览器可以寻址 Host 进程有权访问的任意 `.univer` 文件，远程部署也采用相同规则。Gateway 始终只监听 loopback，不对外暴露。（原 `viewerBaseUrl` 配置已随本次变更移除，保留时会被忽略。）
 
 ## 遥测
 
