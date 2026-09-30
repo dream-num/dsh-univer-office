@@ -25,26 +25,34 @@ try {
       symlink(join(repo, 'node_modules', dep), join(dir, 'node_modules', dep))
     )
   )
-  await writeFile(
-    join(dir, 'node_modules/dsh-univer-office/package.json'),
-    JSON.stringify({ name: 'dsh-univer-office', type: 'module', main: 'lib/index.js' })
+  // Keep the published manifest and bundle patch: stripped peers bypass DSH's
+  // compatibility gate and can hide a plugin that is skipped in real profiles.
+  await Promise.all(
+    ['package.json', 'cordis.patch.yml'].map((file) =>
+      copyFile(join(repo, file), join(dir, 'node_modules/dsh-univer-office', file))
+    )
   )
   await copyFile(
     join(repo, 'lib/index.js'),
     join(dir, 'node_modules/dsh-univer-office/lib/index.js')
   )
-  initProfile(dir, [])
+  initProfile(dir, ['dsh-univer-office'])
   const profile = loadProfileDirectory('dsh', dir, join(runtime, 'package.json'))
+  assert.equal(profile.layers.length, 1, 'The real bundle must pass DSH compatibility checks')
   const rows = [
     { id: 'config-editor', name: '@deepseek-ai/dsh-config-editor' },
-    { id: 'settings', name: '@deepseek-ai/dsh-settings' },
-    {
-      id: 'univer',
-      name: 'dsh-univer-office',
-      config: { tools: false, skills: false, telemetry: false, autoStartGateway: false }
-    }
+    { id: 'settings', name: '@deepseek-ai/dsh-settings' }
   ]
-  await writeFile(profile.patchPath, JSON.stringify([{ insert: rows }]))
+  await writeFile(
+    profile.patchPath,
+    JSON.stringify([
+      { insert: rows },
+      {
+        id: 'univer',
+        config: { tools: false, skills: false, telemetry: false, autoStartGateway: false }
+      }
+    ])
+  )
   const root = join(dir, 'cordis.yml')
   await writeFile(root, '[]')
   const pc = {
@@ -55,7 +63,7 @@ try {
     // Home and Profile must differ: otherwise the same patch is loaded twice.
     home: join(dir, 'home'),
     cwd: dir,
-    startedBundles: [],
+    startedBundles: ['dsh-univer-office'],
     overlays: [],
     telemetryDisabledEnv: '1'
   }
@@ -95,7 +103,7 @@ try {
   assert.equal(describe().value.autoOpenLivePreview, true)
   assert.equal(describe().value.conversationReviewCards, false)
   console.log(
-    'Host profile settings OK (activation, live update, persistence, stale-write rejection, reset, teardown)'
+    'Host profile settings OK (bundle compatibility, activation, live update, persistence, stale-write rejection, reset, teardown)'
   )
 } finally {
   try {
