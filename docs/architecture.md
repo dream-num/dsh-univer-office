@@ -293,10 +293,17 @@ Provider 与 Worker 使用 Gateway Supervisor 返回的 loopback origin 访问 G
 Viewer 面由插件挂载在 DSH WebServer origin 上：`/univer-viewer` 前缀承载 Viewer 文档与静态
 资源，`/uf` 前缀承载 Gateway 领域 API，`/univer-viewer/ws` 是 WebSocket 隧道（`?target=` 携带
 动态上游路径，因 DSH upgrade 注册只支持精确路径）。代理逐请求先通过 DSH `connection` 服务的
-信任门（Host/Origin fence 与浏览器鉴权），再执行既有会话范围检查：Viewer 文档请求解码 fileKey
-并验证其落在指定 live session 的 `cwd` 内，然后以 HttpOnly cookie 把浏览器绑定到该会话范围；
-`/uf` 与隧道请求逐请求按 cookie 中的会话重复该校验。`computeFileState` 投影同源相对路径
+信任门（Host/Origin fence 与浏览器鉴权）。Viewer 文档请求仍解码 fileKey 并验证其落在指定
+live session 的 `cwd` 内；后续 `/uf` 与隧道请求不设置或读取插件会话 cookie，也不重复 workspace
+范围校验，以兼容桌面壳删除 Set-Cookie、替换请求 cookie 的转发行为。已通过 DSH 鉴权的浏览器
+可直接调用 Gateway 文件 API，访问范围由 Host 进程的文件权限决定；该契约同样适用于远程部署。
+`/univer-api` 与模型工具保留 session/workspace 校验。`computeFileState` 投影同源相对路径
 `/univer-viewer/?file=<key>`，`/univer-api/state` 在路由层为每个投影 URL 追加 sessionId。
+桌面 Viewer 以 `location.protocol === 'dsh-app:'` 区分运行环境，启动时从受 connection 门保护的
+`/univer-viewer/runtime-config` 获取真实 Host 地址。该地址使用接收 HTTP 请求的 socket 实际监听
+端口生成，不采信客户端 Host/query；Viewer 验证它为 `http://127.0.0.1:<port>`，配置不可用时
+明确失败。协作与生命周期 WS 均连接该 Host 的固定隧道，由桌面壳注入 DSH 认证；普通浏览器
+沿用页面 origin（HTTPS 对应 WSS），不使用 loopback 配置。运行时配置禁止缓存，不包含凭据。
 Gateway 本身始终只监听 loopback，不对外暴露。完整契约见
 `docs/viewer-same-origin-deployment.md`。
 
@@ -327,7 +334,8 @@ webServer Consumer 使用 DSH `webServer` 的 prefix route 注册 `/univer-api`�
 
 路径是浏览器协议，不等同于 Service 方法。Router 负责 HTTP method、请求体大小、JSON 和字段校验，route handler 只把已验证请求映射为服务调用。错误返回稳定的错误 code 和可显示消息，不把堆栈、绝对内部资源路径或子进程输出原样暴露给浏览器。
 
-worktree 修改审阅操作必须绑定当前 DSH 会话及其 workspace scope，不能只凭浏览器提交的绝对路径授权。
+`/univer-api/worktree-action` 必须绑定当前 DSH 会话及其 workspace scope，不能只凭浏览器提交的
+绝对路径授权。Viewer 内置操作走已通过 DSH 鉴权的 `/uf`，不额外绑定会话范围。
 
 ## 9. Tools Consumer
 

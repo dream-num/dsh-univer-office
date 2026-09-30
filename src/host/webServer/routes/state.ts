@@ -12,8 +12,8 @@ export async function stateRoute(
 ) {
   const authorized = await resolveAuthorizedFile(file, sessionId, sessions)
   const state = await service.fileState({ workspace: authorized.workspace, file: authorized.path })
-  // Viewer targets are same-origin relative paths; the named session is what later /uf requests
-  // are scoped against, so the Host — not the Client — must place it in every projected URL.
+  // Viewer document opens are authorized against the named session, so the Host must place
+  // that session in every projected URL; subsequent Gateway requests use DSH authentication.
   return typeof sessionId === 'string' ? withSessionScope(state, sessionId) : state
 }
 

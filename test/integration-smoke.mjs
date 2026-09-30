@@ -214,7 +214,29 @@ try {
     if (gatedDocument.status !== 401) {
       throw new Error(`connection fence must gate the Viewer proxy: ${gatedDocument.status}`)
     }
+    const gatedConfig = await fetch(`${proxyOrigin}/univer-viewer/runtime-config`)
+    if (gatedConfig.status !== 401) {
+      throw new Error(`connection fence must gate Viewer transport config: ${gatedConfig.status}`)
+    }
     gateRejection = undefined
+
+    const transportConfig = await fetch(`${proxyOrigin}/univer-viewer/runtime-config`)
+    const transport = await transportConfig.json()
+    if (
+      !transportConfig.ok ||
+      transport.desktopStreamBaseUrl !== proxyOrigin ||
+      transportConfig.headers.get('cache-control') !== 'no-store'
+    ) {
+      throw new Error(
+        'Viewer transport config must return the actual dynamic Host port without caching'
+      )
+    }
+    const configMutation = await fetch(`${proxyOrigin}/univer-viewer/runtime-config`, {
+      method: 'POST'
+    })
+    if (configMutation.status !== 405) {
+      throw new Error('Viewer transport config must reject mutations')
+    }
 
     const unscopedDocument = await fetch(`${proxyOrigin}/univer-viewer/?file=${proxyFileKey}`)
     if (unscopedDocument.status !== 403) {
@@ -238,11 +260,8 @@ try {
     if (!document.ok || !documentHtml.includes('<html')) {
       throw new Error(`scoped Viewer document was not proxied: ${document.status}`)
     }
-    const scopeCookie = (document.headers.get('set-cookie') ?? '').split(';')[0]
-    if (!scopeCookie.startsWith('univer-viewer-sessions=')) {
-      throw new Error(
-        `Viewer document did not bind the session scope: ${document.headers.get('set-cookie')}`
-      )
+    if (document.headers.get('set-cookie') !== null) {
+      throw new Error('Viewer document must not set a plugin session cookie')
     }
     const scopedAsset = documentHtml.match(/\/univer-viewer\/assets\/[^"']+\.css/u)?.[0]
     if (scopedAsset === undefined) {
@@ -256,32 +275,40 @@ try {
     }
 
     const ufBase = `${proxyOrigin}/uf/${proxyFileKey}`
-    const unscopedApi = await fetch(`${ufBase}/worktrees`)
-    if (unscopedApi.status !== 403) {
-      throw new Error(`/uf without a bound session must be refused: ${unscopedApi.status}`)
+    // Desktop forwarding retains only DSH authentication cookies. Legacy scope cookies must
+    // neither be required nor affect the Gateway surface, including the startup descriptor.
+    for (const cookie of [
+      undefined,
+      'dsh-auth-probe=desktop-owned',
+      'univer-viewer-sessions=foreign-session',
+      'univer-viewer-sessions=%zz'
+    ]) {
+      const headers = cookie === undefined ? {} : { cookie }
+      const api = await fetch(`${ufBase}/worktrees`, { headers })
+      if (!api.ok || !Array.isArray((await api.json()).worktrees)) {
+        throw new Error(`/uf must work without a scope cookie: ${api.status}`)
+      }
+      const descriptor = await fetch(ufBase, {
+        headers: { ...headers, accept: 'application/vnd.univer.collab-gateway+json;v=1' }
+      })
+      if (!descriptor.ok || (await descriptor.json()).protocolVersion !== 1) {
+        throw new Error(`Gateway descriptor must work without a scope cookie: ${descriptor.status}`)
+      }
     }
-    const foreignApi = await fetch(`${ufBase}/worktrees`, {
-      headers: { cookie: 'univer-viewer-sessions=foreign-session' }
-    })
-    if (foreignApi.status !== 403) {
-      throw new Error(`/uf outside the bound session scope must be refused: ${foreignApi.status}`)
+    for (const rejection of [401, 403]) {
+      gateRejection = rejection
+      const gatedApi = await fetch(`${ufBase}/worktrees`)
+      if (gatedApi.status !== rejection) {
+        throw new Error(`DSH connection fence must still gate /uf: ${gatedApi.status}`)
+      }
     }
-    const malformedApi = await fetch(`${ufBase}/worktrees`, {
-      headers: { cookie: 'univer-viewer-sessions=%zz' }
-    })
-    if (malformedApi.status !== 403) {
-      throw new Error(`malformed scope cookie must fail closed: ${malformedApi.status}`)
-    }
-    const scopedApi = await fetch(`${ufBase}/worktrees`, { headers: { cookie: scopeCookie } })
-    if (!scopedApi.ok) {
-      throw new Error(`scoped /uf request failed: ${scopedApi.status} ${await scopedApi.text()}`)
-    }
+    gateRejection = undefined
 
     const { WebSocket } = await import('ws')
+    let proxyMutation
     const tunnelFrame = await new Promise((resolve, reject) => {
       const client = new WebSocket(
-        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`,
-        { headers: { cookie: scopeCookie } }
+        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`
       )
       const timer = setTimeout(() => {
         client.terminate()
@@ -298,13 +325,19 @@ try {
       client.on('open', () => {
         // Let the Gateway finish registering the socket in its event hub before triggering.
         setTimeout(() => {
-          service
-            .worktree({ ...scoped, action: 'create', name: 'proxy event smoke' })
-            .then(() => undefined)
-            .catch((error) => {
-              clearTimeout(timer)
-              reject(error)
-            })
+          proxyMutation = fetch(`${ufBase}/worktrees`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ name: 'proxy event smoke' })
+          }).then(async (response) => {
+            if (!response.ok || (await response.json()).error?.code !== 1) {
+              throw new Error(`cookie-free worktree creation failed: ${response.status}`)
+            }
+          })
+          void proxyMutation.catch((error) => {
+            clearTimeout(timer)
+            reject(error)
+          })
         }, 100)
       })
       client.on('message', (data) => {
@@ -319,37 +352,44 @@ try {
     if (typeof tunneledWorktreeId !== 'string') {
       throw new Error(`tunneled lifecycle frame was malformed: ${JSON.stringify(tunnelFrame)}`)
     }
-    const refusedTunnel = await new Promise((resolve) => {
-      const client = new WebSocket(
-        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`
-      )
-      client.on('unexpected-response', (_req, response) => {
-        resolve(response.statusCode)
-      })
-      client.on('open', () => {
-        client.terminate()
-        resolve('opened')
-      })
-      client.on('error', () => resolve('error'))
-    })
-    if (refusedTunnel !== 403) {
-      throw new Error(`tunnel without a bound session must be refused: ${String(refusedTunnel)}`)
+    await proxyMutation
+    const persisted = await service.status(scoped)
+    if (
+      !persisted.result?.worktrees?.some((worktree) => worktree.worktreeId === tunneledWorktreeId)
+    ) {
+      throw new Error('cookie-free Gateway mutation must persist the worktree')
     }
-    const malformedTunnel = await new Promise((resolve) => {
-      const client = new WebSocket(
-        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`,
-        { headers: { cookie: 'univer-viewer-sessions=%zz' } }
-      )
-      client.on('unexpected-response', (_req, response) => resolve(response.statusCode))
-      client.on('open', () => {
-        client.terminate()
-        resolve('opened')
+    for (const rejection of [401, 403]) {
+      gateRejection = rejection
+      const refusedTunnel = await new Promise((resolve, reject) => {
+        const client = new WebSocket(
+          `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`
+        )
+        const timer = setTimeout(() => {
+          client.terminate()
+          reject(new Error('DSH connection fence did not settle the tunnel upgrade'))
+        }, 10_000)
+        client.on('unexpected-response', (_req, response) => {
+          clearTimeout(timer)
+          response.resume()
+          client.terminate()
+          resolve(response.statusCode)
+        })
+        client.on('open', () => {
+          clearTimeout(timer)
+          client.terminate()
+          resolve('opened')
+        })
+        client.on('error', () => {
+          clearTimeout(timer)
+          resolve('error')
+        })
       })
-      client.on('error', () => resolve('error'))
-    })
-    if (malformedTunnel !== 403) {
-      throw new Error(`tunnel with a malformed cookie must fail closed: ${String(malformedTunnel)}`)
+      if (refusedTunnel !== rejection) {
+        throw new Error(`DSH connection fence must still gate the tunnel: ${String(refusedTunnel)}`)
+      }
     }
+    gateRejection = undefined
 
     // The comb endpoint authenticates each upgrade with a one-time query parameter the client
     // appends to the tunneled URL, then speaks TEXT frames; the tunnel must relay endpoint
@@ -357,8 +397,7 @@ try {
     // after opening (issue #76). A full HELLO round trip proves both, and the same upgrade
     // without the parameter is the differential control.
     const ticketResponse = await fetch(
-      `${ufBase}/worktrees/${tunneledWorktreeId}/universer-api/user/session-ticket`,
-      { headers: { cookie: scopeCookie } }
+      `${ufBase}/worktrees/${tunneledWorktreeId}/universer-api/user/session-ticket`
     )
     if (!ticketResponse.ok) {
       throw new Error(`session ticket request failed: ${ticketResponse.status}`)
@@ -374,8 +413,7 @@ try {
       )
     const memberID = await new Promise((resolve, reject) => {
       const client = new WebSocket(
-        `${combTunnelBase}&sessionTicket=${encodeURIComponent(ticketBody.ticket)}`,
-        { headers: { cookie: scopeCookie } }
+        `${combTunnelBase}&sessionTicket=${encodeURIComponent(ticketBody.ticket)}`
       )
       const timer = setTimeout(() => {
         client.terminate()
@@ -402,7 +440,7 @@ try {
       throw new Error(`comb HELLO through the tunnel carried no memberID: ${String(memberID)}`)
     }
     const anonymousHold = await new Promise((resolve) => {
-      const client = new WebSocket(combTunnelBase, { headers: { cookie: scopeCookie } })
+      const client = new WebSocket(combTunnelBase)
       const timer = setTimeout(() => {
         client.terminate()
         resolve('held open')
@@ -419,8 +457,7 @@ try {
 
     const disposedClosed = await new Promise((resolve, reject) => {
       const client = new WebSocket(
-        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`,
-        { headers: { cookie: scopeCookie } }
+        `${proxyOrigin}/univer-viewer/ws?target=${encodeURIComponent(`/uf/${proxyFileKey}/events`)}`
       )
       const timer = setTimeout(() => {
         client.terminate()
