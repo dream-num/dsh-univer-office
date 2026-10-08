@@ -29,6 +29,7 @@ cp -R "$ROOT/artifacts" "$PKG_DIR/"
 node "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR"
 mkdir -p "$PKG_DIR/scripts"
 cp "$ROOT/scripts/copy-gateway-dependencies.mjs" "$PKG_DIR/scripts/"
+cp "$ROOT/scripts/telemetry-entry.mjs" "$PKG_DIR/scripts/"
 cp "$ROOT/package.json" "$ROOT/README.md" "$ROOT/README.zh-CN.md" "$ROOT/cordis.patch.yml" "$ROOT/LICENSE" "$PKG_DIR/"
 # The repository's dev lifecycle hooks cannot run from the staged copy (prepare
 # rebuilds through scripts/ that is not shipped, and some npm versions execute
