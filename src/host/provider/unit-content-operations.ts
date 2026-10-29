@@ -1,5 +1,14 @@
 import { isAbsolute, normalize } from 'node:path'
 import { UnitContentWorker } from '../adapters/unit-content/worker.ts'
+import {
+  UnitContentRuntimePool,
+  type UnitContentRuntimePoolOptions
+} from '../adapters/unit-content/runtime-pool.ts'
+import {
+  executeUnitContent,
+  inspectUnitContent,
+  unitContentKind
+} from '../../shared/unit-content-session.ts'
 import type {
   UnitContentInspectionQuery,
   UnitContentWorkerTarget
@@ -37,16 +46,29 @@ export function resolveExportFile(value: string): string {
   return file
 }
 
-/** Package-local Unit content operations over one Gateway and isolated workers. */
+/**
+ * Package-local Unit content operations over one Gateway. Inspection, execution, and
+ * render-source reads reuse pooled Collaboration Runtime Workers; Office import and export run
+ * in one-shot Unit Content Workers. Without a pool every operation is one-shot.
+ */
 export class UnitContentOperations {
   private readonly worker: UnitContentWorker
+  private readonly runtimes: UnitContentRuntimePool | undefined
 
   constructor(
     private readonly gatewayRequestTimeoutMs: number,
     private readonly unitContentCommitTimeoutMs: number,
-    unitContentOperationTimeoutMs: number
+    unitContentOperationTimeoutMs: number,
+    runtimePool: Omit<UnitContentRuntimePoolOptions, 'operationTimeoutMs'>
   ) {
     this.worker = new UnitContentWorker(unitContentOperationTimeoutMs)
+    this.runtimes =
+      runtimePool.maxEntries === 0
+        ? undefined
+        : new UnitContentRuntimePool({
+            ...runtimePool,
+            operationTimeoutMs: unitContentOperationTimeoutMs
+          })
   }
 
   /** Inspect one file, unit, or Sheet range. */
@@ -61,14 +83,11 @@ export class UnitContentOperations {
       request.unitId,
       request.worktreeId
     )
-    const result = await this.worker.run(
-      {
-        ...target,
-        operation: 'inspect',
-        query: inspectionQuery(target.unitType, request.range, request.elementIds)
-      },
-      signal
-    )
+    const query = inspectionQuery(target.unitType, request.range, request.elementIds)
+    const result =
+      this.runtimes === undefined
+        ? await this.worker.run({ ...target, operation: 'inspect', query }, signal)
+        : await this.runtimes.use(target, signal, (session) => inspectUnitContent(session, query))
     return { ok: true, operation: 'inspect', file: request.file, result }
   }
 
@@ -82,11 +101,29 @@ export class UnitContentOperations {
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
     const target = await this.resolveTarget(gateway, file, unitId, worktreeId)
-    const result = await this.worker.run(
-      { ...target, operation: 'execute', code, worktreeId },
-      signal
+    if (this.runtimes === undefined) {
+      const result = await this.worker.run(
+        { ...target, operation: 'execute', code, worktreeId },
+        signal
+      )
+      return { ok: true, operation: 'execute', file, result }
+    }
+    const execution = await this.runtimes.use(target, signal, (session) =>
+      executeUnitContent(session, code)
     )
-    return { ok: true, operation: 'execute', file, result }
+    return {
+      ok: true,
+      operation: 'execute',
+      file,
+      result: {
+        committed: execution.committed,
+        filePath: target.filePath,
+        ...(execution.revision === undefined ? {} : { revision: execution.revision }),
+        unitId: target.unitId,
+        value: execution.value,
+        worktreeId
+      }
+    }
   }
 
   /** Export one Unit to a user-facing Office or delimited file. */
@@ -124,7 +161,13 @@ export class UnitContentOperations {
     readonly unitData: { [key: string]: JsonValue }
   }> {
     const target = await this.resolveTarget(gateway, file, unitId, worktreeId)
-    const value = await this.worker.run({ ...target, operation: 'render-source' }, signal)
+    const value =
+      this.runtimes === undefined
+        ? await this.worker.run({ ...target, operation: 'render-source' }, signal)
+        : await this.runtimes.use(target, signal, async (session) => ({
+            unitType: unitContentKind(target.unitType),
+            unitData: (await session.exportUnitData()) as unknown as { [key: string]: JsonValue }
+          }))
     if (!isRecord(value) || !isUnitKind(value.unitType) || !isRecord(value.unitData)) {
       throw new UniverError(
         'Unit content worker returned an invalid render source.',
@@ -155,6 +198,21 @@ export class UnitContentOperations {
         signal
       )
       .then((snapshot) => ({ kind, snapshot }))
+  }
+
+  /** Drop pooled runtimes of a worktree that was merged or discarded. */
+  async invalidateWorktree(file: string, worktreeId: string): Promise<void> {
+    await this.runtimes?.invalidateWorktree(file, worktreeId)
+  }
+
+  /** Drop the pooled runtime of a Unit removed from a worktree. */
+  async invalidateUnit(file: string, worktreeId: string, unitId: string): Promise<void> {
+    await this.runtimes?.invalidateUnit(file, worktreeId, unitId)
+  }
+
+  /** Close every pooled runtime worker. */
+  async close(): Promise<void> {
+    await this.runtimes?.close()
   }
 
   private async resolveTarget(

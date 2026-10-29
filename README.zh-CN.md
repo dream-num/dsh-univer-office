@@ -201,6 +201,8 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `gatewayRequestTimeoutMs` | `3000` | 状态读取超时 |
 | `gatewayMutationTimeoutMs` | `60000` | 写操作超时 |
 | `unitContentOperationTimeoutMs` | `120000` | 导入、导出、检查和执行超时 |
+| `unitContentRuntimeMaxEntries` | `2` | 为检查、执行和渲染保持预热的 Unit runtime 数，也是这些操作的并发上限；`0` 表示每次操作都启动新进程 |
+| `unitContentRuntimeIdleTtlMs` | `300000` | 预热的 Unit runtime 空闲多久后退出 |
 | `screenshotOperationTimeoutMs` | `120000` | 一次浏览器截图操作的总超时 |
 | `printPdfOperationTimeoutMs` | `120000` | 一次浏览器 PDF 打印操作的总超时 |
 | `screenshotMaxPages` | `30` | 一次 Doc 或 Slide 截图最多渲染的页数 |
@@ -227,7 +229,7 @@ dsh plugin --profile web remove dsh-univer-office
 
 ## 开发
 
-本项目是一个标准 [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md)。Host 组合 Univer Service Provider、Tools Consumer、webServer Consumer 和 Skill Provider；插件自带 Gateway、Viewer、无头 Unit Content Worker 与 Slide render machine。依赖方向和运行时边界见[架构文档](docs/architecture.md)。
+本项目是一个标准 [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md)。Host 组合 Univer Service Provider、Tools Consumer、webServer Consumer 和 Skill Provider；插件自带 Gateway、Viewer、池化 Collaboration Runtime Worker、无头 Unit Content Worker 与 Slide render machine。依赖方向和运行时边界见[架构文档](docs/architecture.md)。
 
 项目要求 Node.js `>=22.19.0` 和 `pnpm@11.23.0`。
 

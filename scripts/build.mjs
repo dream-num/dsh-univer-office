@@ -3,15 +3,16 @@
 // host, worker, and Gateway sources; SDK packages come from the registry.
 //
 //   pnpm run build:lib     → lib/index.js (host) + lib/client.js (client bundle)
-//   pnpm run build:worker  → artifacts/unit-content-worker.mjs
+//   pnpm run build:worker  → artifacts/unit-content-worker.mjs and
+//                            artifacts/collaboration-runtime-worker.mjs
 //   pnpm run build:gateway → artifacts/gateway.cjs and artifacts/upgrade-worker.cjs
 //   pnpm run build:render  → artifacts/render-machine/
 //   pnpm run build:viewer  → artifacts/viewer/
 //   pnpm run build         → all five applications
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { builtinModules, createRequire } from 'node:module'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { build } from 'esbuild'
@@ -69,6 +70,15 @@ if (target === 'all' || target === 'lib') {
       js: "import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);"
     }
   })
+  // The bundled runtime pool forks its bootstrap from beside its own module URL, which is
+  // lib/index.js once inlined, so the bootstrap ships next to it.
+  await copyFile(
+    resolve(
+      dirname(require.resolve('@univer-cli/univer-collaboration-runtime-pool')),
+      'worker-child.mjs'
+    ),
+    'lib/worker-child.mjs'
+  )
 
   // Browser half: react stays external (the DSH client runtime provides it);
   // everything else is inlined into the single client bundle.
@@ -121,14 +131,14 @@ if (target === 'all' || target === 'lib') {
     'lib/build-info.json',
     `${JSON.stringify({ commit, telemetryEndpoint, version: manifest.version }, null, 2)}\n`
   )
-  console.log('built lib/index.js + lib/client.js + lib/telemetry-entry.js')
+  console.log('built lib/index.js + lib/worker-child.mjs + lib/client.js + lib/telemetry-entry.js')
 }
 
 if (target === 'all' || target === 'worker') {
-  // Unit-content worker: a standalone process built from src/workers/unit-content
-  // with the SDK dependencies inlined (except the platform binary packages, which
-  // are resolved at runtime from the plugin's node_modules).
-  const workerOut = 'artifacts/unit-content-worker.mjs'
+  // Worker applications inline their SDK dependencies except the platform binary
+  // packages, which resolve at runtime from the plugin's node_modules:
+  //   - the one-shot Unit Content Worker (src/workers/unit-content)
+  //   - the Collaboration Runtime Worker definition the Host's runtime pool imports
   const workerExternal = [
     ...builtinModules.map((id) => `node:${id}`),
     ...builtinModules,
@@ -137,19 +147,25 @@ if (target === 'all' || target === 'worker') {
     '@univerjs-pro/exchange-node-binding',
     'libsql'
   ]
-  await build({
-    entryPoints: ['src/workers/unit-content/entry.ts'],
-    outfile: workerOut,
-    bundle: true,
-    packages: 'bundle',
-    external: workerExternal,
-    platform: 'node',
-    target: 'node22.19',
-    format: 'esm',
-    legalComments: 'none',
-    sourcemap: false
-  })
-  console.log('built', workerOut)
+  const workers = [
+    ['src/workers/unit-content/entry.ts', 'artifacts/unit-content-worker.mjs'],
+    ['src/workers/collaboration-runtime/entry.ts', 'artifacts/collaboration-runtime-worker.mjs']
+  ]
+  for (const [entryPoint, workerOut] of workers) {
+    await build({
+      entryPoints: [entryPoint],
+      outfile: workerOut,
+      bundle: true,
+      packages: 'bundle',
+      external: workerExternal,
+      platform: 'node',
+      target: 'node22.19',
+      format: 'esm',
+      legalComments: 'none',
+      sourcemap: false
+    })
+    console.log('built', workerOut)
+  }
 }
 
 if (target === 'all' || target === 'gateway') {

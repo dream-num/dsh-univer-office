@@ -86,7 +86,8 @@ function workerDiagnostic(stderr: readonly Buffer[], fallback: string): string {
   return `${fallback} ${diagnostic.length <= limit ? diagnostic : `${diagnostic.slice(0, limit)}…`}`
 }
 
-function unitContentWorkerEnvironment(): NodeJS.ProcessEnv {
+/** Minimal environment every Unit content child process starts with. */
+export function unitContentWorkerEnvironment(): NodeJS.ProcessEnv {
   const env = Object.fromEntries(
     ['HOME', 'LANG', 'LC_ALL', 'PATH', 'TMPDIR'].flatMap((key) => {
       const value = process.env[key]

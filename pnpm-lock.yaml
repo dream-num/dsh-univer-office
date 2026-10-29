@@ -138,6 +138,9 @@ importers:
       '@univer-cli/univer-collaboration-runtime':
         specifier: 1.2.0
         version: 1.2.0(react@18.3.1)(rxjs@7.8.2)
+      '@univer-cli/univer-collaboration-runtime-pool':
+        specifier: 1.2.0
+        version: 1.2.0(react@18.3.1)(rxjs@7.8.2)
       '@univer-cli/univer-render-page':
         specifier: 1.2.0
         version: 1.2.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(@univer-cli/univer-render-runtime@1.2.0(react@18.3.1)(rxjs@7.8.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
@@ -2756,6 +2759,9 @@ packages:
   '@univer-cli/content-inspection@1.2.0':
     resolution: {integrity: sha512-aGtNqtAUPNRyVp2wjnKHnGsTXMFEIRbjcmux8PyzJHEQfGe1YUTeG7T2foUJuhvwsCfTN359gooF0996FupFFQ==, tarball: https://registry.npmjs.org/@univer-cli/content-inspection/-/content-inspection-1.2.0.tgz}
 
+  '@univer-cli/generic-keyed-instance-pool@1.2.0':
+    resolution: {integrity: sha512-qofMA+dSSAn7E3IQGmfMu4Jk27uK4DdNCe+gDSAJ3LJJ0FwZoyAFtaci82j/RZwR8r7lKrUsg1qa4f7JJuE2pw==, tarball: https://registry.npmjs.org/@univer-cli/generic-keyed-instance-pool/-/generic-keyed-instance-pool-1.2.0.tgz}
+
   '@univer-cli/headless-univer@1.2.0':
     resolution: {integrity: sha512-FI6XJafPSuh32hodTBAnODRaShGNmQgsn8AmxysuxIqqfZzO98Y9fLT8cb6V8G4CCOZfd+P+gmW10fATroID+Q==, tarball: https://registry.npmjs.org/@univer-cli/headless-univer/-/headless-univer-1.2.0.tgz}
 
@@ -2773,6 +2779,9 @@ packages:
 
   '@univer-cli/unit-screenshot@1.2.0':
     resolution: {integrity: sha512-JUALK0MFcelNk5E9sJ2+hDhdpdGLVfxsQIQjNLbsovtRUOR3PvUmjXx4Ud+2df3oUsKlAD+8lyynEHk6GwPoVQ==, tarball: https://registry.npmjs.org/@univer-cli/unit-screenshot/-/unit-screenshot-1.2.0.tgz}
+
+  '@univer-cli/univer-collaboration-runtime-pool@1.2.0':
+    resolution: {integrity: sha512-HK+un5Mdq7LRnb5HJxT7xcNiKb5+AGUYN+o83Efs6jSzW0GIcxowcvw8NVHTL1W/N412tbkpWDnYIcan6yTjng==, tarball: https://registry.npmjs.org/@univer-cli/univer-collaboration-runtime-pool/-/univer-collaboration-runtime-pool-1.2.0.tgz}
 
   '@univer-cli/univer-collaboration-runtime@1.2.0':
     resolution: {integrity: sha512-F2G5ShLcBCB/1PlTGgr1gKscfc/WyN/o2rkvbNIypF5Glur+zdXd45ulH9hjAEzkQCH1qbPBctgObtJ3N1RB/A==, tarball: https://registry.npmjs.org/@univer-cli/univer-collaboration-runtime/-/univer-collaboration-runtime-1.2.0.tgz}
@@ -6451,6 +6460,8 @@ snapshots:
       - react
       - rxjs
 
+  '@univer-cli/generic-keyed-instance-pool@1.2.0': {}
+
   '@univer-cli/headless-univer@1.2.0(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
       '@univerjs-pro/bases': 1.2.0(react@18.3.1)(rxjs@7.8.2)
@@ -6552,6 +6563,15 @@ snapshots:
       - rxjs
       - utf-8-validate
       - yauzl
+
+  '@univer-cli/univer-collaboration-runtime-pool@1.2.0(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univer-cli/generic-keyed-instance-pool': 1.2.0
+      '@univer-cli/univer-collaboration-runtime': 1.2.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/protocol': 1.2.0
+    transitivePeerDependencies:
+      - react
+      - rxjs
 
   '@univer-cli/univer-collaboration-runtime@1.2.0(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
