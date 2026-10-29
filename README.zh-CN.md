@@ -188,6 +188,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 - 截图、PDF 打印、Slide 布局检查和 SVG 文字度量需要本机 Chromium 系浏览器。Chrome/Chromium 与 Microsoft Edge 会被自动探测；也可以通过 `browserExecutablePath` 配置项或 `UNIVER_RENDER_BROWSER` 环境变量指定浏览器可执行文件路径（例如 Windows 上的 Edge）。
 - Slide 的母版、版式页和演讲者备注不在当前编辑范围内。
 - Board 的思维导图、表格、墨迹和高级编辑，以及 Board 文件导出尚未开放。
+- 启用内置任务指引时，插件会替换 DSH 自带的 `office`、`office-docx`、`office-xlsx` 和 `office-pptx` 技能，使 Word、Excel 和 PowerPoint 任务走 Univer，而不是 python-docx、openpyxl 或 python-pptx。DSH 的 LibreOffice Kit 技能（`office-render`、`office-recalculate` 和 `office-export-pdf`）保持可用。如需保留 DSH 原有技能，设置 `skills: false`。
 
 ## 配置
 

@@ -50,8 +50,42 @@ const DEFINITIONS = [
     name: 'univer-cross-unit-formula',
     description:
       'Author, calculate, update, inspect, and verify cross-Unit formulas through DSH tools and the Lite Interface. Use proactively when a Sheet cell or formula-driven Shape in a Sheet, Doc, Slide, or Board reads a Sheet range or Base table column from another Unit in the same .univer file.'
+  },
+  {
+    name: 'office',
+    description:
+      'Create, edit, inspect, or convert Office documents, spreadsheets, and presentations through Univer and the structured univer_* tools. Load to choose the relevant workflow.'
+  },
+  {
+    name: 'office-docx',
+    description:
+      'Create, read, edit, and validate Word documents (.docx) through Univer Doc Units and the structured univer_* tools.'
+  },
+  {
+    name: 'office-pptx',
+    description:
+      'Create, read, edit, and validate PowerPoint presentations (.pptx) through Univer Slide Units and the structured univer_* tools.'
+  },
+  {
+    name: 'office-xlsx',
+    description:
+      'Read, create, edit, and validate Excel workbooks, data, and formulas (.xlsx) through Univer Sheet Units and the structured univer_* tools.'
   }
 ] as const
+
+/**
+ * DSH's bundled `dsh-office` provider registers these names at `BUNDLED_SKILL_RANK` and routes
+ * Office work to python-docx, openpyxl, and python-pptx. The registry keeps the lowest rank among
+ * same-name skills in one layer, so these Univer routing skills shadow them while this plugin is
+ * loaded; DSH's LibreOffice Kit operation skills stay visible.
+ */
+const OFFICE_ROUTES: ReadonlySet<string> = new Set([
+  'office',
+  'office-docx',
+  'office-pptx',
+  'office-xlsx'
+])
+const OFFICE_ROUTE_RANK = BUNDLED_SKILL_RANK - 1
 
 const CANDIDATES: readonly SkillCandidate[] = DEFINITIONS.map((definition) => {
   const url = new URL(`../skills/${definition.name}/SKILL.md`, import.meta.url)
@@ -64,7 +98,7 @@ const CANDIDATES: readonly SkillCandidate[] = DEFINITIONS.map((definition) => {
       kind: 'directory',
       path: fileURLToPath(new URL(`../skills/${definition.name}/`, import.meta.url))
     },
-    rank: BUNDLED_SKILL_RANK,
+    rank: OFFICE_ROUTES.has(definition.name) ? OFFICE_ROUTE_RANK : BUNDLED_SKILL_RANK,
     locator: url
   }
 })
