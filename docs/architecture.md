@@ -36,8 +36,8 @@
 - 一个 worktree 改动多个 unit 时，只列出有改动的 unit 并允许切换；
 - draft 或 ready worktree 的 Viewer 可在 View 与 Compare 间切换，把当前 worktree 与固定的 trunk 或另一个活跃 worktree 并排比较，并为 Sheet、Doc、Slide、Base 与 Board 提供语义差异列表、定位和显式刷新；
 - 会话结束后在最近一次操作各 worktree 的回合末尾为 `draft` 或 `ready` worktree 显示嵌入式审阅面板；
-- 后续回合再次操作同一 worktree 时，旧回合保留同一张完整卡片并默认折叠，不回退到旧文件预览卡片或单独历史 header；
-- 审阅卡片使用紧凑 header：首行显示 Univer 文件名和右侧的 worktree 名称，次行只显示完整文件路径，状态、折叠和全屏控制位于右侧；桌面端不同生命周期的展开卡片默认总高度约 650px，内嵌完整页面默认折叠左侧边栏，卡片折叠保留已加载页面；全屏时隐藏折叠按钮，Esc 退出全屏；
+- 只有会话中最近一个渲染卡片的回合默认展开，更早回合保留同一张完整卡片并默认折叠，不回退到旧文件预览卡片或单独历史 header；没有 Univer 文件的回合不会让已展开的卡片折叠；
+- 审阅卡片使用紧凑 header：首行显示 Univer 文件名和右侧的 worktree 名称，次行只显示完整文件路径，状态、折叠和全屏控制位于右侧；桌面端不同生命周期的展开卡片默认总高度约 650px，内嵌完整页面默认折叠左侧边栏；每个 Viewer 都是独立的协作客户端，因此折叠的卡片不挂载 Viewer，展开时重新加载；全屏时隐藏折叠按钮，Esc 退出全屏；
 - draft、ready 状态的提交确认、丢弃与合入当前版本只使用完整 Univer 页面内置操作，卡片外壳不重复提供 action footer；
 - worktree 进入 `merged` 或 `discarded` 终态后不再显示浮窗或修改操作，但保留审阅卡片并在完整页面中显示主线；
 - 插件按需启动并管理内置 Gateway 和 Viewer；
