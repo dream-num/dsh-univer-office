@@ -51,6 +51,7 @@
 @import '@univerjs-pro/boards-mind-ui/lib/index.css';
 @import '@univerjs-pro/boards-print/lib/index.css';
 @import '@univerjs-pro/boards-table-ui/lib/index.css';
+@import './import-export/styles.css';
 /* Keep the broad Board UI sheet last in this multi-Unit bundle. Feature sheets
  * contain partial utility sets and must not become the final cascade authority. */
 @import '@univerjs-pro/boards-ui/lib/index.css';

@@ -170,6 +170,7 @@ src/
   viewer-app/                        # Viewer browser application
   viewer-support/
     render-preset/                   # Viewer 的 Univer 渲染组合
+      import-export/                 # Ribbon 与 Base 工具栏的导入导出 UI
     importrange-formula/             # Viewer 的 IMPORTRANGE plugin
   client/
     index.tsx                        # dsh.client 入口
@@ -313,7 +314,7 @@ Gateway 通过 SDK `register(router)` 注册 HTTP/WebSocket Endpoint，连接跟
 
 Gateway 中的 Collaboration SDK runtime（trunk Service、Worktree Service、Unit Snapshot Materializer 与 `createUnitRuntime`）统一使用 `execution: { mode: 'in-process' }`。SDK 1.0.4 起默认改为 worker thread，并从 SDK 模块旁加载 `unit-runtime-worker.cjs`；Gateway 打包为单个 CJS，运行时旁边没有该文件，而且按请求创建的 materializer 会为每次调用启动和销毁整个 worker 池。
 
-Viewer Ribbon 的交互式导入导出使用 Gateway 中逐 `.univer` 隔离的 Universer exchange 协议：`source=1` 上传、异步 import/export task、sign-url 与 artifact content。该协议只挂在 trunk 路径；导入在当前 `.univer` trunk 创建新 Unit 并发布结构化 `unit_added` 事件，导出从 trunk head 物化快照。临时 artifact 和 task 有界、可过期，并随文件 runtime 一起释放。嵌入资源继续使用 `source=3` 且按 Unit/worktree 授权，两类文件协议不得混用。docx 导入的兼容模式由 import options 的 `doc.docType`（`traditional`/`modern`）决定：两个导入入口（Unit Content Worker 与该协议）在缺省时都显式解析为 `traditional` 以保留源页面几何，`modern` 是 pageless 语义、会重写页面版面，仅由调用方显式选择；上游 exchange binding 的 serde 缺省值不做兜底依据。
+Viewer Ribbon 的交互式导入导出使用 Gateway 中逐 `.univer` 隔离的 Universer exchange 协议：`source=1` 上传、异步 import/export task、sign-url 与 artifact content。该协议只挂在 trunk 路径；导入在当前 `.univer` trunk 创建新 Unit 并发布结构化 `unit_added` 事件，导出从 trunk head 物化快照。SDK 1.2.0 起 exchange-client 系列包只保留服务与 Facade，不再提供导入导出 UI；`render-preset/import-export` 按 Unit 类型保存 univer-pro `v1.2.0` 示例插件 `custom-import-export`（Sheet、Doc、Slide 的 Ribbon“文件”菜单与 Base 工具栏按钮），仅在传入 `exchangeClientConfig` 时注册在对应 exchange-client 插件之后。临时 artifact 和 task 有界、可过期，并随文件 runtime 一起释放。嵌入资源继续使用 `source=3` 且按 Unit/worktree 授权，两类文件协议不得混用。docx 导入的兼容模式由 import options 的 `doc.docType`（`traditional`/`modern`）决定：两个导入入口（Unit Content Worker 与该协议）在缺省时都显式解析为 `traditional` 以保留源页面几何，`modern` 是 pageless 语义、会重写页面版面，仅由调用方显式选择；上游 exchange binding 的 serde 缺省值不做兜底依据。
 
 Gateway 还为 trunk revision 组合 Collaboration SDK History Service 与 Endpoint。Gateway 自己在共享 `.univer` connection 上实现 History database adapter。`history@2` 不再按 revision 派生：每个 Unit 的每个分段保存一条**分段起始**记录（主键 `(unit_id, start_revision)`），`endRevision` 由下一段的起始 revision 计算、不入库，列表按 `startRevision` 降序并以排他的 `beforeRevision` 分页，`hasMore` 只表示页下方仍存在匹配记录。SDK 1.0.0 移除了旧的逐 revision History 读取与重建 API，因此文件 runtime 启动时不再 reconcile 到 trunk head，SDK transport 直接开放。Viewer 为 trunk 的 Sheet、Doc、Slide、Base 与 Board 分别注册官方 History UI；只读审阅可检查历史但不能恢复，可编辑 trunk 视图可显式恢复，worktree 与 merge preview 不呈现历史入口。
 
@@ -423,7 +424,7 @@ Client 必须满足：
 
 ## 12. 构建与发布
 
-`src` 包含插件发布的所有 application 源码；Viewer application、machine render page、render preset 和 IMPORTRANGE plugin 源码从 `univer-cli` 复制到本仓库后直接维护。`packages/unit-comparison-viewer` 与 `univer-workspace`、`univer-cli` 中的同名可复制组件保持行为同步，并针对本仓库的 React 18 Host 做兼容。`pnpm run build` 生成 Host/Client bundle、Unit Content Worker、Gateway、machine render page 和 Viewer；`lib` 与 `artifacts` 都被 gitignore，并在打包前重新生成。Host 构建为 Node ESM，Client 构建为 DSH ModuleLoader 可加载的浏览器 bundle，Gateway 构建为 Node CJS 子进程，Worker 构建为 Node ESM 子进程，machine render page 与 Viewer 构建为 Vite 静态资产。lib 构建同时生成 `lib/telemetry-entry.js`（卸载 hook 发送入口）与 `lib/build-info.json`（包版本、构建 commit 与遥测 endpoint）。
+`src` 包含插件发布的所有 application 源码；Viewer application、machine render page、render preset 和 IMPORTRANGE plugin 源码从 `univer-cli` 复制到本仓库后直接维护；`render-preset/import-export` 从 univer-pro `examples/src/*/custom-plugin/custom-import-export`（`v1.2.0`）复制，去掉移动端入口，依赖注入按本仓库约定改为 `setDependencies`/`DependentOn` 调用而非装饰器。`packages/unit-comparison-viewer` 与 `univer-workspace`、`univer-cli` 中的同名可复制组件保持行为同步，并针对本仓库的 React 18 Host 做兼容。`pnpm run build` 生成 Host/Client bundle、Unit Content Worker、Gateway、machine render page 和 Viewer；`lib` 与 `artifacts` 都被 gitignore，并在打包前重新生成。Host 构建为 Node ESM，Client 构建为 DSH ModuleLoader 可加载的浏览器 bundle，Gateway 构建为 Node CJS 子进程，Worker 构建为 Node ESM 子进程，machine render page 与 Viewer 构建为 Vite 静态资产。lib 构建同时生成 `lib/telemetry-entry.js`（卸载 hook 发送入口）与 `lib/build-info.json`（包版本、构建 commit 与遥测 endpoint）。
 
 发布包包含运行所需的 Gateway、Viewer、Unit Content Worker、Office 转换器、平台依赖、Univer license 与 bundled Skills。Gateway、Worker、Viewer 和 Host 直接使用 manifest 中精确版本的 Univer SDK/API Reference packages；JavaScript SDK 被 bundle，平台原生 package 由包管理器为目标机器安装。发布时只打包从当前源码生成的运行产物。
 

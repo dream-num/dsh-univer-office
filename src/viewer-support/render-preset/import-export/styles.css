@@ -1,0 +1,26 @@
+/*
+ * Utilities the import/export views use that no loaded Univer stylesheet defines. Through SDK
+ * 1.0.x they shipped in `@univerjs-pro/exchange-client/lib/index.css`, which 1.2.0 removed together
+ * with the built-in import/export UI; the rules below are copied from that stylesheet.
+ */
+.univer-bottom-12 {
+  bottom: 3rem;
+}
+.univer-no-underline {
+  text-decoration-line: none;
+}
+.univer-pr-4 {
+  padding-right: 1rem;
+}
+.univer-pt-5 {
+  padding-top: 1.25rem;
+}
+.univer-w-\[324px\] {
+  width: 324px;
+}
+.univer-w-\[372px\] {
+  width: 372px;
+}
+.univer-w-\[calc\(100\%-48px\)\] {
+  width: calc(100% - 48px);
+}

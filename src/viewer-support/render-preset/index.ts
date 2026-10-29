@@ -107,6 +107,10 @@ import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui'
 // import { UniverThreadCommentUIPlugin } from "@univerjs/thread-comment-ui";
 import { UniverUIPlugin, type RibbonType } from '@univerjs/ui'
 import { createViewBaseResourceRefDataProviderRegistration } from './view-base-resource-ref-data-provider.js'
+import { CustomBasesImportExportPlugin } from './import-export/bases/plugin.js'
+import { CustomDocsImportExportPlugin } from './import-export/docs/plugin.js'
+import { CustomImportExportPlugin as CustomSheetsImportExportPlugin } from './import-export/sheets/plugin.js'
+import { CustomSlidesImportExportPlugin } from './import-export/slides/plugin.js'
 
 export type { BoardModel, IBoardLayoutAnalysisResult, IBoardRect } from '@univerjs-pro/boards'
 export {
@@ -298,12 +302,14 @@ function registerOutputPlugins(
       registerExchange()
       if (exchangeClientConfig !== undefined) {
         univer.registerPlugin(UniverSheetsExchangeClientPlugin)
+        univer.registerPlugin(CustomSheetsImportExportPlugin)
       }
       return
     case UniverInstanceType.UNIVER_DOC:
       registerExchange()
       if (exchangeClientConfig !== undefined) {
         univer.registerPlugin(UniverDocsExchangeClientPlugin)
+        univer.registerPlugin(CustomDocsImportExportPlugin)
       }
       univer.registerPlugin(UniverDocsPrintPlugin)
       return
@@ -311,6 +317,7 @@ function registerOutputPlugins(
       registerExchange()
       if (exchangeClientConfig !== undefined) {
         univer.registerPlugin(UniverSlidesExchangeClientPlugin)
+        univer.registerPlugin(CustomSlidesImportExportPlugin)
       }
       univer.registerPlugin(UniverSlidesPrintPlugin)
       return
@@ -318,6 +325,7 @@ function registerOutputPlugins(
       registerExchange()
       if (exchangeClientConfig !== undefined) {
         univer.registerPlugin(UniverBasesExchangeClientPlugin)
+        univer.registerPlugin(CustomBasesImportExportPlugin)
       }
       return
     case UniverInstanceType.UNIVER_BOARD:
