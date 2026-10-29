@@ -1,9 +1,8 @@
 import * as React from 'react'
 import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
-import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { DEFAULT_UNIVER_SETTINGS, type UniverSettings } from '../../shared/settings.ts'
-import type { UniverSettingsForm } from '../settings/settings-contract.ts'
+import type { UniverSettingsForm, UniverSettingsSnapshot } from '../settings/settings-contract.ts'
 import type { UniverLocaleKey } from '../locales/zh.ts'
 
 interface UniverSettingsCardInjected {
@@ -197,10 +196,7 @@ export function UniverSettingsCard(props: UniverSettingsCardProps): React.ReactN
 }
 
 /** The schema default for one field, used when a Reset is committed. */
-function fallbackValue(
-  snapshot: SettingsScopeSnapshot<UniverSettings>,
-  field: BooleanSettingKey
-): boolean {
+function fallbackValue(snapshot: UniverSettingsSnapshot, field: BooleanSettingKey): boolean {
   const base =
     typeof snapshot.base === 'object' && snapshot.base !== null && !Array.isArray(snapshot.base)
       ? (snapshot.base as Record<string, unknown>)[field]
