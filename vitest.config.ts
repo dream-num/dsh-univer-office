@@ -3,6 +3,10 @@ import { defineConfig } from 'vitest/config'
 
 const source = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
+// Node imports the built Host bundle directly. Through Vite's module runner, every isolated test
+// file would re-transform the multi-megabyte `lib/index.js`, which dominated suite time.
+const nativeBuiltBundle = { deps: { external: [/\/lib\/[^/]+\.js$/] } }
+
 // Three tiers, selected with `--project`:
 // - unit: source-level, no build, no Gateway.
 // - integration: built `lib/` and `artifacts/` from the same checkout, real Gateway and Workers.
@@ -30,6 +34,7 @@ export default defineConfig({
         test: {
           name: 'integration',
           include: ['test/integration/**/*.test.ts'],
+          server: nativeBuiltBundle,
           environment: 'node',
           fileParallelism: false,
           testTimeout: 120_000,
@@ -40,6 +45,7 @@ export default defineConfig({
         test: {
           name: 'e2e',
           include: ['test/e2e/**/*.test.ts'],
+          server: nativeBuiltBundle,
           environment: 'node',
           fileParallelism: false,
           testTimeout: 180_000,
