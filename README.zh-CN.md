@@ -241,6 +241,8 @@ pnpm run build
 pnpm run test
 ```
 
+`.npmrc` 让 `@univer-cli`、`@univerjs`、`@univerjs-pro` 三个 scope 从 Univer 的 insider registry（`https://insider-npm-registry.univer.work/`）解析。该源对外公开，不需要账号或 token，主要用于访问 Univer 的 insider 版本；正式版本推荐从 npm 下载安装。
+
 ## 官方包名
 
 请只安装 `dsh-univer-office`。以下相似名称是本项目为防止仿冒而保留的 deprecated npm 占位包，不包含插件代码：
