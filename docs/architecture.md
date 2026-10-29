@@ -224,11 +224,11 @@ artifacts/                            # gitignored 的发布运行产物
   unit-content-worker.mjs           # 从 workers/unit-content 生成
   collaboration-runtime-worker.mjs  # 从 workers/collaboration-runtime 生成
 test/
-  host-smoke.mjs
-  client-smoke.mjs
-  integration-smoke.mjs
-  skills-smoke.mjs
-  telemetry-smoke.mjs
+  unit/                              # Vitest unit project：直接加载源码，无需构建
+  integration/                       # Vitest integration project：加载 lib/ 与 artifacts/，自带 Gateway
+  e2e/                               # Vitest e2e project：真实渲染浏览器
+  support/                           # 共享 Gateway harness、端口、OOXML 与浏览器工具
+  fixtures/
 scripts/
   build.mjs
 skills/
@@ -268,7 +268,7 @@ bundled skill provider -> DSH skill registry
 7. Render Machine browser page 使用与 runtime 精确同版本的 `@univer-cli/univer-render-page` 提供页面协议与 render operations，并注入本仓库与 Viewer 共享的 Univer composition；Viewer、render preset 和 IMPORTRANGE plugin 是本仓库的普通源码。仓库不提交上游源码快照目录或预构建 Viewer。
 8. Skill Provider 只负责发现与加载包内 Markdown，不调用 Service，也不复制工具 schema。
 9. 所有 Cordis 注册通过 effect 生命周期撤销；插件卸载后不得遗留路由、工具、Skill provider、定时器或子进程。
-10. `@univerjs/`、`@univerjs-pro/`、`@univer-cli/` 前缀的 SDK 依赖是一个跨应用兼容契约，用 `pnpm update:univer-sdk --sdk_version <精确版本>` 统一升级为同一精确版本，升级后 pnpm-workspace.yaml `overrides` 不得残留任何 SDK 条目。`@univerjs/icons`、`@univerjs-pro/cli-assets`、`@univerjs-pro/doc-typst-native-binding` 按自身发布节奏声明精确版本。`@univerjs-pro/engine-formula-rust-binding` 与 `@univerjs-pro/exchange-node-binding` 是上游依赖树中的传递绑定包：本仓库任何 package.json 都不得声明它们，源码也不直接 import；bundle 内联两个 wrapper 的代码，绑定包保持 external。发布物以 dsh 的 pnpm 安装为前提（隔离布局下插件 bundle 无法解析传递依赖），因此打包时由 `scripts/inject-runtime-bindings.mjs` 把绑定包按安装树解析到的实际版本写入 dist manifest 的 dependencies，并与 pnpm store 中 wrapper 的声明交叉校验；该差异由打包生成，不入库。构建与发布脚本一律按包名操作、动态读取解析后的实际版本，不写死版本号。开发工作区用 pnpm `publicHoistPattern` 把绑定包提升到根 `node_modules`：bundle 内联了 wrapper 代码，运行时 `require(binding)` 从仓库根解析。integration smoke 对仓库 manifest 断言零绑定包声明，对已安装包断言绑定包已作为直接依赖注入。
+10. `@univerjs/`、`@univerjs-pro/`、`@univer-cli/` 前缀的 SDK 依赖是一个跨应用兼容契约，用 `pnpm update:univer-sdk --sdk_version <精确版本>` 统一升级为同一精确版本，升级后 pnpm-workspace.yaml `overrides` 不得残留任何 SDK 条目。`@univerjs/icons`、`@univerjs-pro/cli-assets`、`@univerjs-pro/doc-typst-native-binding` 按自身发布节奏声明精确版本。`@univerjs-pro/engine-formula-rust-binding` 与 `@univerjs-pro/exchange-node-binding` 是上游依赖树中的传递绑定包：本仓库任何 package.json 都不得声明它们，源码也不直接 import；bundle 内联两个 wrapper 的代码，绑定包保持 external。发布物以 dsh 的 pnpm 安装为前提（隔离布局下插件 bundle 无法解析传递依赖），因此打包时由 `scripts/inject-runtime-bindings.mjs` 把绑定包按安装树解析到的实际版本写入 dist manifest 的 dependencies，并与 pnpm store 中 wrapper 的声明交叉校验；该差异由打包生成，不入库。构建与发布脚本一律按包名操作、动态读取解析后的实际版本，不写死版本号。开发工作区用 pnpm `publicHoistPattern` 把绑定包提升到根 `node_modules`：bundle 内联了 wrapper 代码，运行时 `require(binding)` 从仓库根解析。`test/integration/gateway-lifecycle.test.ts` 对仓库 manifest 断言零绑定包声明，对已安装包断言绑定包已作为直接依赖注入。
 
 ## 6. Service Definition
 
@@ -478,7 +478,7 @@ Client 必须满足：
 
 产品遥测是 best-effort 的匿名活跃与卸载统计，只用于看趋势，不用于精确计量。发布包不声明 `postinstall`，以兼容 DSH profile 的依赖构建脚本审批策略。遥测绝不影响插件启动或卸载：所有失败静默吞掉，发送有 5 秒超时，无重试、无队列、无锁。
 
-- 事件共三个，统一经 `lib/build-info.json` 中写死的 Univer 代理 endpoint 上报（版本与 commit 也取自该文件），客户端不持有任何分析平台凭证。发送只发生在安装后的插件激活与卸载钩子，开发 checkout 不会触发任何发送；telemetry smoke 断言构建产物中的 endpoint 等于写死地址，防止回归为静默构建。运行时显式设置 `UNIVER_TELEMETRY_ENDPOINT`（含空值）优先于写死值，用作测试重定向与应急开关。服务端 allowlist 必须先于带 endpoint 的构建部署，否则事件会被整包拒绝且因 at-most-once 永久丢失；
+- 事件共三个，统一经 `lib/build-info.json` 中写死的 Univer 代理 endpoint 上报（版本与 commit 也取自该文件），客户端不持有任何分析平台凭证。发送只发生在安装后的插件激活与卸载钩子，开发 checkout 不会触发任何发送；`test/integration/telemetry.test.ts` 断言构建产物中的 endpoint 等于写死地址，防止回归为静默构建。运行时显式设置 `UNIVER_TELEMETRY_ENDPOINT`（含空值）优先于写死值，用作测试重定向与应急开关。服务端 allowlist 必须先于带 endpoint 的构建部署，否则事件会被整包拒绝且因 at-most-once 永久丢失；
 - `dsh_plugin_activated`（Host 激活，每安装身份一次）、`dsh_plugin_daily_active`（Host 激活时检查，每安装身份每本地日一次）、`dsh_plugin_uninstall_hook`（包 uninstall，不去重，因为 state 跨重装存活，一次性标记会掩盖后续卸载）；
 - payload 只允许 `distinctId`（随机 UUID）、事件名与白名单属性（package name/version、build commit、platform、arch、Node major version、event source、state schema version），禁止路径、workspace、session、文件内容与环境变量。服务端代理对未知键整包拒绝；
 - 去重只在本机 state（`$DSH_HOME/telemetry/dsh-univer-office/state.json`，沿用 `config.ts` 的 `DSH_HOME` 约定）中做，先落盘标记再发送（at-most-once：崩溃宁可丢事件不重发，标记写失败时同样放弃发送）；并发启动的毫秒级竞态接受偶发双发；
