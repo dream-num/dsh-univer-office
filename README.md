@@ -241,6 +241,8 @@ pnpm run build
 pnpm run test
 ```
 
+`.npmrc` resolves the `@univer-cli`, `@univerjs`, and `@univerjs-pro` scopes from Univer's insider registry, `https://insider-npm-registry.univer.work/`. It is publicly readable and needs no account or token. It serves every official release (its tarballs redirect to npmjs.org) and also insider builds that are not yet on npm. `pnpm-lock.yaml` records the npmjs.org tarball URL for each of these packages.
+
 ## Official package name
 
 Install only `dsh-univer-office`. The following similar names are deprecated npm placeholders reserved by this project to prevent impersonation; they contain no plugin code:
