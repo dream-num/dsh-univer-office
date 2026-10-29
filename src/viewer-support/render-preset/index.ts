@@ -10,6 +10,7 @@ import { UniverBasesExchangeClientPlugin } from '@univerjs-pro/bases-exchange-cl
 import { BoardToolType, UniverBoardsPlugin } from '@univerjs-pro/boards'
 import { UniverBoardsChartPlugin } from '@univerjs-pro/boards-chart'
 import { UniverBoardsChartUIPlugin } from '@univerjs-pro/boards-chart-ui'
+import { UniverChartEmbedPlugin } from '@univerjs-pro/chart-embed'
 import { UniverBoardsMindPlugin } from '@univerjs-pro/boards-mind'
 import { UniverBoardsMindUIPlugin } from '@univerjs-pro/boards-mind-ui'
 import { UniverBoardsTablePlugin } from '@univerjs-pro/boards-table'
@@ -348,6 +349,8 @@ function registerEmbedCorePlugin(
       ...resourceRefDataProviderRegistrations
     ]
   })
+  // Referenced Doc, Slide, and Board charts resolve their data sources through this runtime.
+  univer.registerPlugin(UniverChartEmbedPlugin)
 }
 
 function registerEmbedUIPlugin(univer: Univer): void {

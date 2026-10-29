@@ -9,10 +9,11 @@ import {
   type OptimizeUniverfileReport,
   type OptimizeUniverfileWorktrees
 } from '../contract/index.js'
-import { type DatabaseContext, UniverUnitRuntime } from '@univerjs-pro/collaboration-service'
+import { type DatabaseContext, createUnitRuntime } from '@univerjs-pro/collaboration-service'
 import type { UniverType } from '@univerjs/protocol'
 import { externalizeEmbeddedImages } from '../assets/externalize-embedded-images.js'
 import { GatewaySemanticError } from '../errors.js'
+import { GATEWAY_UNIT_RUNTIME } from '../sdk-runtime.js'
 import {
   UniverfileSQLiteAssetStore,
   UniverfileSQLiteConnection,
@@ -259,8 +260,8 @@ async function materializeCurrentHeads(connection: UniverfileSQLiteConnection): 
     filename: connection.filename,
     connection
   })
-  // The runtime now takes a read-only reader; IDatabaseAdapter satisfies that contract.
-  const runtime = new UniverUnitRuntime({ reader: adapter })
+  // The runtime takes a read-only reader; IDatabaseAdapter satisfies that contract.
+  const runtime = createUnitRuntime({ ...GATEWAY_UNIT_RUNTIME, reader: adapter })
   const context = optimizationDatabaseContext()
   const units = connection.database
     .prepare(
