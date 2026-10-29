@@ -687,10 +687,15 @@ function optimizationDatabaseContext(): DatabaseContext {
 }
 
 function encodeStoredJson(value: unknown): string {
-  return JSON.stringify(value, (_key, current: unknown) =>
-    current instanceof Uint8Array
-      ? { [BINARY_TAG]: Buffer.from(current).toString('base64') }
-      : current
+  // Read the holder value: JSON.stringify applies Buffer#toJSON before the replacer sees it.
+  return JSON.stringify(
+    value,
+    function (this: Readonly<Record<string, unknown>>, key, current: unknown) {
+      const raw = this[key]
+      return raw instanceof Uint8Array
+        ? { [BINARY_TAG]: Buffer.from(raw).toString('base64') }
+        : current
+    }
   )
 }
 

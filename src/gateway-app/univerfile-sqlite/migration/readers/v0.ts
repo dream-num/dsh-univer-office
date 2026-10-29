@@ -938,12 +938,17 @@ function parseJson<T>(json: string, label: string): T {
 }
 
 function encode(value: unknown): string {
-  return JSON.stringify(value, (_key, entry: unknown) => {
-    if (entry instanceof Uint8Array) {
-      return { [BINARY_TAG]: Buffer.from(entry).toString('base64') }
+  // Read the holder value: JSON.stringify applies Buffer#toJSON before the replacer sees it.
+  return JSON.stringify(
+    value,
+    function (this: Readonly<Record<string, unknown>>, key, entry: unknown) {
+      const raw = this[key]
+      if (raw instanceof Uint8Array) {
+        return { [BINARY_TAG]: Buffer.from(raw).toString('base64') }
+      }
+      return entry
     }
-    return entry
-  })
+  )
 }
 
 function parseTimestamp(value: string, label: string): number {

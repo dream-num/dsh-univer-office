@@ -935,14 +935,19 @@ function uniqueUnitIDs(unitIDs: readonly string[]): readonly string[] {
 }
 
 function encode(value: unknown): string {
-  return JSON.stringify(value, (_key, current: unknown) => {
-    if (current instanceof Uint8Array) {
-      return {
-        [BINARY_TAG]: Buffer.from(current).toString('base64')
+  // Read the holder value: JSON.stringify applies Buffer#toJSON before the replacer sees it.
+  return JSON.stringify(
+    value,
+    function (this: Readonly<Record<string, unknown>>, key, current: unknown) {
+      const raw = this[key]
+      if (raw instanceof Uint8Array) {
+        return {
+          [BINARY_TAG]: Buffer.from(raw).toString('base64')
+        }
       }
+      return current
     }
-    return current
-  })
+  )
 }
 
 function decode<T>(payload: string): T {
