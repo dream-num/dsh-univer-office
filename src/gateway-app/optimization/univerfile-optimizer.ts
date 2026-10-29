@@ -22,8 +22,7 @@ import {
   detectUniverfileSQLiteFormat,
   UniverfileSQLiteDatabaseAdapter
 } from '../univerfile-sqlite/index.js'
-
-const BINARY_TAG = '__univerCollaborationBinary'
+import { decodeStoredJson, encodeStoredJson } from '../univerfile-sqlite/stored-json.js'
 
 export interface OptimizeUniverfileCopyInput {
   readonly sourcePath: string
@@ -685,31 +684,6 @@ function optimizationDatabaseContext(): DatabaseContext {
     customData: {},
     request: {}
   }
-}
-
-function encodeStoredJson(value: unknown): string {
-  // Read the holder value: JSON.stringify applies Buffer#toJSON before the replacer sees it.
-  return JSON.stringify(
-    value,
-    function (this: Readonly<Record<string, unknown>>, key, current: unknown) {
-      const raw = this[key]
-      return raw instanceof Uint8Array
-        ? { [BINARY_TAG]: Buffer.from(raw).toString('base64') }
-        : current
-    }
-  )
-}
-
-function decodeStoredJson(payload: string): unknown {
-  return JSON.parse(payload, (_key, current: unknown) =>
-    isBinaryEncoding(current)
-      ? Uint8Array.from(Buffer.from(current[BINARY_TAG], 'base64'))
-      : current
-  ) as unknown
-}
-
-function isBinaryEncoding(value: unknown): value is Record<typeof BINARY_TAG, string> {
-  return isRecord(value) && Object.keys(value).length === 1 && typeof value[BINARY_TAG] === 'string'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
