@@ -12,18 +12,11 @@ import type {
   IUnitComparisonTextSegment
 } from '@univerjs-pro/edit-history'
 
-/** Gateway-owning business failures carried alongside the numeric SDK error code. */
-export enum GatewaySemanticErrorCode {
-  OptimizeHistoryActiveWorktrees = 'OPTIMIZE_HISTORY_ACTIVE_WORKTREES'
-}
-
 /** 统一错误信封;所有响应都带。code:1=OK,0=fail(snapshot 类透传 SDK ErrorCode)。 */
 export interface ErrorEnvelope {
   error: {
     code: number
     message: string
-    semanticCode?: GatewaySemanticErrorCode
-    details?: unknown
   }
 }
 
@@ -121,58 +114,6 @@ export interface DiscardResponse extends ErrorEnvelope {
 
 /** 低层按地址创建 univerfile 的响应;已存在 → HTTP 409,不存在的查询 → HTTP 404。 */
 export interface CreateUniverfileResponse extends ErrorEnvelope {}
-
-export type OptimizeUniverfileImages = 'externalize'
-export type OptimizeUniverfileWorktrees = 'clean'
-export type OptimizeUniverfileHistory = 'reset'
-
-export type OptimizeHistoryActiveWorktreeDetails = {
-  readonly activeWorktrees: readonly {
-    readonly worktreeId: string
-    readonly status: string
-    readonly name: string
-  }[]
-}
-
-export interface OptimizeUniverfileRequest {
-  /** Absolute local output path. Required unless dryRun is true. */
-  outputPath?: string
-  images?: OptimizeUniverfileImages
-  worktrees?: OptimizeUniverfileWorktrees
-  history?: OptimizeUniverfileHistory
-  dryRun: boolean
-}
-
-export interface OptimizeUniverfileReport {
-  sourcePath: string
-  outputPath?: string
-  dryRun: boolean
-  beforeBytes: number
-  afterBytes?: number
-  images: {
-    selected: boolean
-    references: number
-    uniqueBlobs: number
-    sourceBytes: number
-    storedBytes: number
-  }
-  worktrees: {
-    mode: 'preserve' | OptimizeUniverfileWorktrees
-    impliedByHistory: boolean
-    removedWorktrees: number
-  }
-  history: {
-    mode: 'preserve' | OptimizeUniverfileHistory
-    resetUnits: number
-    removedSnapshots: number
-    removedChangesets: number
-  }
-}
-
-export interface OptimizeUniverfileResponse extends ErrorEnvelope {
-  ok: true
-  report: OptimizeUniverfileReport
-}
 
 /**
  * Lifecycle events delivered over WebSocket (`/uf/<enc>/events` univerfile channel,

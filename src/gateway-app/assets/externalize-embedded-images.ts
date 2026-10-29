@@ -23,13 +23,6 @@ export interface ExternalizeEmbeddedImagesOptions {
     readonly filename: string
     readonly mediaType: SupportedImageMediaType
   }) => string
-  readonly onRewrite?: (image: {
-    readonly byteSize: number
-    readonly digest: string
-    readonly source: string
-  }) => void
-  /** Explicit optimization fails instead of silently preserving a supported image on store errors. */
-  readonly strictStore?: boolean
 }
 
 /**
@@ -54,8 +47,7 @@ export function externalizeEmbeddedImages(
         mediaType: image.mediaType
       })
       fileIdByDigest.set(image.digest, fileId)
-    } catch (error) {
-      if (options.strictStore === true) throw error
+    } catch {
       // Asset hosting is an optimization. Preserve BASE64 when local storage cannot accept it.
     }
   }
@@ -66,7 +58,7 @@ export function externalizeEmbeddedImages(
     const fileId = fileIdByDigest.get(image.digest)
     if (fileId !== undefined) fileIdBySource.set(source, fileId)
   }
-  return rewriteValue(value, fileIdBySource, imagesBySource, options)
+  return rewriteValue(value, fileIdBySource)
 }
 
 function collectEmbeddedImages(value: unknown): ReadonlyMap<string, EmbeddedImage> {
@@ -81,34 +73,21 @@ function collectEmbeddedImages(value: unknown): ReadonlyMap<string, EmbeddedImag
   return images
 }
 
-function rewriteValue(
-  value: unknown,
-  replacementBySource: ReadonlyMap<string, string>,
-  imagesBySource: ReadonlyMap<string, EmbeddedImage>,
-  options: ExternalizeEmbeddedImagesOptions
-): unknown {
+function rewriteValue(value: unknown, replacementBySource: ReadonlyMap<string, string>): unknown {
   if (Array.isArray(value)) {
-    return value.map((item) => rewriteValue(item, replacementBySource, imagesBySource, options))
+    return value.map((item) => rewriteValue(item, replacementBySource))
   }
   if (!isPlainRecord(value)) return value
 
   const rewritten: Record<string, unknown> = {}
   for (const [key, child] of Object.entries(value)) {
-    rewritten[key] = rewriteValue(child, replacementBySource, imagesBySource, options)
+    rewritten[key] = rewriteValue(child, replacementBySource)
   }
   for (const reference of imageFieldPairs(value, 'BASE64')) {
     const replacement = replacementBySource.get(reference.source)
     if (replacement !== undefined) {
       rewritten[reference.sourceKey] = replacement
       rewritten[reference.typeKey] = 'UUID'
-      const image = imagesBySource.get(reference.source)
-      if (image !== undefined) {
-        options.onRewrite?.({
-          byteSize: image.bytes.byteLength,
-          digest: image.digest,
-          source: image.source
-        })
-      }
     }
   }
   return rewritten

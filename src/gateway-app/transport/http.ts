@@ -8,7 +8,6 @@ import {
   isGatewayDescriptorContentType,
   isSupportedUnitType,
   type ErrorEnvelope,
-  type OptimizeUniverfileRequest,
   type UnitComparisonRefRequest,
   type UnitType
 } from '../contract/index.js'
@@ -18,8 +17,6 @@ import type {
   UnitComparisonContextQuery
 } from '../contract/index.js'
 import { CollabGatewayAssetScopeNotFoundError } from '../assets/errors.js'
-import { GatewaySemanticError } from '../errors.js'
-import { optimizeUniverfilePath } from '../optimization/univerfile-optimizer.js'
 import { MAX_UNIVERFILE_ASSET_BYTES } from '../univerfile-sqlite/index.js'
 import { ExchangeHttpError, MAX_EXCHANGE_FILE_BYTES } from '../exchange/gateway-exchange-service.js'
 import type { Univerfile, UniverfileManager } from '../univerfile-manager.js'
@@ -250,34 +247,6 @@ async function dispatch(
       return
     }
 
-    if (rest.length === 1 && rest[0] === 'optimize' && method === 'POST') {
-      try {
-        const sourcePath = manager.resolveExistingPathByKey(key)
-        const input = parseOptimizeRequest(await readJsonBody(req))
-        const outputPath =
-          input.outputPath === undefined
-            ? undefined
-            : manager.prepareNewUniverfilePath(input.outputPath)
-        const report = await optimizeUniverfilePath({
-          sourcePath,
-          ...input,
-          ...(outputPath === undefined ? {} : { outputPath })
-        })
-        sendJson(res, 200, { error: { code: 1, message: '' }, ok: true, report })
-      } catch (error) {
-        if (
-          error instanceof UniverfileError ||
-          error instanceof UniverfileExistsError ||
-          error instanceof UniverfileNotFoundError
-        ) {
-          sendUniverfileError(res, error)
-        } else {
-          sendJson(res, 200, { error: toErrorDetail(error) })
-        }
-      }
-      return
-    }
-
     // Every other endpoint requires the univerfile to already exist (never creates).
     let univerfile: Univerfile
     try {
@@ -445,35 +414,6 @@ async function handleExchangeApi(
     const status = error instanceof ExchangeHttpError ? error.status : 500
     sendJson(res, status, { error: toErrorDetail(error) })
     return true
-  }
-}
-
-function parseOptimizeRequest(body: unknown): OptimizeUniverfileRequest {
-  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-    throw new UniverfileError('optimize request body must be an object')
-  }
-  const value = body as Record<string, unknown>
-  if (value.images !== undefined && value.images !== 'externalize') {
-    throw new UniverfileError('optimize images must be externalize')
-  }
-  if (value.worktrees !== undefined && value.worktrees !== 'clean') {
-    throw new UniverfileError('optimize worktrees must be clean')
-  }
-  if (value.history !== undefined && value.history !== 'reset') {
-    throw new UniverfileError('optimize history must be reset')
-  }
-  if (typeof value.dryRun !== 'boolean') {
-    throw new UniverfileError('optimize dryRun must be a boolean')
-  }
-  if (value.outputPath !== undefined && typeof value.outputPath !== 'string') {
-    throw new UniverfileError('optimize outputPath must be a string')
-  }
-  return {
-    ...(value.outputPath === undefined ? {} : { outputPath: value.outputPath }),
-    ...(value.images === undefined ? {} : { images: value.images }),
-    ...(value.worktrees === undefined ? {} : { worktrees: value.worktrees }),
-    ...(value.history === undefined ? {} : { history: value.history }),
-    dryRun: value.dryRun
   }
 }
 
@@ -1225,13 +1165,5 @@ function asMessage(error: unknown): string {
 }
 
 function toErrorDetail(error: unknown): ErrorEnvelope['error'] {
-  if (error instanceof GatewaySemanticError) {
-    return {
-      code: 0,
-      message: error.message,
-      semanticCode: error.semanticCode,
-      ...(error.details === undefined ? {} : { details: error.details })
-    }
-  }
   return { code: 0, message: asMessage(error) }
 }

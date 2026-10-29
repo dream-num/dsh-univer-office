@@ -46,18 +46,10 @@ export type {
   UnitComparisonContextScope,
   UnitComparisonContext,
   UnitComparisonAxisAlignment,
-  UnitComparisonContextResponse,
-  OptimizeHistoryActiveWorktreeDetails,
-  OptimizeUniverfileHistory,
-  OptimizeUniverfileImages,
-  OptimizeUniverfileWorktrees,
-  OptimizeUniverfileReport,
-  OptimizeUniverfileRequest,
-  OptimizeUniverfileResponse
+  UnitComparisonContextResponse
 } from './types.js'
 
 export {
-  GatewaySemanticErrorCode,
   UNIT_TYPE_DOC,
   UNIT_TYPE_SHEET,
   UNIT_TYPE_SLIDE,
