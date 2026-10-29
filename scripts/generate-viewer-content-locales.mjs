@@ -64,7 +64,6 @@ const PACKAGES = [
   '@univerjs-pro/sheets-history-ui',
   '@univerjs-pro/bases',
   '@univerjs-pro/bases-ui',
-  '@univerjs-pro/bases-exchange-client',
   '@univerjs-pro/shape-editor-ui',
   '@univerjs-pro/ink-ui',
   '@univerjs-pro/boards-ui',
@@ -75,7 +74,6 @@ const PACKAGES = [
   '@univerjs-pro/docs-callout-ui',
   '@univerjs-pro/docs-chart-ui',
   '@univerjs-pro/docs-column-ui',
-  '@univerjs-pro/docs-exchange-client',
   '@univerjs-pro/docs-code-ui',
   '@univerjs-pro/docs-list-ui',
   '@univerjs-pro/docs-quote-ui',
@@ -100,7 +98,6 @@ const PACKAGES = [
   '@univerjs-pro/sheets-outline-ui',
   '@univerjs-pro/sheets-pivot',
   '@univerjs-pro/sheets-pivot-ui',
-  '@univerjs-pro/sheets-exchange-client',
   '@univerjs-pro/sheets-print',
   '@univerjs-pro/sheets-shape-ui',
   '@univerjs/sheets-sort-ui',
@@ -113,7 +110,6 @@ const PACKAGES = [
   '@univerjs-pro/slides-ui',
   '@univerjs-pro/slides-chart-ui',
   '@univerjs-pro/slides-table-ui',
-  '@univerjs-pro/slides-exchange-client',
   '@univerjs-pro/slides-print',
   '@univerjs-pro/chart-ui',
   '@univerjs-pro/engine-chart'
@@ -138,7 +134,7 @@ function loaderModule() {
 }
 
 function viewerLocaleModule(locale) {
-  return `import basesHistoryUI from "@univerjs-pro/bases-history-ui/locale/${locale}";\nimport boardsHistoryUI from "@univerjs-pro/boards-history-ui/locale/${locale}";\nimport collaborationClient from "@univerjs-pro/collaboration-client/locale/${locale}";\nimport collaborationClientUI from "@univerjs-pro/collaboration-client-ui/locale/${locale}";\nimport docsHistoryUI from "@univerjs-pro/docs-history-ui/locale/${locale}";\nimport editHistoryUI from "@univerjs-pro/edit-history-ui/locale/${locale}";\nimport exchangeClient from "@univerjs-pro/exchange-client/locale/${locale}";\nimport sheetsHistoryUI from "@univerjs-pro/sheets-history-ui/locale/${locale}";\nimport slidesHistoryUI from "@univerjs-pro/slides-history-ui/locale/${locale}";\nimport { loadContentLocale, mergeLocalePacks } from "@univer/render-preset";\nimport type { ILanguagePack } from "@univerjs/core";\n\nexport default async function loadLocale(): Promise<ILanguagePack> {\n  const content = await loadContentLocale("${locale}");\n  return mergeLocalePacks([\n    content,\n    collaborationClient,\n    collaborationClientUI,\n    exchangeClient,\n    editHistoryUI,\n    sheetsHistoryUI,\n    docsHistoryUI,\n    slidesHistoryUI,\n    basesHistoryUI,\n    boardsHistoryUI\n  ]);\n}\n`
+  return `import basesHistoryUI from "@univerjs-pro/bases-history-ui/locale/${locale}";\nimport boardsHistoryUI from "@univerjs-pro/boards-history-ui/locale/${locale}";\nimport collaborationClient from "@univerjs-pro/collaboration-client/locale/${locale}";\nimport collaborationClientUI from "@univerjs-pro/collaboration-client-ui/locale/${locale}";\nimport docsHistoryUI from "@univerjs-pro/docs-history-ui/locale/${locale}";\nimport editHistoryUI from "@univerjs-pro/edit-history-ui/locale/${locale}";\nimport sheetsHistoryUI from "@univerjs-pro/sheets-history-ui/locale/${locale}";\nimport slidesHistoryUI from "@univerjs-pro/slides-history-ui/locale/${locale}";\nimport { loadContentLocale, mergeLocalePacks } from "@univer/render-preset";\nimport type { ILanguagePack } from "@univerjs/core";\n\nexport default async function loadLocale(): Promise<ILanguagePack> {\n  const content = await loadContentLocale("${locale}");\n  return mergeLocalePacks([\n    content,\n    collaborationClient,\n    collaborationClientUI,\n    editHistoryUI,\n    sheetsHistoryUI,\n    docsHistoryUI,\n    slidesHistoryUI,\n    basesHistoryUI,\n    boardsHistoryUI\n  ]);\n}\n`
 }
 
 function viewerLoaderModule() {

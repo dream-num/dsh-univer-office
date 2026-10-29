@@ -27,6 +27,7 @@ import {
   type UniverfileSQLiteWorktreeDatabaseAdapter
 } from './univerfile-sqlite/index.js'
 import { createSdkCollabLogger } from './sdk-logger.js'
+import { GATEWAY_UNIT_RUNTIME } from './sdk-runtime.js'
 export interface GatewayFileRuntimeOptions {
   /** `.univer` SQLite filename, or `:memory:` for tests. */
   readonly dbPath?: string
@@ -73,6 +74,7 @@ export class GatewayFileRuntime {
 
       this.trunkService = new UniverCollabService({
         dbAdapter: this.trunkAdapter,
+        runtime: GATEWAY_UNIT_RUNTIME,
         logger: createSdkCollabLogger()
       })
       this.worktreeService = new UniverCollabWorktreeService({
@@ -81,6 +83,7 @@ export class GatewayFileRuntime {
           dbAdapter: this.trunkAdapter
         },
         dbAdapter: this.worktreeAdapter,
+        runtime: GATEWAY_UNIT_RUNTIME,
         logger: createSdkCollabLogger()
       })
       this.historyService = new UniverHistoryService({

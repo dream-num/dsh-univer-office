@@ -1,11 +1,11 @@
 import type Database from 'libsql'
 import { UniverType } from '@univerjs/protocol'
 import { runUniverfileSQLiteTransaction } from '../connection.js'
+import { decodeStoredJson, encodeStoredJson } from '../stored-json.js'
 
 const APPLY_BASE_JSON1_MUTATION_ID = 'base.mutation.apply-base-json1'
 const SET_SUPER_TABLE_MUTATION_ID = 'formula.mutation.set-super-table'
 const BASE_RECORD_ID_FIELD_ID = '__record_id'
-const BINARY_TAG = '__univerCollaborationBinary'
 const LEGACY_BASE_SCHEMA_VERSION = 1
 const CURRENT_BASE_SCHEMA_VERSION = 2
 
@@ -90,10 +90,10 @@ function migrateTrunkSnapshots(database: Database.Database): ReadonlySet<string>
   const blockPlansByUnit = new Map<string, Map<string, BaseBlockPlan>>()
 
   for (const row of rows) {
-    const migration = migrateBaseSnapshot(decode<JsonRecord>(row.payload_json))
+    const migration = migrateBaseSnapshot(decodeStoredJson<JsonRecord>(row.payload_json))
     addSchemaVersion(schemasByUnit, row.unit_id, migration.sourceSchemaVersion)
     if (migration.sourceSchemaVersion !== LEGACY_BASE_SCHEMA_VERSION) continue
-    updateSnapshot.run(encode(migration.snapshot), row.unit_id, row.revision)
+    updateSnapshot.run(encodeStoredJson(migration.snapshot), row.unit_id, row.revision)
     const plans = blockPlansByUnit.get(row.unit_id) ?? new Map<string, BaseBlockPlan>()
     for (const [blockId, plan] of migration.blockPlans) {
       const existing = plans.get(blockId)
@@ -135,7 +135,7 @@ function migrateTrunkBlocks(
     const plan = blockPlansByUnit.get(row.unit_id)?.get(row.block_id)
     if (!plan) continue
     update.run(
-      encode(migrateBaseSheetBlock(decode<JsonRecord>(row.payload_json), plan)),
+      encodeStoredJson(migrateBaseSheetBlock(decodeStoredJson<JsonRecord>(row.payload_json), plan)),
       row.unit_id,
       row.block_id
     )
@@ -164,7 +164,7 @@ function migrateTrunkChangesets(
   for (const row of rows) {
     if (!legacyUnitIds.has(row.unit_id)) continue
     update.run(
-      encode(migrateBaseChangeset(decode<JsonRecord>(row.payload_json))),
+      encodeStoredJson(migrateBaseChangeset(decodeStoredJson<JsonRecord>(row.payload_json))),
       row.unit_id,
       row.revision
     )
@@ -204,7 +204,7 @@ function migrateWorktreeContent(
     const inheritsLegacyTrunk = row.source === 'trunk' && trunkLegacyUnitIds.has(row.unit_id)
     if (!inheritsLegacyTrunk && !legacyWorktreeUnits.has(worktreeUnitKey(row))) continue
     update.run(
-      encode(migrateBaseChangeset(decode<JsonRecord>(row.payload_json))),
+      encodeStoredJson(migrateBaseChangeset(decodeStoredJson<JsonRecord>(row.payload_json))),
       row.worktree_id,
       row.unit_id,
       row.revision
@@ -234,18 +234,18 @@ function migrateWorktreeSnapshots(
      WHERE worktree_id = ? AND unit_id = ?`
   )
   for (const row of rows) {
-    const migration = migrateBaseSnapshot(decode<JsonRecord>(row.snapshot_json))
+    const migration = migrateBaseSnapshot(decodeStoredJson<JsonRecord>(row.snapshot_json))
     if (migration.sourceSchemaVersion !== LEGACY_BASE_SCHEMA_VERSION) continue
     const blocks = row.sheet_blocks_json
-      ? decode<JsonRecord[]>(row.sheet_blocks_json).map((block) => {
+      ? decodeStoredJson<JsonRecord[]>(row.sheet_blocks_json).map((block) => {
           const blockId = readRequiredString(block.id, 'Base Worktree block id')
           const plan = migration.blockPlans.get(blockId)
           return plan ? migrateBaseSheetBlock(block, plan) : block
         })
       : null
     update.run(
-      encode(migration.snapshot),
-      blocks === null ? null : encode(blocks),
+      encodeStoredJson(migration.snapshot),
+      blocks === null ? null : encodeStoredJson(blocks),
       row.worktree_id,
       row.unit_id
     )
@@ -719,31 +719,4 @@ function worktreeUnitKey(value: {
   readonly unit_id: string
 }): string {
   return `${value.worktree_id}\u0000${value.unit_id}`
-}
-
-function encode(value: unknown): string {
-  return JSON.stringify(value, (_key, current: unknown) => {
-    if (current instanceof Uint8Array) {
-      return { [BINARY_TAG]: Buffer.from(current).toString('base64') }
-    }
-    return current
-  })
-}
-
-function decode<T>(payload: string): T {
-  return JSON.parse(payload, (_key, current: unknown) => {
-    if (isBinaryEncoding(current)) {
-      return Uint8Array.from(Buffer.from(current[BINARY_TAG], 'base64'))
-    }
-    return current
-  }) as T
-}
-
-function isBinaryEncoding(value: unknown): value is Record<typeof BINARY_TAG, string> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    Object.keys(value).length === 1 &&
-    typeof (value as Record<string, unknown>)[BINARY_TAG] === 'string'
-  )
 }

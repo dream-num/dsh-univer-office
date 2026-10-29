@@ -17,8 +17,8 @@ import {
 } from '@univerjs-pro/collaboration-service'
 import type { IChangeset, ISheetBlock, ISnapshot, UniverType } from '@univerjs/protocol'
 import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
+import { decodeStoredJson, encodeStoredJson } from '../stored-json.ts'
 
-const BINARY_TAG = '__univerCollaborationBinary'
 const CORE_SCHEMA_COMPONENT = 'core'
 const CORE_SCHEMA_VERSION = 2
 const CORE_TABLE_NAMES = [
@@ -172,7 +172,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
          WHERE unit_id = ? AND revision = ?`
       )
       .get(unitID, revision) as PayloadRow | undefined
-    return row ? decode<IChangeset>(row.payload_json) : undefined
+    return row ? decodeStoredJson<IChangeset>(row.payload_json) : undefined
   }
 
   public getChangesetBySid(unitID: string, sid: string, reqId: number): IChangeset | undefined {
@@ -184,7 +184,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
          WHERE unit_id = ? AND sid = ? AND req_id = ?`
       )
       .get(unitID, sid, reqId) as PayloadRow | undefined
-    return row ? decode<IChangeset>(row.payload_json) : undefined
+    return row ? decodeStoredJson<IChangeset>(row.payload_json) : undefined
   }
 
   async getSnapshot(
@@ -219,7 +219,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
          LIMIT 1`
       )
       .get(unitID, targetRevision) as PayloadRow | undefined
-    return row ? decode<ISnapshot>(row.payload_json) : null
+    return row ? decodeStoredJson<ISnapshot>(row.payload_json) : null
   }
 
   async getChangesets(
@@ -255,7 +255,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
         to,
         unit.head_revision
       ) as unknown as PayloadRow[]
-    return rows.map((row) => decode<IChangeset>(row.payload_json))
+    return rows.map((row) => decodeStoredJson<IChangeset>(row.payload_json))
   }
 
   async getSnapshotInfo(
@@ -315,7 +315,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
            AND collaboration_units.soft_deleted_at_ms IS NULL`
       )
       .get(unitID, sid, reqId) as PayloadRow | undefined
-    return row ? decode<IChangeset>(row.payload_json) : null
+    return row ? decodeStoredJson<IChangeset>(row.payload_json) : null
   }
 
   async createUnit(
@@ -325,10 +325,10 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
     this._assertOpen()
     validateInitialUnit(input)
 
-    const snapshotPayload = encode(input.snapshot)
+    const snapshotPayload = encodeStoredJson(input.snapshot)
     const blocks = (input.sheetBlocks ?? []).map((block) => ({
       id: block.id,
-      payload: encode(block)
+      payload: encodeStoredJson(block)
     }))
     return this._transaction(() => {
       if (this._hasTombstone(input.record.unitID)) {
@@ -469,7 +469,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
       ...input.changeset,
       createTime: Math.floor(createdAt / 1000)
     }
-    const payload = encode(changeset)
+    const payload = encodeStoredJson(changeset)
 
     return this._transaction(() => {
       const unit = this._getActiveUnitRow(changeset.unitID)
@@ -523,7 +523,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
 
       return {
         status: 'committed',
-        changeset: decode<IChangeset>(payload),
+        changeset: decodeStoredJson<IChangeset>(payload),
         headRevision: changeset.revision
       }
     })
@@ -531,10 +531,10 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
 
   async saveSnapshot(_context: DatabaseContext, input: SaveSnapshotInput): Promise<void> {
     this._assertOpen()
-    const snapshotPayload = encode(input.snapshot)
+    const snapshotPayload = encodeStoredJson(input.snapshot)
     const blocks = (input.sheetBlocks ?? []).map((block) => ({
       id: block.id,
-      payload: encode(block)
+      payload: encodeStoredJson(block)
     }))
     this._transaction(() => {
       const unit = this._getActiveUnitRow(input.snapshot.unitID)
@@ -580,7 +580,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
            AND collaboration_units.soft_deleted_at_ms IS NULL`
       )
       .get(unitID, blockID) as PayloadRow | undefined
-    return row ? decode<ISheetBlock>(row.payload_json) : null
+    return row ? decodeStoredJson<ISheetBlock>(row.payload_json) : null
   }
 
   async dispose(): Promise<void> {
@@ -932,33 +932,4 @@ function incompatibleSchema(message: string): CollabError {
 
 function uniqueUnitIDs(unitIDs: readonly string[]): readonly string[] {
   return [...new Set(unitIDs)]
-}
-
-function encode(value: unknown): string {
-  return JSON.stringify(value, (_key, current: unknown) => {
-    if (current instanceof Uint8Array) {
-      return {
-        [BINARY_TAG]: Buffer.from(current).toString('base64')
-      }
-    }
-    return current
-  })
-}
-
-function decode<T>(payload: string): T {
-  return JSON.parse(payload, (_key, current: unknown) => {
-    if (isBinaryEncoding(current)) {
-      return Uint8Array.from(Buffer.from(current[BINARY_TAG], 'base64'))
-    }
-    return current
-  }) as T
-}
-
-function isBinaryEncoding(value: unknown): value is Record<typeof BINARY_TAG, string> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    Object.keys(value).length === 1 &&
-    typeof (value as Record<string, unknown>)[BINARY_TAG] === 'string'
-  )
 }

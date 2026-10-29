@@ -9,10 +9,11 @@ import {
   type OptimizeUniverfileReport,
   type OptimizeUniverfileWorktrees
 } from '../contract/index.js'
-import { type DatabaseContext, UniverUnitRuntime } from '@univerjs-pro/collaboration-service'
+import { type DatabaseContext, createUnitRuntime } from '@univerjs-pro/collaboration-service'
 import type { UniverType } from '@univerjs/protocol'
 import { externalizeEmbeddedImages } from '../assets/externalize-embedded-images.js'
 import { GatewaySemanticError } from '../errors.js'
+import { GATEWAY_UNIT_RUNTIME } from '../sdk-runtime.js'
 import {
   UniverfileSQLiteAssetStore,
   UniverfileSQLiteConnection,
@@ -21,8 +22,7 @@ import {
   detectUniverfileSQLiteFormat,
   UniverfileSQLiteDatabaseAdapter
 } from '../univerfile-sqlite/index.js'
-
-const BINARY_TAG = '__univerCollaborationBinary'
+import { decodeStoredJson, encodeStoredJson } from '../univerfile-sqlite/stored-json.js'
 
 export interface OptimizeUniverfileCopyInput {
   readonly sourcePath: string
@@ -259,8 +259,8 @@ async function materializeCurrentHeads(connection: UniverfileSQLiteConnection): 
     filename: connection.filename,
     connection
   })
-  // The runtime now takes a read-only reader; IDatabaseAdapter satisfies that contract.
-  const runtime = new UniverUnitRuntime({ reader: adapter })
+  // The runtime takes a read-only reader; IDatabaseAdapter satisfies that contract.
+  const runtime = createUnitRuntime({ ...GATEWAY_UNIT_RUNTIME, reader: adapter })
   const context = optimizationDatabaseContext()
   const units = connection.database
     .prepare(
@@ -684,26 +684,6 @@ function optimizationDatabaseContext(): DatabaseContext {
     customData: {},
     request: {}
   }
-}
-
-function encodeStoredJson(value: unknown): string {
-  return JSON.stringify(value, (_key, current: unknown) =>
-    current instanceof Uint8Array
-      ? { [BINARY_TAG]: Buffer.from(current).toString('base64') }
-      : current
-  )
-}
-
-function decodeStoredJson(payload: string): unknown {
-  return JSON.parse(payload, (_key, current: unknown) =>
-    isBinaryEncoding(current)
-      ? Uint8Array.from(Buffer.from(current[BINARY_TAG], 'base64'))
-      : current
-  ) as unknown
-}
-
-function isBinaryEncoding(value: unknown): value is Record<typeof BINARY_TAG, string> {
-  return isRecord(value) && Object.keys(value).length === 1 && typeof value[BINARY_TAG] === 'string'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

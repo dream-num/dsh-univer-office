@@ -24,7 +24,8 @@ try {
     stdin: {
       contents: `export * from './src/gateway-app/univerfile-sqlite/index.ts';
         export { CollabService } from './src/gateway-app/collab-service.ts';
-        export { optimizeUniverfilePath } from './src/gateway-app/optimization/univerfile-optimizer.ts';`,
+        export { optimizeUniverfilePath } from './src/gateway-app/optimization/univerfile-optimizer.ts';
+        export * from './src/gateway-app/univerfile-sqlite/stored-json.ts';`,
       resolveDir: resolve('.')
     },
     outfile,
@@ -251,6 +252,39 @@ try {
     assert.equal(fromV0.databaseAdapter.getChangeset('unit', 2).createTime, createdAt / 1000 + 1)
   } finally {
     await fromV0.dispose()
+  }
+
+  // Stored JSON keeps Buffer views as bytes; Buffer#toJSON runs before the replacer sees them.
+  const bufferView = Buffer.from([9, 0, 128, 255, 9]).subarray(1, 4)
+  const bufferShaped = { type: 'Buffer', data: [0, 128, 255] }
+  const storedJson = api.encodeStoredJson({ bufferView, empty: Buffer.alloc(0), bufferShaped })
+  assert.deepEqual(JSON.parse(storedJson).bufferView, { __univerCollaborationBinary: 'AID/' })
+  const decodedJson = api.decodeStoredJson(storedJson)
+  assert.deepEqual(decodedJson.bufferView, new Uint8Array([0, 128, 255]))
+  assert.equal(Object.getPrototypeOf(decodedJson.bufferView), Uint8Array.prototype)
+  assert.deepEqual(decodedJson.empty, new Uint8Array(0))
+  assert.deepEqual(decodedJson.bufferShaped, bufferShaped)
+
+  // Sheet blocks the Rust materializer hands over as Buffers read back intact after reopen.
+  const bufferBlocks = join(workspace, 'buffer-blocks.univer')
+  const blockWriter = new api.CollabService({ dbPath: bufferBlocks, create: true })
+  try {
+    await blockWriter.createUnit(2, { unitId: 'sheet', name: 'Sheet' })
+    const sheetSnapshot = await blockWriter.runtime.trunkAdapter.getSnapshot(context, 'sheet')
+    await blockWriter.runtime.trunkAdapter.saveSnapshot(context, {
+      snapshot: sheetSnapshot,
+      sheetBlocks: [{ id: 'buffer-block', startRow: 0, endRow: 0, data: bufferView }]
+    })
+  } finally {
+    await blockWriter.dispose()
+  }
+  const blockReader = api.openUniverfileSQLite(bufferBlocks)
+  try {
+    const block = await blockReader.databaseAdapter.getSheetBlock(context, 'sheet', 'buffer-block')
+    assert.deepEqual(block.data, new Uint8Array([0, 128, 255]))
+    assert.equal(Object.getPrototypeOf(block.data), Uint8Array.prototype)
+  } finally {
+    await blockReader.dispose()
   }
 
   // Independent openers share the filesystem lock; only one publishes an upgrade and backup.

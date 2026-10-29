@@ -25,6 +25,7 @@
     "src/viewer-app/**/*.tsx",
     "test/fixtures/**/*.tsx",
     "src/viewer-support/**/*.ts",
+    "src/viewer-support/**/*.tsx",
     "src/gateway-app/contract/**/*.ts",
     "packages/unit-comparison-viewer/src/**/*.ts",
     "packages/unit-comparison-viewer/src/**/*.tsx"

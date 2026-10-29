@@ -4,7 +4,6 @@ import collaborationClient from '@univerjs-pro/collaboration-client/locale/ru-RU
 import collaborationClientUI from '@univerjs-pro/collaboration-client-ui/locale/ru-RU'
 import docsHistoryUI from '@univerjs-pro/docs-history-ui/locale/ru-RU'
 import editHistoryUI from '@univerjs-pro/edit-history-ui/locale/ru-RU'
-import exchangeClient from '@univerjs-pro/exchange-client/locale/ru-RU'
 import sheetsHistoryUI from '@univerjs-pro/sheets-history-ui/locale/ru-RU'
 import slidesHistoryUI from '@univerjs-pro/slides-history-ui/locale/ru-RU'
 import { loadContentLocale, mergeLocalePacks } from '@univer/render-preset'
@@ -16,7 +15,6 @@ export default async function loadLocale(): Promise<ILanguagePack> {
     content,
     collaborationClient,
     collaborationClientUI,
-    exchangeClient,
     editHistoryUI,
     sheetsHistoryUI,
     docsHistoryUI,

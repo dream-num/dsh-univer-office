@@ -47,6 +47,7 @@ import type {
 import { externalizeEmbeddedImages } from './assets/externalize-embedded-images.js'
 import { CollabGatewayAssetScopeNotFoundError } from './assets/errors.js'
 import { GatewayFileRuntime } from './gateway-file-runtime.js'
+import { GATEWAY_UNIT_RUNTIME } from './sdk-runtime.js'
 import type { UniverfileAssetRecord, UniverfileOpenedAsset } from './univerfile-sqlite/index.js'
 import {
   UNIVERFILE_UNIT_METADATA_KEY,
@@ -172,7 +173,7 @@ export class CollabService {
       throw new Error(`Unit ${unitId} was not found with type ${String(type)}`)
     }
     const loadData = await this._getTrunkLoadDataWithBlocks(unitId, type, 0, 'gateway-exchange')
-    const materializer = new UnitSnapshotMaterializer()
+    const materializer = new UnitSnapshotMaterializer(GATEWAY_UNIT_RUNTIME)
     try {
       return await materializer.materializeSnapshot(loadData)
     } finally {
@@ -816,7 +817,7 @@ export class CollabService {
       unit.type,
       unit.headRev
     )
-    const materializer = new UnitSnapshotMaterializer()
+    const materializer = new UnitSnapshotMaterializer(GATEWAY_UNIT_RUNTIME)
     try {
       const materialized = await materializer.materializeSnapshot(loadData)
       return previewUnitData(unit.type, materialized.snapshot, materialized.sheetBlocks)
@@ -1012,7 +1013,7 @@ export class CollabService {
             unit.type,
             unit.revision
           )
-    const materializer = new UnitSnapshotMaterializer()
+    const materializer = new UnitSnapshotMaterializer(GATEWAY_UNIT_RUNTIME)
     try {
       const materialized = await materializer.materializeSnapshot(loadData)
       const sheetBlocks = deserializeSheetBlocks(materialized.sheetBlocks)

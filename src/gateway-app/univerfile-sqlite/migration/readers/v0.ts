@@ -8,9 +8,9 @@ import {
 import { UniverfileSQLiteDatabaseAdapter } from '../../database-adapters/collaboration-database-adapter.ts'
 import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../../database-adapters/worktree-database-adapter.ts'
 import { ANONYMOUS_CREATOR_ID } from './v2.ts'
+import { encodeStoredJson } from '../../stored-json.ts'
 
 const LEGACY_PREFIX = '__collaboration_migration_v0_'
-const BINARY_TAG = '__univerCollaborationBinary'
 const LEGACY_BINARY_TAG = '__u8__'
 const SUPPORTED_UNIT_TYPES = new Set([1, 2, 3, 5, 6])
 const LEGACY_TABLE_COLUMNS = {
@@ -318,7 +318,7 @@ function migrateTrunk(database: Database.Database): void {
     ) {
       throw new Error(`snapshot ${row.unit_id}@${row.revision} identity does not match its row`)
     }
-    insertSnapshot.run(row.unit_id, row.revision, unit.type, encode(snapshot))
+    insertSnapshot.run(row.unit_id, row.revision, unit.type, encodeStoredJson(snapshot))
     snapshotUnits.add(row.unit_id)
     latestSnapshotByUnit.set(
       row.unit_id,
@@ -373,7 +373,7 @@ function migrateTrunk(database: Database.Database): void {
       endRow: block.end_row,
       data: new Uint8Array(block.data)
     }
-    insertBlock.run(block.unit_id, block.block_id, encode(payload))
+    insertBlock.run(block.unit_id, block.block_id, encodeStoredJson(payload))
   }
 }
 
@@ -549,7 +549,7 @@ function migrateWorktree(
     validateWorktreeChangesets(worktree, unit, unitChangesets)
     const draftHead = unitChangesets.at(-1)?.revision ?? unit.baselineRevision
     const readyHead = status === 'ready' || status === 'merged' ? draftHead : null
-    const mergeResult = status === 'merged' ? encode({ status: 'unchanged' }) : null
+    const mergeResult = status === 'merged' ? encodeStoredJson({ status: 'unchanged' }) : null
     insertUnit.run(
       worktree.worktree_id,
       unit.unitId,
@@ -614,8 +614,8 @@ function migrateWorktreeSeeds(
     insertSeed.run(
       worktree.worktree_id,
       unit.unitId,
-      encode(snapshot),
-      blocks.length === 0 ? null : encode(blocks)
+      encodeStoredJson(snapshot),
+      blocks.length === 0 ? null : encodeStoredJson(blocks)
     )
   }
 }
@@ -643,7 +643,7 @@ function migrateActiveWorktreeChangesets(
         row.base_rev,
         identity.sid,
         identity.reqId,
-        encode(changeset)
+        encodeStoredJson(changeset)
       )
     }
   }
@@ -710,7 +710,7 @@ function migrateChangesets(
       row.base_rev,
       identity.sid,
       identity.reqId,
-      encode(toChangeset(row, identity))
+      encodeStoredJson(toChangeset(row, identity))
     )
   }
 }
@@ -935,15 +935,6 @@ function parseJson<T>(json: string, label: string): T {
   } catch (error) {
     throw new Error(`${label} is not valid JSON: ${asMessage(error)}`)
   }
-}
-
-function encode(value: unknown): string {
-  return JSON.stringify(value, (_key, entry: unknown) => {
-    if (entry instanceof Uint8Array) {
-      return { [BINARY_TAG]: Buffer.from(entry).toString('base64') }
-    }
-    return entry
-  })
 }
 
 function parseTimestamp(value: string, label: string): number {
