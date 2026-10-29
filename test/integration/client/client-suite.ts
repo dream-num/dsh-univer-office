@@ -254,6 +254,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         }
       },
       get(name: string) {
+        if (name === 'settingsScope') return fakeCtx.settingsScope
         if (name === 'configForms')
           return {
             get(entryId: string) {

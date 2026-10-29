@@ -6,11 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
-import {
-  UNIVER_CONFIG_ENTRY_ID,
-  UNIVER_SETTINGS_NAMESPACE,
-  type UniverSettings
-} from '../shared/settings.ts'
+import { UNIVER_CONFIG_ENTRY_ID, UNIVER_SETTINGS_NAMESPACE } from '../shared/settings.ts'
 import { betterSidebarOf } from './better-sidebar.ts'
 import { PreviewCard } from './components/preview-card.tsx'
 import { UniverSettingsCard } from './components/settings-card.tsx'
@@ -25,7 +21,11 @@ import { selectUniverTurn, univerTurnDefinition } from './conversation/univer-tu
 import { en, UNIVER_LOCALE_NAMESPACE, zh } from './locales/index.ts'
 import { fileAddressBasename, parseFileAddress } from './resource-address.ts'
 import { sidebarRightTabsOf } from './sidebar-right.ts'
-import type { UniverConfigForms, UniverSettingsForm } from './settings/settings-contract.ts'
+import type {
+  UniverConfigForms,
+  UniverSettingsForm,
+  UniverSettingsScopeBinder
+} from './settings/settings-contract.ts'
 import { UniverPreferences } from './settings/univer-preferences.ts'
 import { settingsStyles } from './styles/settings.ts'
 import { worktreeStyles } from './styles/worktree.ts'
@@ -123,13 +123,9 @@ export function apply(ctx: ClientContext): void {
     sidebarCtx.effect(() => registerUniverFileViewer(sidebarCtx), 'univer: univer file viewer')
   })
   ctx.inject(['settingsScope'], (settingsCtx: ClientContext) => {
-    registerSettings(
-      settingsCtx,
-      preferences,
-      settingsCtx.settingsScope.bind<UniverSettings>({
-        namespace: UNIVER_SETTINGS_NAMESPACE
-      })
-    )
+    // DSH 0.1.6 and earlier; current hosts provide configForms instead.
+    const scope = settingsCtx.get('settingsScope') as UniverSettingsScopeBinder
+    registerSettings(settingsCtx, preferences, scope.bind({ namespace: UNIVER_SETTINGS_NAMESPACE }))
   })
   ctx.inject(['configForms'], (settingsCtx: ClientContext) => {
     // The bundle patch owns this entry id; modern DSH projects its live Config.

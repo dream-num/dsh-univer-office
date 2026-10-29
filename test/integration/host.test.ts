@@ -6,7 +6,6 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/brand'
-import { SettingsProvider } from '@deepseek-ai/dsh-settings'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -109,36 +108,30 @@ describe('built Host bundle', () => {
   })
 })
 
+// DSH 0.1.7+ derives settings forms from the root plugin's live Config; a real Profile covers that
+// path in host-settings-profile.test.ts. The registry below stands in for DSH 0.1.6 and earlier,
+// whose Settings provider no longer ships in the current DSH dev cohort.
 describe('Settings', () => {
-  class MemorySettings extends SettingsProvider {
-    writable = true
-    storedDocument = {}
-    async load() {
-      return this.storedDocument
-    }
-    async persist(namespace: string, section: unknown) {
-      this.storedDocument = { ...this.storedDocument, [namespace]: section }
-    }
-  }
-
-  it('registers live defaults and applies updates', async () => {
+  it('registers live defaults with a legacy Settings registry', async () => {
     const context = new Context()
+    const registrations: unknown[][] = []
     try {
-      await context.plugin(MemorySettings)
+      context.provide('settings', {
+        register: (...args: unknown[]) => {
+          registrations.push(args)
+        }
+      })
       await context.plugin(plugin, { tools: false, skills: false })
-      const describe = () =>
-        context.settings.describe().find((entry: any) => entry.ns === 'univer-office')
-      expect(describe()).toMatchObject({
-        applies: 'live',
-        value: { autoOpenLivePreview: true, conversationReviewCards: true }
+      expect(registrations).toHaveLength(1)
+      const [namespace, schema, options] = registrations[0]!
+      expect(namespace).toBe('univer-office')
+      expect((schema as (value: unknown) => unknown)({})).toEqual({
+        autoOpenLivePreview: true,
+        conversationReviewCards: true
       })
-      await context.settings.update('univer-office', {
-        autoOpenLivePreview: false,
-        conversationReviewCards: false
-      })
-      expect(describe()?.value).toMatchObject({
-        autoOpenLivePreview: false,
-        conversationReviewCards: false
+      expect(options).toEqual({
+        base: { autoOpenLivePreview: true, conversationReviewCards: true },
+        applies: 'live'
       })
     } finally {
       await context.fiber.dispose()
