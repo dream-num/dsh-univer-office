@@ -240,6 +240,10 @@ skills/
   univer-board/SKILL.md
   univer-embed/SKILL.md
   univer-cross-unit-formula/SKILL.md
+  office/SKILL.md                    # 同名覆盖 DSH Office 路由，导向 Univer
+  office-docx/SKILL.md
+  office-xlsx/SKILL.md
+  office-pptx/SKILL.md
 ```
 
 当前仍采用单包发布。只有当某一层具备独立版本、独立消费方或明显不同的发布节奏时才拆 npm 包；目录分层本身不是拆包理由。
@@ -381,6 +385,8 @@ Tools Consumer 注册面向模型的领域工具，而不是一个透传 CLI 的
 `univer_status` 是发现文件状态与显式 Unit ID 的入口。所有内容工具要求显式 Unit ID，所有文件和输出路径都绑定当前 tool exec session 的 workspace，并在 Provider 边界再次验证。`univer_screenshot` 在读取文件前确认 attachment service、PNG 限制与当前模型图片输入能力，生成文件再次经过 workspace realpath 授权，再保存为持久 DSH image attachment；结构化文本保留恢复目标与图片元数据。`univer_print_pdf` 复用同一渲染源与 Render Machine，把 Sheet、Doc、Slide 或 Board 写入授权的 `.pdf` 路径，不支持 Base。`univer_resources` 的 cache root 只由 Provider 配置拥有，不向模型暴露；export 目录和每个实际输出文件都必须通过 workspace 授权。`ready` 提交修改等待审阅；同一任务需要继续修改时用 `reopen`。`merge` 与 `discard` 只有在用户明确要求时才可调用，并通过 `tools/pre-execute` 返回审批请求，不能由模型自行决定。
 
 包内 `univer` Skill 描述完整编排顺序，sheet、doc、slide、base 与 board Skill 只在对应 Unit 工作时按需加载，Embed 与跨 Unit 公式各有 Topic Skill。内容以同版本 Univer CLI runtime Skills 为基线：只移除插件未开放的 command，并把 CLI command 调用替换为结构化 DSH Tool 或 Client 自动预览。Slide Skill 要求新页面主动使用 `univer_compile_svg`，结构检查后对每个变更页运行 `univer_lint`，最终逐页运行 `univer_screenshot`；其他 Unit Skill 使用其范围、分页、工作台或画布截图目标。需要图标、Logo、Emoji 或插画时先通过 `univer_resources` 查找和导出。不确定或可能随 SDK 变化的 API 必须通过 `univer_api` 查询。
+
+DSH 自带的 `dsh-office` provider 以 `BUNDLED_SKILL_RANK` 注册 `office`、`office-docx`、`office-xlsx` 与 `office-pptx`，并把 Office 任务导向 python-docx、openpyxl 与 python-pptx。Skill Registry 只按名字去重，同一层内 rank 小者胜出，不同名技能会并列进入模型目录。因此 Skill Provider 以 `BUNDLED_SKILL_RANK - 1` 注册这四个同名路由 Skill，正文只把任务导向 `univer` 与对应 Unit Skill；`office-render`、`office-recalculate` 与 `office-export-pdf` 不覆盖。插件卸载后 DSH 原有技能自动恢复。
 
 Client 只解析结构化 `univer_*` 工具事件，不从 bash 命令或自由文本猜测文件与 worktree。
 

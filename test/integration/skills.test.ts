@@ -1,12 +1,16 @@
 import { readFile, readdir } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
-import SkillRegistry from '@deepseek-ai/dsh-skill'
+import SkillRegistry, { BUNDLED_SKILL_RANK } from '@deepseek-ai/dsh-skill'
 import { prepareContentExecutionProgram } from '@univer-cli/content-execution'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { importHostBundle, repoPath } from '../support/paths.ts'
 
 const BUNDLED = [
+  'office',
+  'office-docx',
+  'office-pptx',
+  'office-xlsx',
   'univer',
   'univer-base',
   'univer-board',
@@ -34,7 +38,7 @@ describe('bundled skills', () => {
     skills = ctx.skills
   })
 
-  it('lists the eight lazy bundled skills with frontmatter descriptions', async () => {
+  it('lists the twelve lazy bundled skills with frontmatter descriptions', async () => {
     const listed = await skills.list()
     expect(listed.map((entry: any) => entry.name)).toEqual(BUNDLED)
     for (const entry of listed) {
@@ -175,7 +179,85 @@ describe('bundled skills', () => {
   it.each(['univer-embed', 'univer-cross-unit-formula'])('loads topic skill %s', async (name) => {
     expect((await skill(name)).content).toContain('univer_execute')
   })
+
+  it.each([
+    { name: 'office-docx', unit: 'univer-doc', writer: 'python-docx' },
+    { name: 'office-xlsx', unit: 'univer-sheet', writer: 'openpyxl' },
+    { name: 'office-pptx', unit: 'univer-slide', writer: 'python-pptx' }
+  ])('routes $name to Univer instead of $writer', async ({ name, unit, writer }) => {
+    const route = await skill(name)
+    for (const text of ['`univer`', `\`${unit}\``, 'univer_import', 'univer_export']) {
+      expect(route.content).toContain(text)
+    }
+    expect(route.content).toContain(`Do not use ${writer}`)
+  })
 })
+
+describe('Office skill routing over DSH bundled Office skills', () => {
+  const DSH_OFFICE = [
+    'office',
+    'office-docx',
+    'office-export-pdf',
+    'office-pptx',
+    'office-recalculate',
+    'office-render',
+    'office-xlsx'
+  ]
+  const dshOffice = {
+    name: 'dsh-office',
+    list: () =>
+      Promise.resolve(
+        DSH_OFFICE.map((name) => ({
+          name,
+          description: `DSH ${name}`,
+          invocation: { modelInvocable: true, userInvocable: true },
+          provider: 'dsh-office',
+          source: 'bundled',
+          rank: BUNDLED_SKILL_RANK,
+          locator: name
+        }))
+      ),
+    get: (candidate: any) => Promise.resolve({ ...candidate, content: 'Use python-docx.' })
+  }
+  it('shadows the DSH Office routes while loaded and restores them on unload', async () => {
+    const plugin = await importHostBundle()
+    const ctx = new Context()
+    new SkillRegistry(ctx)
+    // DSH mounts its Office provider before installed bundles.
+    ctx.skills.registerProvider(() => dshOffice)
+    let child: any
+    ctx.plugin({
+      name: 'univer-under-test',
+      apply: (scope: Context) => {
+        child = scope
+        plugin.apply(scope, { tools: false, skills: true })
+      }
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(await providers(ctx.skills)).toMatchObject({
+      office: 'univer',
+      'office-docx': 'univer',
+      'office-pptx': 'univer',
+      'office-xlsx': 'univer',
+      'office-export-pdf': 'dsh-office',
+      'office-recalculate': 'dsh-office',
+      'office-render': 'dsh-office',
+      univer: 'univer'
+    })
+    expect((await ctx.skills.get('office-docx'))?.content).toContain('`univer-doc`')
+
+    await child.fiber.dispose()
+    const restored = await providers(ctx.skills)
+    expect(Object.keys(restored).toSorted()).toEqual(DSH_OFFICE)
+    expect(new Set(Object.values(restored))).toEqual(new Set(['dsh-office']))
+  })
+})
+
+/** Winning provider for each listed skill name. */
+async function providers(skills: any): Promise<Record<string, string>> {
+  return Object.fromEntries((await skills.list()).map((entry: any) => [entry.name, entry.provider]))
+}
 
 /** Markdown files reachable from a skill entrypoint through relative links. */
 async function readLinkedReferences(

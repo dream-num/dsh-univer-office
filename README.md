@@ -188,6 +188,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 - Screenshots, PDF printing, Slide layout checks, and SVG text measurement need a local Chromium-family browser. Chrome/Chromium and Microsoft Edge are detected automatically; set the `browserExecutablePath` option or the `UNIVER_RENDER_BROWSER` environment variable to point at a specific executable (for example Edge on Windows).
 - Slide master pages, layout pages, and speaker notes are outside the current editing scope.
 - Board mind maps, tables, ink, advanced editing, and file export are not yet supported.
+- While bundled task guidance is enabled, the plugin replaces DSH's built-in `office`, `office-docx`, `office-xlsx`, and `office-pptx` skills so Word, Excel, and PowerPoint tasks go through Univer instead of python-docx, openpyxl, or python-pptx. DSH's LibreOffice Kit skills (`office-render`, `office-recalculate`, and `office-export-pdf`) stay available. Set `skills: false` to keep DSH's originals.
 
 ## Configuration
 
