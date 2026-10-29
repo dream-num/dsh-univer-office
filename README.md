@@ -241,7 +241,7 @@ pnpm run build
 pnpm run test
 ```
 
-`.npmrc` resolves the `@univer-cli`, `@univerjs`, and `@univerjs-pro` scopes from Univer's insider registry, `https://insider-npm-registry.univer.work/`. It is publicly readable and needs no account or token. It serves every official release (its tarballs redirect to npmjs.org) and also insider builds that are not yet on npm.
+`.npmrc` resolves the `@univer-cli`, `@univerjs`, and `@univerjs-pro` scopes from Univer's insider registry, `https://insider-npm-registry.univer.work/`. The registry is public and needs no account or token. It is mainly for installing Univer insider builds; install official releases from npm.
 
 ## Official package name
 

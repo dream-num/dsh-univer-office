@@ -241,7 +241,7 @@ pnpm run build
 pnpm run test
 ```
 
-`.npmrc` 让 `@univer-cli`、`@univerjs`、`@univerjs-pro` 三个 scope 从 Univer 的 insider registry（`https://insider-npm-registry.univer.work/`）解析。它对外公开可读，不需要账号或 token；既提供全部正式版本（tarball 会跳转到 npmjs.org），也提供尚未发布到 npm 的 insider 版本。
+`.npmrc` 让 `@univer-cli`、`@univerjs`、`@univerjs-pro` 三个 scope 从 Univer 的 insider registry（`https://insider-npm-registry.univer.work/`）解析。该源对外公开，不需要账号或 token，主要用于访问 Univer 的 insider 版本；正式版本推荐从 npm 下载安装。
 
 ## 官方包名
 
