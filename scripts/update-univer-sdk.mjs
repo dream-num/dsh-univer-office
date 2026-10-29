@@ -174,4 +174,4 @@ for (const name of removedOverrides) {
 if (pinned === 0 && removedBindings === 0 && removedOverrides.length === 0) {
   console.log(`SDK cohort already pinned to ${sdkVersion}; nothing to change.`)
 }
-console.log('Next: pnpm install, then build and run the affected smoke tests.')
+console.log('Next: pnpm install, then run pnpm test (it builds every target first).')

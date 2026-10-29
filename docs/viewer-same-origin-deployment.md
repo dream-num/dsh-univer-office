@@ -96,9 +96,9 @@ session/workspace 校验。DSH 桌面壳会删除响应的 Set-Cookie，并把�
 
 ## 测试
 
-- `test/host-smoke.mjs`：配置面（`viewerBaseUrl` 不存在、投影为相对路径）。
-- `test/viewer-transport.mjs`：浏览器 HTTPS/WSS、桌面真实 Host 地址、协作与生命周期路径、配置缺失及非法地址拒绝。
-- `test/integration-smoke.mjs`：真实 Gateway + 真实路由 handler：文档范围内 200、不设置
+- `test/integration/host.test.ts`：配置面（`viewerBaseUrl` 不存在、投影为相对路径）。
+- `test/unit/viewer-transport.test.ts`：浏览器 HTTPS/WSS、桌面真实 Host 地址、协作与生命周期路径、配置缺失及非法地址拒绝。
+- `test/integration/viewer-proxy.test.ts`：真实 Gateway + 真实路由 handler：文档范围内 200、不设置
   插件 cookie、范围外文档 403；`/uf` GET 与 descriptor 在无 cookie、只有 DSH cookie、旧的
   外会话或畸形 cookie 下均放行；无 cookie 的 POST 创建 worktree 后读取持久状态；无 cookie
   的 WS 隧道收到真实生命周期事件，comb 的 sessionTicket + HELLO 往返成功，缺少 ticket

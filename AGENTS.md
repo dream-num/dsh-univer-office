@@ -30,29 +30,29 @@ pnpm run update:univer-sdk --sdk_version <exact-version>
 - `pnpm run build` builds Host/Client, Worker, Gateway, Render Machine, and Viewer. Use `build:lib`, `build:worker`, `build:gateway`, `build:render`, or `build:viewer` for a narrower build.
 - `pnpm run update:univer-sdk` re-pins the Univer SDK cohort to one exact version in every manifest, leaves self-versioned packages untouched, strips any transitive binding declarations (the wrappers own those versions), and drops SDK entries from `pnpm-workspace.yaml` overrides; run `pnpm install` and the full build afterwards.
 - Before any cohort version change, read the Collaboration SDK migration notes for the target version; they live in a private repository that the configured GitHub credentials already reach, so ask for the location instead of recording a link here. Those notes are authoritative for the component schema versions the Gateway adapters own, so a version bump is only complete once the adapters and `src/gateway-app/univerfile-sqlite/migration/` match them.
-- Smoke tests consume `lib/` and `artifacts/`. Always build the affected target from the current source before running its smoke test.
+- Tests run on Vitest in three projects: `unit`, `integration`, and `e2e` (see §7). `integration` and most `e2e` files consume `lib/` and `artifacts/`; always build the affected target from the current source before running them. `pnpm test` builds everything, then runs every project.
 
-Choose the narrowest validation that proves the change:
+Choose the narrowest validation that proves the change. Run one file with `pnpm exec vitest run <path>`:
 
-| Change                                                                                        | Build first                      | Test                                                            |
-| --------------------------------------------------------------------------------------------- | -------------------------------- | --------------------------------------------------------------- |
-| Host, HTTP, or tools                                                                          | `pnpm run build:lib`             | `pnpm run test:host`                                            |
-| DSH Client                                                                                    | `pnpm run build:lib`             | `pnpm run test:client`                                          |
-| Bundled skills                                                                                | None                             | `pnpm run test:skills`                                          |
-| Product telemetry or lifecycle packaging                                                      | `pnpm run build:lib`             | `pnpm run test:telemetry`                                       |
-| Viewer UI                                                                                     | `pnpm run build:viewer`          | `pnpm run test:preview-formula`; add `test:integration` when behavior crosses a process boundary |
-| Gateway, Worker, persistence, worktree lifecycle, Render Machine, or a cross-process protocol | Build every affected application | `pnpm run test:integration`                                     |
-| Cross-layer or release change                                                                 | None separately                  | `pnpm test` (builds every target first)                         |
+| Change                                                                                        | Build first                      | Test                                                                     |
+| --------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------ |
+| Pure Host, Client, or shared logic                                                            | None                             | `pnpm run test:unit`                                                     |
+| Host, HTTP, or tools                                                                          | `pnpm run build:lib`             | `test/integration/host.test.ts`                                          |
+| DSH Client                                                                                    | `pnpm run build:lib`             | `test/integration/client/`                                               |
+| Review-panel or floating-window layout                                                        | None                             | `test/e2e/client-layout.test.ts`                                         |
+| Bundled skills                                                                                | `pnpm run build:lib`             | `test/integration/skills.test.ts`                                        |
+| Product telemetry or lifecycle packaging                                                      | `pnpm run build:lib`             | `test/integration/telemetry.test.ts`                                     |
+| Viewer UI                                                                                     | `pnpm run build:viewer`          | `test/unit/` for Viewer logic; `test/e2e/viewer.test.ts` for built pages |
+| `.univer` schema or migration                                                                 | None                             | `test/unit/univerfile-migration.test.ts`                                 |
+| Import or export fidelity                                                                     | Build every affected application | `test/integration/exchange.test.ts`                                      |
+| Gateway, Worker, persistence, worktree lifecycle, Render Machine, or a cross-process protocol | Build every affected application | `pnpm run test:integration`                                              |
+| Cross-layer, SDK upgrade, or release change                                                   | None separately                  | `pnpm test`                                                              |
 
-For DSH compatibility changes, build `lib/` first, then use an independently installed target DSH package: `UNIVER_DSH_RUNTIME_ROOT=/absolute/path/to/dsh pnpm run test:client` checks its Cordis lifecycle, and `UNIVER_DSH_RUNTIME_ROOT=/absolute/path/to/dsh node test/host-settings-profile.mjs` checks real Profile settings in a temporary deployment. The latter checks live updates and persistence across restarts.
+For DSH compatibility changes, build `lib/` first, then point `UNIVER_DSH_RUNTIME_ROOT` at an independently installed target DSH package: `test/integration/client/` then checks that release's Cordis lifecycle, and `test/integration/host-settings-profile.test.ts` (skipped without the variable) checks real Profile settings, live updates, and persistence across restarts in a temporary deployment.
 
 Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before every handoff. Report the exact commands that completed successfully.
 
-`pnpm run typecheck` does not cover `src/gateway-app/**`: the root `tsconfig.json` excludes it and `tsconfig.viewer.json` includes only its `contract/`. Gateway type errors therefore surface in the smoke tests rather than in the typecheck, so treat `pnpm run build:gateway` plus `pnpm run test:integration` as the Gateway type gate. A relative import that omits its file extension (`from './univerfile-sqlite'`) resolves at runtime but makes every type it re-exports `any`, which silently disables checking at the call sites; always write the explicit `.ts`/`.js` path this repository otherwise requires.
-
-For `.univer` schema or migration changes, also run `pnpm run test:migration`. This source-level regression suite checks legacy files, atomic replacement, failure cleanup, concurrent opens, and History readback.
-
-For review-panel layout changes, also run `pnpm run test:client:layout`. This source-level browser test uses the installed render browser to check containment, fullscreen, iframe continuity, and cleanup; it supplements the built Client smoke test.
+`pnpm run typecheck` does not cover `src/gateway-app/**`: the root `tsconfig.json` excludes it and `tsconfig.viewer.json` includes only its `contract/`. Gateway type errors therefore surface in the integration tests rather than in the typecheck, so treat `pnpm run build:gateway` plus `pnpm run test:integration` as the Gateway type gate. A relative import that omits its file extension (`from './univerfile-sqlite'`) resolves at runtime but makes every type it re-exports `any`, which silently disables checking at the call sites; always write the explicit `.ts`/`.js` path this repository otherwise requires.
 
 ## 3. Architecture and Cordis boundaries
 
@@ -101,7 +101,12 @@ For review-panel layout changes, also run `pnpm run test:client:layout`. This so
 - Cover relevant success, rejection, cancellation, and race paths for new behavior.
 - Use temporary workspaces and dynamic ports. Tests must not depend on a global CLI, existing demo files, fixed ports, or leftover local processes.
 - Mock only expensive or nondeterministic external boundaries such as network and time. Prefer real Service, Router, Gateway, and package entry paths elsewhere.
-- Keep source and artifact validation separate: typecheck `src/`; built smoke tests consume artifacts generated from the same checkout immediately before the test.
+- Keep source and artifact validation separate: typecheck `src/`; integration tests consume artifacts generated from the same checkout immediately before the test.
+- Place each test by what it loads: `test/unit/` imports source and needs no build or Gateway; `test/integration/` loads built `lib/` or `artifacts/`; `test/e2e/` drives a real render browser. Name files `*.test.ts`, assert with Vitest `expect`, and build on `test/support/` (Gateway harness, ports, OOXML builders and readers, render browser) rather than local copies.
+- Integration and e2e files own their Gateway through `startGateway()`, and steps within a file may share state in order. Each file seeds what it needs, for example with `populateTrunk()`, and never depends on another file.
+- A bug fix lands with a regression test whose name carries the issue number, such as `it('keeps explicit left-to-right bidi on docx round-trip (#91)')`.
+- Record a known, unfixed defect as `it.fails` with its issue number, holding only the defective step; setup belongs in hooks that must pass, so an unrelated failure cannot satisfy it. When an upgrade turns an `it.fails` red, the defect is fixed: switch it to `it` and close the issue.
+- Commit small binary fixtures under `test/fixtures/` only when a builder in `test/support/` cannot produce them, and record their provenance in `test/fixtures/README.md`.
 
 ## 8. Documentation, generated files, and workspace safety
 

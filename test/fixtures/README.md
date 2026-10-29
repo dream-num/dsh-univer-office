@@ -1,6 +1,6 @@
 # Header browser checks
 
-Run `node test/dev-header.mjs` from the repository root and open
+Run `node scripts/dev-header.mjs` from the repository root and open
 `http://127.0.0.1:5181/test/fixtures/header.html`.
 
 The fixture renders the production Topbar with type-checked, inert application callbacks.
@@ -19,9 +19,16 @@ Status messages remain visible and may wrap. Check control bounds and overlap af
 in both directions. Segmented controls retain horizontal keyboard navigation and wrap labels.
 
 The on-page action readout verifies View/Compare, preview selection, submit, merge, and discard.
-Conflict state must disable merge and leave discard available. `test/integration-smoke.mjs`
+Conflict state must disable merge and leave discard available. `test/e2e/viewer.test.ts`
 retains built-Viewer bounds and centering assertions plus actual comparison wiring checks.
 
-The HTML entry and runner live under `test/`. Production Viewer builds use only
+The HTML entry lives under `test/fixtures/` and its runner under `scripts/`. Production Viewer builds use only
 `src/viewer-app/index.html`; the fixture is not a production entry or packaged page.
 `pnpm typecheck` includes the fixture through `tsconfig.viewer.json`.
+
+# Exchange fixtures
+
+`exchange/slide-picture.pptx` and `exchange/layout-picture.pptx` were generated with python-pptx 1.0
+from its default template: one 32×32 red PNG placed on a blank slide, or moved onto the blank slide
+layout so only the layout carries a picture. They reproduce #122 in `test/integration/exchange.test.ts`;
+`test/support/ooxml.ts` builds every docx fixture in code instead.
