@@ -52,9 +52,10 @@ export function ReviewPanel(props: {
   const discarded = status === 'discarded'
 
   React.useEffect(() => {
-    if (!wasHistorical.current && props.historical) setOpen(false)
+    // Folding unmounts the Viewer, so a card the user is reading fullscreen stays open.
+    if (!wasHistorical.current && props.historical && !fullscreen) setOpen(false)
     wasHistorical.current = props.historical
-  }, [props.historical])
+  }, [props.historical, fullscreen])
 
   React.useEffect(() => {
     if (props.preferredUnitId !== null) setSelected(props.preferredUnitId)
@@ -159,9 +160,11 @@ export function ReviewPanel(props: {
             <div className="uvf_panelUnavailable">
               {props.t(status === 'loading' ? 'dock.loading' : 'dock.unavailable')}
             </div>
-          ) : (
+          ) : open ? (
+            // Every mounted Viewer is a live collaboration client, so a folded
+            // card releases its Viewer and reloads it when expanded again (#99).
             <iframe className="uvf_panelFrame" src={url} title={title} />
-          )}
+          ) : null}
         </div>
       </div>
     </dialog>

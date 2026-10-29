@@ -59,7 +59,10 @@ function PreviewCardContent(
     files.map((entry) => entry.file),
     props.sessionId
   )
-  const latestTurns = React.useMemo(() => latestWorktreeTurns(props.timeline), [props.timeline])
+  const latestTurn = React.useMemo(() => latestCardTurn(props.timeline), [props.timeline])
+  // Only the latest Turn with cards opens by default; folded cards mount no Viewer, so one
+  // file has a single live Viewer however long the conversation grows (#99).
+  const historical = latestTurn !== undefined && props.matched.turn < latestTurn
   return (
     <>
       {files.map((target) => {
@@ -68,7 +71,6 @@ function PreviewCardContent(
         if (missingFiles.has(target.file)) return null
         const outcome = outcomeOfTurnFile(target)
         const worktreeId = outcome.primaryWorktreeId ?? pendingWorktree(target)
-        const historical = worktreeId !== null && latestTurns.get(worktreeId) !== props.matched.turn
         return (
           <ReviewPanel
             key={target.file}
@@ -94,16 +96,13 @@ function pendingWorktree(target: UniverTurnFile): string | null {
   return null
 }
 
-function latestWorktreeTurns(timeline: ConversationTimelineSnapshot): Map<string, number> {
-  const latest = new Map<string, number>()
+/** The newest Turn that renders cards, matching `selectUniverTurn`; turns without Univer files do not count. */
+function latestCardTurn(timeline: ConversationTimelineSnapshot): number | undefined {
+  let latest: number | undefined
   for (const [turnNumber, turn] of timeline.turns) {
     const data = turn.data.get('univerTurn')
-    if (data === undefined) continue
-    for (const file of data.files) {
-      for (const operation of file.operations) {
-        if (operation.worktreeId !== null) latest.set(operation.worktreeId, turnNumber)
-      }
-    }
+    if (data === undefined || data.files.length === 0) continue
+    if (latest === undefined || turnNumber > latest) latest = turnNumber
   }
   return latest
 }

@@ -925,35 +925,77 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         }
       })
 
-      it('keeps a history header when a newer Turn touches the same worktree', async () => {
-        const turnData = () => ({
+      describe('history', () => {
+        const turnData = (files: any[] | undefined) => ({
           data: {
-            get: (key: string) =>
-              key === 'univerTurn' ? { files: [turnFile(DEMO_FILE, WORKTREE)] } : undefined
+            get: (key: string) => (key === 'univerTurn' && files ? { files } : undefined)
           }
         })
-        const historical = {
-          sessionId: SESSION_ID,
-          running: false,
-          chat: {
-            timeline: {
-              turns: new Map([
-                [3, turnData()],
-                [4, turnData()]
-              ])
+        const sessionWithTurns = (turns: Array<[number, any[] | undefined]>) =>
+          runtimeProps({
+            sessionId: SESSION_ID,
+            running: false,
+            chat: {
+              timeline: {
+                turns: new Map(turns.map(([turn, files]) => [turn, turnData(files)]))
+              }
             }
-          }
+          })
+        const isHistory = () => tail.element.querySelector('.uvf_panel_history') !== null
+        // Remount from an empty tail: an expansion must not leak into the next case, and the
+        // asynchronous commit must not let a predicate match the previous case's DOM.
+        const renderHistory = async (files: any[], extra: object) => {
+          tail.root.render(null)
+          await waitFor('清空上一组卡片', () => tail.element.querySelector('.uvf_panel') === null)
+          renderTail(files, extra)
+          await waitFor('渲染新一组卡片', () => tail.element.querySelector('.uvf_panel') !== null)
         }
-        renderTail([turnFile(DEMO_FILE, WORKTREE)], runtimeProps(historical))
-        await waitFor(
-          '旧回合保留新版审阅 header',
-          () => tail.element.querySelector('.uvf_panel_history') !== null
-        )
-        await waitFor(
-          '历史 header 显示 worktree 名称',
-          () => tail.element.querySelector('.uvf_panelWorktree')?.textContent === 'v3smoke'
-        )
-        expect(panelMeta(), 'historical header shows only the full file path').toBe(DEMO_FILE)
+
+        it('folds an older worktree card without mounting its Viewer', async () => {
+          await renderHistory(
+            [turnFile(DEMO_FILE, WORKTREE)],
+            sessionWithTurns([
+              [3, [turnFile(DEMO_FILE, WORKTREE)]],
+              [4, [turnFile(DEMO_FILE, WORKTREE)]]
+            ])
+          )
+          await waitFor('旧回合保留新版审阅 header', isHistory)
+          await waitFor(
+            '历史 header 显示 worktree 名称',
+            () => tail.element.querySelector('.uvf_panelWorktree')?.textContent === 'v3smoke'
+          )
+          expect(panelMeta(), 'historical header shows only the full file path').toBe(DEMO_FILE)
+          expect(tail.element.querySelector('.uvf_panelContent')?.hasAttribute('hidden')).toBe(true)
+          expect(frameSrc(), 'a historical card mounts no Viewer').toBeUndefined()
+
+          click(tail.element.querySelector('[data-panel-action=fold]')!)
+          await waitFor('展开历史卡片后加载 Viewer', () => frameSrc() === ZH_FULL_DEFAULT_UNIT_URL)
+        })
+
+        it('folds an older trunk card once any newer Turn renders cards', async () => {
+          await renderHistory(
+            [turnFile(DEMO_FILE)],
+            sessionWithTurns([
+              [3, [turnFile(DEMO_FILE)]],
+              [4, [turnFile(SECOND_FILE)]]
+            ])
+          )
+          await waitFor('较新回合有卡片时旧 trunk 卡片折叠', isHistory)
+          expect(frameSrc()).toBeUndefined()
+        })
+
+        it('keeps the latest card Turn open across Turns without Univer files', async () => {
+          await renderHistory(
+            [turnFile(DEMO_FILE, WORKTREE)],
+            sessionWithTurns([
+              [3, [turnFile(DEMO_FILE, WORKTREE)]],
+              [4, undefined],
+              [5, []]
+            ])
+          )
+          await waitFor('无卡片回合不折叠最新卡片', () => frameSrc() === ZH_FULL_DEFAULT_UNIT_URL)
+          expect(isHistory()).toBe(false)
+        })
       })
     })
 
@@ -1489,14 +1531,14 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         await waitFor('按钮退出审阅全屏', () => q('.uvf_panel_fullscreen') === null)
       })
 
-      it('folds the full Univer page while keeping it mounted', async () => {
-        const frame = q('.uvf_panelFrame')
+      it('releases the Viewer while folded and reloads it when expanded', async () => {
         click(q('[data-panel-action=fold]'))
         await waitFor('审阅卡片折叠完整页面', () => q('.uvf_panelContent')?.hidden === true)
         expect(q('[data-panel-action=fold]')?.getAttribute('aria-label')).toBe('展开')
-        expect(q('.uvf_panelFrame')).toBe(frame)
+        expect(q('.uvf_panelFrame'), 'a folded card mounts no Viewer').toBeNull()
         click(q('[data-panel-action=fold]'))
         await waitFor('审阅卡片重新展开', () => q('.uvf_panelContent')?.hidden === false)
+        expect(q('.uvf_panelFrame')?.getAttribute('src')).toBe(ZH_FULL_DEFAULT_UNIT_URL)
       })
 
       it('switches the review card locale in place', async () => {
