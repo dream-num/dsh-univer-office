@@ -117,16 +117,6 @@ export class UniverfileManager {
     return this.openByPath(this._decodeKey(key))
   }
 
-  /** Resolve an existing addressed path without opening its resident collaboration runtime. */
-  public resolveExistingPathByKey(key: string): string {
-    const normalized = this._normalizeUniverfile(this._decodeKey(key))
-    this._evictIfDeleted(normalized)
-    if (!existsSync(normalized)) {
-      throw new UniverfileNotFoundError(`univerfile not found: ${normalized}`)
-    }
-    return normalized
-  }
-
   /** Decode a `base64url(univerfile)` key, then create the univerfile. */
   public createByKey(key: string): Univerfile {
     return this.createUniverfile(this._decodeKey(key))

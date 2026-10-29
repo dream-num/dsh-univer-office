@@ -24,7 +24,6 @@ try {
     stdin: {
       contents: `export * from './src/gateway-app/univerfile-sqlite/index.ts';
         export { CollabService } from './src/gateway-app/collab-service.ts';
-        export { optimizeUniverfilePath } from './src/gateway-app/optimization/univerfile-optimizer.ts';
         export * from './src/gateway-app/univerfile-sqlite/stored-json.ts';`,
       resolveDir: resolve('.')
     },
@@ -356,39 +355,11 @@ try {
     assert.deepEqual(await readFile(file), before)
   }
 
-  // Optimization must upgrade a copy even when the source is V2; reset cannot retain old boundaries.
-  const activeBytes = await readFile(legacy)
-  await assert.rejects(
-    api.optimizeUniverfilePath({
-      sourcePath: legacy,
-      outputPath: join(workspace, 'rejected.univer'),
-      history: 'reset',
-      dryRun: false
-    }),
-    /requires no active worktrees/
-  )
-  assert.deepEqual(await readFile(legacy), activeBytes)
-  assert.ok(!(await readdir(workspace)).includes('rejected.univer'))
-  const source = join(workspace, 'optimize-source.univer')
-  const output = join(workspace, 'optimized.univer')
-  createLegacy(source, snapshot)
-  const sourceBytes = await readFile(source)
-  await api.optimizeUniverfilePath({ sourcePath: source, history: 'reset', dryRun: true })
-  await api.optimizeUniverfilePath({
-    sourcePath: source,
-    outputPath: output,
-    history: 'reset',
-    dryRun: false
-  })
-  assert.deepEqual(await readFile(source), sourceBytes)
-  assert.equal(api.detectUniverfileSQLiteFormat(output), 'v3')
-  const optimized = api.openUniverfileSQLite(output)
-  assert.equal((await optimized.databaseAdapter.getUnit(context, 'unit')).headRevision, 1)
-  assert.equal(await optimized.historyDatabaseAdapter.getLatestRecord(context, 'unit'), null)
-  assert.equal(optimized.worktreeDatabaseAdapter.listWorktrees().length, 0)
-  await optimized.dispose()
-  const resumed = new api.CollabService({ dbPath: output })
+  // Trunk submits store server time in Unix seconds, and retries keep the first commit time.
+  const submitFile = join(workspace, 'submit.univer')
+  const resumed = new api.CollabService({ dbPath: submitFile, create: true })
   try {
+    await resumed.createUnit(2, { unitId: 'unit', name: 'Document' })
     const submitted = await resumed.submit('unit', 2, changeset(2, Date.now()))
     assert.equal(submitted.success, true)
     const saved = resumed.runtime.trunkAdapter.getChangeset('unit', 2)
@@ -399,7 +370,7 @@ try {
   } finally {
     await resumed.dispose()
   }
-  const afterEdit = new api.CollabService({ dbPath: output })
+  const afterEdit = new api.CollabService({ dbPath: submitFile })
   try {
     const history = await afterEdit.runtime.historyService.getHistoryList(
       { unitID: 'unit', length: 20 },
@@ -409,7 +380,6 @@ try {
   } finally {
     await afterEdit.dispose()
   }
-  assert.ok(!(await readdir(workspace)).some((name) => name.startsWith('univer-optimize-')))
   console.log('univerfile migration regression tests passed')
 } finally {
   await rm(workspace, { recursive: true, force: true })

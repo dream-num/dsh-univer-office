@@ -14,8 +14,6 @@ import type {
   MergeResponse,
   MergePreviewResponse,
   MergePreviewUnitResponse,
-  OptimizeUniverfileRequest,
-  OptimizeUniverfileResponse,
   ReadyResponse,
   ReopenResponse,
   UnitSummary,
@@ -76,11 +74,6 @@ export class WorktreeControlClient {
   /** 低层按地址创建 univerfile `.univer`(`POST /uf/<enc>`);已存在 → HTTP 409。 */
   public createUniverfile(): Promise<CreateUniverfileResponse> {
     return this.postJson<CreateUniverfileResponse>(this.base, {})
-  }
-
-  /** Copy-only package optimization. Every optimization pass is explicit in the request. */
-  public optimize(req: OptimizeUniverfileRequest): Promise<OptimizeUniverfileResponse> {
-    return this.postJson<OptimizeUniverfileResponse>(`${this.base}/optimize`, req)
   }
 
   /** 列 unit;省略 worktreeId = trunk,给定 = 该 worktree 视角。 */
