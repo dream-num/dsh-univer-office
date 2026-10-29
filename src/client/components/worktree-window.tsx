@@ -10,6 +10,7 @@ import { UnitChips, unitViewerUrl } from './unit-chips.tsx'
 interface ViewportSize {
   readonly width: number
   readonly height: number
+  readonly top: number
 }
 interface WindowRect {
   readonly x: number
@@ -321,21 +322,26 @@ function CloseIcon(): React.ReactElement {
 }
 
 function viewportSize(): ViewportSize {
+  // The host publishes a resolved CSS length; ordinary browser pages omit it.
+  const clearance = Number.parseFloat(
+    window.getComputedStyle(document.documentElement).getPropertyValue('--dsh-frame-top-clearance')
+  )
   return {
     width: Math.max(1, window.innerWidth),
-    height: Math.max(1, window.innerHeight)
+    height: Math.max(1, window.innerHeight),
+    top: VIEWPORT_GUTTER + (Number.isFinite(clearance) ? Math.max(0, clearance) : 0)
   }
 }
 
 function initialRect(stackIndex: number, viewport: ViewportSize): WindowRect {
   const availableWidth = Math.max(1, viewport.width - VIEWPORT_GUTTER * 2)
-  const availableHeight = Math.max(1, viewport.height - VIEWPORT_GUTTER * 2)
+  const availableHeight = Math.max(1, viewport.height - viewport.top - VIEWPORT_GUTTER)
   const width = Math.min(DEFAULT_WIDTH, availableWidth)
   const height = Math.min(DEFAULT_HEIGHT, availableHeight)
   return fitRect(
     {
       x: viewport.width - VIEWPORT_GUTTER - width - stackIndex * CASCADE_OFFSET,
-      y: VIEWPORT_GUTTER + stackIndex * CASCADE_OFFSET,
+      y: viewport.top + stackIndex * CASCADE_OFFSET,
       width,
       height
     },
@@ -345,7 +351,7 @@ function initialRect(stackIndex: number, viewport: ViewportSize): WindowRect {
 
 function fitRect(rect: WindowRect, viewport: ViewportSize): WindowRect {
   const availableWidth = Math.max(1, viewport.width - VIEWPORT_GUTTER * 2)
-  const availableHeight = Math.max(1, viewport.height - VIEWPORT_GUTTER * 2)
+  const availableHeight = Math.max(1, viewport.height - viewport.top - VIEWPORT_GUTTER)
   const width = clamp(rect.width, Math.min(MIN_WIDTH, availableWidth), availableWidth)
   const height = clamp(rect.height, Math.min(MIN_HEIGHT, availableHeight), availableHeight)
   return {
@@ -356,8 +362,8 @@ function fitRect(rect: WindowRect, viewport: ViewportSize): WindowRect {
     ),
     y: clamp(
       rect.y,
-      VIEWPORT_GUTTER,
-      Math.max(VIEWPORT_GUTTER, viewport.height - VIEWPORT_GUTTER - height)
+      viewport.top,
+      Math.max(viewport.top, viewport.height - VIEWPORT_GUTTER - height)
     ),
     width,
     height
@@ -377,7 +383,10 @@ function resizeRect(
 ): WindowRect {
   const fitted = fitRect(start, viewport)
   const minWidth = Math.min(MIN_WIDTH, Math.max(1, viewport.width - VIEWPORT_GUTTER * 2))
-  const minHeight = Math.min(MIN_HEIGHT, Math.max(1, viewport.height - VIEWPORT_GUTTER * 2))
+  const minHeight = Math.min(
+    MIN_HEIGHT,
+    Math.max(1, viewport.height - viewport.top - VIEWPORT_GUTTER)
+  )
   let left = fitted.x
   let right = fitted.x + fitted.width
   let top = fitted.y
@@ -386,7 +395,7 @@ function resizeRect(
   if (direction.includes('w')) left = clamp(fitted.x + dx, VIEWPORT_GUTTER, right - minWidth)
   if (direction.includes('e'))
     right = clamp(right + dx, left + minWidth, viewport.width - VIEWPORT_GUTTER)
-  if (direction.includes('n')) top = clamp(fitted.y + dy, VIEWPORT_GUTTER, bottom - minHeight)
+  if (direction.includes('n')) top = clamp(fitted.y + dy, viewport.top, bottom - minHeight)
   if (direction.includes('s'))
     bottom = clamp(bottom + dy, top + minHeight, viewport.height - VIEWPORT_GUTTER)
   return { x: left, y: top, width: right - left, height: bottom - top }

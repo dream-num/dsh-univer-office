@@ -14,15 +14,18 @@ const bundle = await build({
       import React from 'react'
       import { createRoot } from 'react-dom/client'
       import { ReviewPanel } from './src/client/components/review-panel.tsx'
+      import { WorktreeWindow } from './src/client/components/worktree-window.tsx'
       import { worktreeStyles } from './src/client/styles/worktree.ts'
       const style = document.createElement('style')
       style.textContent = worktreeStyles
       document.head.append(style)
       const root = createRoot(document.getElementById('root'))
       window.unmountReview = () => root.unmount()
+      const floating = new URLSearchParams(location.search).has('floating')
       root.render(React.createElement(React.StrictMode, null,
-        React.createElement(ReviewPanel, {
+        React.createElement(floating ? WorktreeWindow : ReviewPanel, {
           file: 'example.univer', worktreeId: null, preferredUnitId: null,
+          stackIndex: 0, onDismiss: () => root.unmount(),
           historical: false, viewerLocale: 'en-US', t: key => key,
           state: {ok: true, file: 'example.univer', gateway: null,
             gatewayRunning: true, viewerUrl: '/frame', worktrees: []}
@@ -44,7 +47,15 @@ const cases = [
   'transform:translateY(0)',
   'filter:blur(0px)',
   'container-type:inline-size'
+].map((ancestor) => ({ ancestor, clearance: 0, width: 1280 }))
+const titlebarCases = [
+  { clearance: 0, width: 1280 },
+  { clearance: 40, width: 1280 },
+  { clearance: 42, width: 1280 },
+  { clearance: 48, width: 1280 },
+  { clearance: 40, width: 600 }
 ]
+cases.push(...titlebarCases.slice(1).map((entry) => ({ ancestor: '', ...entry })))
 const server = createServer((request, response) => {
   const url = new URL(request.url, 'http://localhost')
   if (url.pathname === '/bundle.js') {
@@ -57,8 +68,11 @@ const server = createServer((request, response) => {
     response.end('<button id="focus">Viewer focus target</button>')
     return
   }
-  const ancestor = cases[Number(url.searchParams.get('case'))] ?? ''
+  const { ancestor, clearance } = cases[Number(url.searchParams.get('case'))] ?? cases[0]
+  const top = Number(url.searchParams.get('clearance') ?? clearance)
   response.end(`<!doctype html><style>
+    ${top === 0 ? '' : `html{--dsh-windows-titlebar-height:${top}px;--dsh-frame-top-clearance:var(--dsh-windows-titlebar-height)}`}
+    *{box-sizing:border-box}
     body{margin:0;padding:0 40px;font:14px system-ui}
     #root{width:600px;${ancestor}}
     .spacer{height:600px}
@@ -77,10 +91,10 @@ try {
     // because the browser's own sandbox is unavailable there.
     args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage']
   })
-  for (const [index, ancestor] of cases.entries()) {
+  for (const [index, { ancestor, clearance, width }] of cases.entries()) {
     const page = await browser.newPage()
     try {
-      await page.setViewport({ width: 1280, height: 900 })
+      await page.setViewport({ width, height: 900 })
       await page.goto(`http://127.0.0.1:${server.address().port}/?case=${index}`)
       await page.waitForSelector('.uvf_panelFrame')
       await page.waitForFunction(() =>
@@ -110,17 +124,18 @@ try {
           scroll: window.scrollY
         }
       })
+      const gutter = width <= 680 ? 4 : 10
       assert.deepEqual(
         fullscreen,
         {
-          width: 1260,
-          height: 880,
-          x: 10,
-          y: 10,
+          width: width - gutter * 2,
+          height: 900 - gutter * 2 - clearance,
+          x: gutter,
+          y: gutter + clearance,
           placeholder: before.height,
           scroll: before.scroll
         },
-        ancestor || 'normal ancestor'
+        `${ancestor || 'normal ancestor'}, clearance ${clearance}, width ${width}`
       )
       // Esc must work while focus is inside the Viewer, not just in its header.
       const frame = await (await page.$('iframe')).contentFrame()
@@ -150,7 +165,84 @@ try {
       await page.close()
     }
   }
-  console.log(`client layout OK (${cases.length} ancestor styles, iframe continuity, Esc, cleanup)`)
+  for (const { clearance, width } of titlebarCases) {
+    const page = await browser.newPage()
+    try {
+      await page.setViewport({ width, height: 900 })
+      await page.goto(`http://127.0.0.1:${server.address().port}/?floating&clearance=${clearance}`)
+      await page.waitForSelector('.uvf_win')
+      const bounds = () =>
+        page.$eval('.uvf_win', (element) => {
+          const rect = element.getBoundingClientRect()
+          return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+        })
+      const minimumY = clearance + 12
+      const waitForY = (expected) =>
+        page.waitForFunction(
+          (y) => document.querySelector('.uvf_win').getBoundingClientRect().y === y,
+          {},
+          expected
+        )
+      assert.equal((await bounds()).y, minimumY, 'initial title bar clearance')
+      // Move below the strip, then drag back up past the viewport edge.
+      const start = await bounds()
+      await page.mouse.move(start.x + 70, start.y + 20)
+      await page.mouse.down()
+      await page.mouse.move(start.x + 70, start.y + 100)
+      await page.mouse.up()
+      await waitForY(minimumY + 80)
+      const moved = await bounds()
+      assert.equal(moved.y, minimumY + 80)
+      await page.mouse.move(moved.x + 70, moved.y + 20)
+      await page.mouse.down()
+      await page.mouse.move(moved.x + 70, 0)
+      await page.mouse.up()
+      await waitForY(minimumY)
+      assert.equal((await bounds()).y, minimumY, 'drag stays below title bar')
+      const north = await page.$('[data-direction=n]')
+      const handle = await north.boundingBox()
+      await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(handle.x + handle.width / 2, 0)
+      await page.mouse.up()
+      await waitForY(minimumY)
+      assert.equal((await bounds()).y, minimumY, 'north resize stays below title bar')
+      await page.click('[data-window-action=maximize]')
+      await page.waitForSelector('.uvf_win_max')
+      assert.deepEqual(await bounds(), {
+        x: 12,
+        y: minimumY,
+        width: width - 24,
+        height: 900 - minimumY - 12
+      })
+      await page.click('[data-window-action=maximize]')
+      await page.waitForSelector('.uvf_win:not(.uvf_win_max)')
+      await page.setViewport({ width, height: 320 })
+      await page.waitForFunction(
+        () => document.querySelector('.uvf_win').getBoundingClientRect().bottom <= 308
+      )
+      const resized = await bounds()
+      assert.equal(resized.y, minimumY)
+      assert.ok(resized.y + resized.height <= 308, 'short viewport keeps the bottom gutter')
+      await page.evaluate(() => {
+        document.documentElement.style.setProperty('--dsh-frame-top-clearance', '64px')
+        window.dispatchEvent(new Event('resize'))
+      })
+      await page.waitForFunction(
+        () => document.querySelector('.uvf_win').getBoundingClientRect().y === 76
+      )
+      const adjusted = await bounds()
+      assert.ok(adjusted.y + adjusted.height <= 308, 'changed clearance refits the window')
+      await page.click('[data-window-action=close]')
+      await page.waitForSelector('.uvf_win', { hidden: true })
+      assert.equal(await page.$('.uvf_win'), null)
+    } finally {
+      await page.close()
+    }
+  }
+  console.log(
+    `client layout OK (${cases.length} review cases, ${titlebarCases.length} floating cases, iframe continuity, Esc, cleanup)`
+  )
 } finally {
   await browser?.close()
   await new Promise((resolve) => server.close(resolve))
