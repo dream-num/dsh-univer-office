@@ -201,7 +201,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `gatewayRequestTimeoutMs` | `3000` | 状态读取超时 |
 | `gatewayMutationTimeoutMs` | `60000` | 写操作超时 |
 | `unitContentOperationTimeoutMs` | `120000` | 导入、导出、检查和执行超时 |
-| `unitContentRuntimeMaxEntries` | `2` | 为检查、执行和渲染保持预热的 Unit runtime 数，也是这些操作的并发上限；`0` 表示每次操作都启动新进程 |
+| `unitContentRuntimeMaxEntries` | `20` | 为检查、执行和渲染保持预热的 Unit runtime 数；全部忙碌时后续操作返回 `COLLABORATION_POOL_CAPACITY_EXCEEDED`；`0` 表示每次操作都启动新进程 |
 | `unitContentRuntimeIdleTtlMs` | `300000` | 预热的 Unit runtime 空闲多久后退出 |
 | `screenshotOperationTimeoutMs` | `120000` | 一次浏览器截图操作的总超时 |
 | `printPdfOperationTimeoutMs` | `120000` | 一次浏览器 PDF 打印操作的总超时 |

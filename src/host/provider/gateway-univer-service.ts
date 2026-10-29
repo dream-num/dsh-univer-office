@@ -117,9 +117,6 @@ export class GatewayUniverService extends UniverService {
         request.worktreeId,
         request.action
       )
-      if (request.action === 'merge' || request.action === 'discard') {
-        await this.unitContent.invalidateWorktree(request.file, request.worktreeId)
-      }
       this.invalidate(request.file, request.worktreeId)
       return {
         ok: true,
@@ -228,9 +225,6 @@ export class GatewayUniverService extends UniverService {
         ? await api.create(request.file, request.name)
         : await this.transitionWorktree(gateway, request)
     requireGatewaySuccess(result, `Gateway rejected worktree ${request.action}.`)
-    if (request.action === 'merge' || request.action === 'discard') {
-      await this.unitContent.invalidateWorktree(request.file, request.worktreeId)
-    }
     signal?.throwIfAborted()
     const id = worktreeResultId(result, request)
     this.invalidate(request.file, id)
@@ -256,9 +250,6 @@ export class GatewayUniverService extends UniverService {
         ? await api.createUnit(request.file, request.worktreeId, request.kind, request.name)
         : await api.removeUnit(request.file, request.worktreeId, request.unitId)
     requireGatewaySuccess(result, `Gateway rejected Unit ${request.action}.`)
-    if (request.action === 'remove') {
-      await this.unitContent.invalidateUnit(request.file, request.worktreeId, request.unitId)
-    }
     signal?.throwIfAborted()
     this.invalidate(request.file, request.worktreeId)
     return {

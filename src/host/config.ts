@@ -23,7 +23,7 @@ export interface Config {
   unitContentOperationTimeoutMs?: number
   /**
    * Pooled Collaboration Runtime Workers kept for inspection, execution, and render-source
-   * reads; also how many such operations run at once. `0` runs every operation one-shot.
+   * reads. `0` runs every operation one-shot.
    */
   unitContentRuntimeMaxEntries?: number
   /** Idle time after which a pooled Collaboration Runtime Worker exits. */
@@ -109,7 +109,7 @@ export const Config: z<Config> = z.object({
   gatewayRequestTimeoutMs: z.natural().default(3_000),
   gatewayMutationTimeoutMs: z.natural().default(60_000),
   unitContentOperationTimeoutMs: z.natural().default(120_000),
-  unitContentRuntimeMaxEntries: z.natural().default(2),
+  unitContentRuntimeMaxEntries: z.natural().default(20),
   unitContentRuntimeIdleTtlMs: z.natural().default(300_000),
   screenshotOperationTimeoutMs: z.natural().default(120_000),
   printPdfOperationTimeoutMs: z.natural().default(120_000),
@@ -137,7 +137,7 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     gatewayRequestTimeoutMs: config.gatewayRequestTimeoutMs ?? 3_000,
     gatewayMutationTimeoutMs: config.gatewayMutationTimeoutMs ?? 60_000,
     unitContentOperationTimeoutMs: config.unitContentOperationTimeoutMs ?? 120_000,
-    unitContentRuntimeMaxEntries: config.unitContentRuntimeMaxEntries ?? 2,
+    unitContentRuntimeMaxEntries: config.unitContentRuntimeMaxEntries ?? 20,
     unitContentRuntimeIdleTtlMs: config.unitContentRuntimeIdleTtlMs ?? 300_000,
     screenshotOperationTimeoutMs: config.screenshotOperationTimeoutMs ?? 120_000,
     printPdfOperationTimeoutMs: config.printPdfOperationTimeoutMs ?? 120_000,

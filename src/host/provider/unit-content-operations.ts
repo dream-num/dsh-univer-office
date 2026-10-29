@@ -200,16 +200,6 @@ export class UnitContentOperations {
       .then((snapshot) => ({ kind, snapshot }))
   }
 
-  /** Drop pooled runtimes of a worktree that was merged or discarded. */
-  async invalidateWorktree(file: string, worktreeId: string): Promise<void> {
-    await this.runtimes?.invalidateWorktree(file, worktreeId)
-  }
-
-  /** Drop the pooled runtime of a Unit removed from a worktree. */
-  async invalidateUnit(file: string, worktreeId: string, unitId: string): Promise<void> {
-    await this.runtimes?.invalidateUnit(file, worktreeId, unitId)
-  }
-
   /** Close every pooled runtime worker. */
   async close(): Promise<void> {
     await this.runtimes?.close()

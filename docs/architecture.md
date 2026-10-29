@@ -319,10 +319,10 @@ Gateway 本身始终只监听 loopback，不对外暴露。完整契约见
 
 Unit 的检查、执行和 render-source 读取（lint、截图与 PDF 打印的数据来源）由 Unit Content Adapter 从 `@univer-cli/univer-collaboration-runtime-pool` 取得 keyed lease。Key 由 Gateway origin、文件路径、trunk/worktree scope、Unit ID 与 Unit type 组成；每个 key 对应一个由 pool fork 的 Collaboration Runtime Worker 子进程，加载 `artifacts/collaboration-runtime-worker.mjs` 并通过与一次性 Worker 相同的 server backend 连接 Gateway。Pool 的 bootstrap `worker-child.mjs` 按其模块位置查找，因此构建把它复制到 `lib/index.js` 旁。
 
-- 每次使用先 pull；pull 失败或冲突（例如历史恢复后无法原地 pull）时销毁该 runtime 并用新 runtime 重试一次。Gateway 始终是内容与 revision 的唯一依据，缓存的 runtime 不构成授权或内容真相。
-- 同时运行的操作数与常驻 Worker 数都受 `unitContentRuntimeMaxEntries`（默认 2）约束：Host 以同样大小的信号量排队，因此 pool 不会因容量不足拒绝请求，超出的空闲 runtime 按 LRU 回收；空闲超过 `unitContentRuntimeIdleTtlMs`（默认 5 分钟）后退出。单个 Worker 即使是很小的 Unit 也约占 440 MB RSS，默认值因此很小。设为 `0` 时所有操作回到一次性 Worker。
-- 操作成功后 release 复用；失败时只有在没有 pending、awaiting 和 conflict 时才复用，否则销毁，保证失败写入的部分 mutation 不会被后续操作提交。取消、超时、Worker 崩溃或协议错误都会销毁 Worker。
-- 通过 Host 进行的 worktree merge/discard 与 Unit remove 会主动销毁对应 runtime；Gateway origin 变化时销毁指向旧 origin 的 runtime。Viewer 内直接完成的 merge/discard 不经过 Host，对应 runtime 由下一次 pull 失败重试或空闲超时回收。Provider 卸载时先关闭 pool，再停止 Gateway。
+- 每次使用先 pull 再执行。Gateway 始终是内容与 revision 的唯一依据，缓存的 runtime 不构成授权或内容真相。
+- 常驻 Worker 数上限为 `unitContentRuntimeMaxEntries`（默认 20，与 cli-sdk 一致），满员时淘汰最久未用的空闲 runtime；全部忙碌时 pool 直接以 `COLLABORATION_POOL_CAPACITY_EXCEEDED` 拒绝，Host 不排队。空闲超过 `unitContentRuntimeIdleTtlMs`（默认 5 分钟）后退出。设为 `0` 时所有操作回到一次性 Worker。
+- 操作成功后 release 复用；任何失败（包括 pull 冲突、取消、超时、Worker 崩溃或协议错误）都销毁该 Worker，保证失败写入的部分 mutation 不会被后续操作提交，下一次使用重新加载。
+- Host 不主动驱逐 runtime：merge/discard 或 Unit remove 后不再使用的 runtime 由空闲超时或 LRU 回收。Provider 卸载时先关闭 pool，再停止 Gateway。
 - Pool 忽略子进程 stdio，因此池化 Worker 的失败只以结构化错误码与消息返回，不再附带 stderr 诊断。
 
 Office 导入与导出由一次性 Unit Content Worker 完成：导入不需要 runtime，导出加载 runtime 后直接写出目标文件，两者都在操作完成或取消后退出，不拥有独立持久状态。Gateway 的 worktree 控制面直接提供 Unit 创建与移除端点，并通过 collaboration service 与 lifecycle event 完成操作。写操作只能针对显式 draft worktree；Gateway 是提交结果和 revision 的唯一依据。

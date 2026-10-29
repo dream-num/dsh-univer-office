@@ -28,7 +28,7 @@ if (defaultConfig.printPdfOperationTimeoutMs !== 120_000) {
   throw new Error(`default PDF print timeout drifted: ${JSON.stringify(defaultConfig)}`)
 }
 if (
-  defaultConfig.unitContentRuntimeMaxEntries !== 2 ||
+  defaultConfig.unitContentRuntimeMaxEntries !== 20 ||
   defaultConfig.unitContentRuntimeIdleTtlMs !== 300_000
 ) {
   throw new Error(`default runtime pool limits drifted: ${JSON.stringify(defaultConfig)}`)

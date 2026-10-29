@@ -201,7 +201,7 @@ The defaults are designed for local use: the service starts at port `9080`. If t
 | `gatewayRequestTimeoutMs` | `3000` | State-read timeout |
 | `gatewayMutationTimeoutMs` | `60000` | Write-operation timeout |
 | `unitContentOperationTimeoutMs` | `120000` | Import, export, inspection, and execution timeout |
-| `unitContentRuntimeMaxEntries` | `2` | Unit runtimes kept warm for inspection, execution, and rendering; also how many of these run at once. `0` starts a new process for every operation |
+| `unitContentRuntimeMaxEntries` | `20` | Unit runtimes kept warm for inspection, execution, and rendering. When all are busy, further operations fail with `COLLABORATION_POOL_CAPACITY_EXCEEDED`. `0` starts a new process for every operation |
 | `unitContentRuntimeIdleTtlMs` | `300000` | Idle time after which a warm Unit runtime exits |
 | `screenshotOperationTimeoutMs` | `120000` | Overall timeout for one browser screenshot operation |
 | `printPdfOperationTimeoutMs` | `120000` | Overall timeout for one browser PDF print operation |
