@@ -64,7 +64,11 @@ export class GatewayUniverService extends UniverService {
     this.unitContent = new UnitContentOperations(
       config.gatewayRequestTimeoutMs,
       config.unitContentCommitTimeoutMs,
-      config.unitContentOperationTimeoutMs
+      config.unitContentOperationTimeoutMs,
+      {
+        maxEntries: config.unitContentRuntimeMaxEntries,
+        idleTtlMs: config.unitContentRuntimeIdleTtlMs
+      }
     )
     this.worktrees = new WorktreeOperations(
       config.gatewayRequestTimeoutMs,
@@ -474,7 +478,12 @@ export class GatewayUniverService extends UniverService {
   async dispose(): Promise<void> {
     this.stateCache.clear()
     this.unitCache.clear()
-    await this.gatewaySupervisor.dispose()
+    try {
+      // Runtime workers hold Gateway connections; close them before the Gateway stops.
+      await this.unitContent.close()
+    } finally {
+      await this.gatewaySupervisor.dispose()
+    }
   }
 
   /** Status value used by the Web Consumer. */

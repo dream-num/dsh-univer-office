@@ -152,6 +152,7 @@
     "@univer-cli/unit-pdf-printer": "1.2.0",
     "@univer-cli/unit-screenshot": "1.2.0",
     "@univer-cli/univer-collaboration-runtime": "1.2.0",
+    "@univer-cli/univer-collaboration-runtime-pool": "1.2.0",
     "@univer-cli/univer-render-page": "1.2.0",
     "@univer-cli/univer-render-runtime": "1.2.0",
     "@univerjs-pro/bases": "1.2.0",

@@ -17,13 +17,14 @@
 - `skills` 向 DSH Skill Registry 提供按需加载的 Univer 工作流与 Unit 专项知识；
 - `processes/gateway` 负责插件内置 Gateway 进程和 Viewer 资源；
 - `workers/unit-content` 是一次性 Unit Content Worker 的子进程入口；
+- `workers/collaboration-runtime` 是 runtime pool 导入到每个池化子进程的 Collaboration Runtime Worker 定义；
 - `client` 负责 DSH 浏览器端的预览、实时 worktree 窗口和用户审阅界面；
 - `shared/wire` 只存放 Host 与 Client 共享的纯 JSON 数据类型；
 - `telemetry` 提供 best-effort 的匿名产品遥测，只在 Host 与包卸载入口发送，发布包不声明 `postinstall`，任何失败都不影响启动与卸载。
 
-用户只安装本插件即可使用全部功能。全局 `univer` CLI 不属于运行依赖；Unit 的导入、检查、执行和导出由插件内置的一次性 Unit Content Worker 完成。
+用户只安装本插件即可使用全部功能。全局 `univer` CLI 不属于运行依赖；Unit 的检查、执行和 render-source 读取复用插件内置的池化 Collaboration Runtime Worker，Office 导入与导出由一次性 Unit Content Worker 完成。
 
-代码、API 和界面使用具体名称 `Gateway`、`Viewer`、`Unit Content Worker` 和 `artifacts`，不使用含义宽泛的 `runtime` 或 `daemon` 作为本插件领域名称。
+代码、API 和界面使用具体名称 `Gateway`、`Viewer`、`Unit Content Worker`、`Collaboration Runtime Worker` 和 `artifacts`，不使用含义宽泛的 `runtime` 或 `daemon` 作为本插件领域名称。
 
 ## 2. 必须保留的产品功能
 
@@ -67,6 +68,9 @@ flowchart LR
     Provider --> GatewaySupervisor["Gateway Supervisor"]
     GatewaySupervisor --> Gateway["Bundled Gateway process"]
     GatewayAdapter --> Gateway
+    UnitContentAdapter --> RuntimePool["Collaboration Runtime Pool"]
+    RuntimePool --> RuntimeWorker["Pooled Collaboration Runtime Worker"]
+    RuntimeWorker --> Gateway
     UnitContentAdapter --> Worker["Bundled one-shot Unit Content Worker"]
     Worker --> Gateway
     Browser --> Viewer["Bundled Viewer served by Gateway"]
@@ -148,6 +152,7 @@ src/
       unit-content/
         protocol.ts                  # Unit Content Worker 进程协议
         worker.ts                    # 一次性 worker 启动、取消与结果校验
+        runtime-pool.ts              # 池化 runtime 的 key、并发上限、取消、复用判定与驱逐
     processes/
       gateway/
         supervisor.ts                # Gateway 生命周期与并发启动合并
@@ -158,6 +163,9 @@ src/
     unit-content/
       entry.ts                       # 一次性无头 Univer 子进程入口
       license.ts                     # Worker 使用的 Univer license
+      runtime/content-runtime.ts     # 两类 Worker 共用的 runtime 初始化校验与加载
+    collaboration-runtime/
+      entry.ts                       # runtime pool 的 worker definition
       runtime/                       # 本地 snapshot/reference adapters
   render-machine/                    # 组装 SDK Render Page 的 machine-facing browser entry
   gateway-app/
@@ -214,6 +222,7 @@ artifacts/                            # gitignored 的发布运行产物
   gateway.cjs                        # 从 gateway-app 生成
   upgrade-worker.cjs                 # Windows .univer 升级 helper，从 migration/upgrade-worker 生成
   unit-content-worker.mjs           # 从 workers/unit-content 生成
+  collaboration-runtime-worker.mjs  # 从 workers/collaboration-runtime 生成
 test/
   host-smoke.mjs
   client-smoke.mjs
@@ -250,12 +259,12 @@ bundled skill provider -> DSH skill registry
 
 具体约束：
 
-1. webServer Consumer 和 Tools Consumer 只能调用 `ctx.univer`，不得直接调用 Gateway、Unit Content Worker、子进程或文件系统。
+1. webServer Consumer 和 Tools Consumer 只能调用 `ctx.univer`，不得直接调用 Gateway、Unit Content Worker、runtime pool、子进程或文件系统。
 2. Provider 是唯一可以组合 Gateway、Unit 内容操作和缓存的层。
 3. `host/processes/gateway` 只管理 Gateway 进程与资源，不包含 worktree、unit、merge 等业务规则。
 4. Client component 不直接 `fetch`；HTTP 访问集中在 `client/api`，轮询和 mutation 状态集中在 hooks。
 5. `shared/wire` 不依赖 Node.js、React、Cordis 或上游 Univer 包，且所有值必须可 JSON 序列化。
-6. Gateway 与 Worker 的应用源码分别属于 `src/gateway-app` 和 `src/workers/unit-content`。它们通过精确版本 SDK package 构建，不从外部 checkout 同步源码；生成 executable 不入库。
+6. Gateway 与 Worker 的应用源码分别属于 `src/gateway-app`、`src/workers/unit-content` 和 `src/workers/collaboration-runtime`。它们通过精确版本 SDK package 构建，不从外部 checkout 同步源码；生成 executable 不入库。
 7. Render Machine browser page 使用与 runtime 精确同版本的 `@univer-cli/univer-render-page` 提供页面协议与 render operations，并注入本仓库与 Viewer 共享的 Univer composition；Viewer、render preset 和 IMPORTRANGE plugin 是本仓库的普通源码。仓库不提交上游源码快照目录或预构建 Viewer。
 8. Skill Provider 只负责发现与加载包内 Markdown，不调用 Service，也不复制工具 schema。
 9. 所有 Cordis 注册通过 effect 生命周期撤销；插件卸载后不得遗留路由、工具、Skill provider、定时器或子进程。
@@ -278,7 +287,7 @@ bundled skill provider -> DSH skill registry
 
 默认值在 Provider 的 `resolve(request)` 阶段产生；执行方法不使用隐藏的 `value ?? default`。可随部署变化的端口、启动超时、轮询间隔和自动启动策略必须来自已校验配置。
 
-## 7. Provider、Gateway 与 Unit Content Worker
+## 7. Provider、Gateway、Runtime Pool 与 Unit Content Worker
 
 Provider 按规范化文件路径维护缓存；同一个插件实例只持有一个 Gateway 进程，多个 workspace 共享该协作进程，但浏览器文件请求必须先绑定 live DSH session 并通过该 session `cwd` 的 realpath 范围校验。Gateway 的进程复用不构成文件授权。并发的 `ensureGateway` 调用共享同一个启动 Promise；启动失败、进程提前退出和插件卸载都必须释放状态并允许安全重试。
 
@@ -308,7 +317,15 @@ live session 的 `cwd` 内；后续 `/uf` 与隧道请求不设置或读取插�
 Gateway 本身始终只监听 loopback，不对外暴露。完整契约见
 `docs/viewer-same-origin-deployment.md`。
 
-Unit 的导入、检查、执行和导出由 Unit Content Adapter 启动一次性 Unit Content Worker。Worker 连接 Gateway Supervisor 提供的同一个 Gateway，操作完成或取消后退出，不拥有独立持久状态。Gateway 的 worktree 控制面直接提供 Unit 创建与移除端点，并通过 collaboration service 与 lifecycle event 完成操作。写操作只能针对显式 draft worktree；Gateway 是提交结果和 revision 的唯一依据。
+Unit 的检查、执行和 render-source 读取（lint、截图与 PDF 打印的数据来源）由 Unit Content Adapter 从 `@univer-cli/univer-collaboration-runtime-pool` 取得 keyed lease。Key 由 Gateway origin、文件路径、trunk/worktree scope、Unit ID 与 Unit type 组成；每个 key 对应一个由 pool fork 的 Collaboration Runtime Worker 子进程，加载 `artifacts/collaboration-runtime-worker.mjs` 并通过与一次性 Worker 相同的 server backend 连接 Gateway。Pool 的 bootstrap `worker-child.mjs` 按其模块位置查找，因此构建把它复制到 `lib/index.js` 旁。
+
+- 每次使用先 pull 再执行。Gateway 始终是内容与 revision 的唯一依据，缓存的 runtime 不构成授权或内容真相。
+- 常驻 Worker 数上限为 `unitContentRuntimeMaxEntries`（默认 20，与 cli-sdk 一致），满员时淘汰最久未用的空闲 runtime；全部忙碌时 pool 直接以 `COLLABORATION_POOL_CAPACITY_EXCEEDED` 拒绝，Host 不排队。空闲超过 `unitContentRuntimeIdleTtlMs`（默认 5 分钟）后退出。设为 `0` 时所有操作回到一次性 Worker。
+- 操作成功后 release 复用；任何失败（包括 pull 冲突、取消、超时、Worker 崩溃或协议错误）都销毁该 Worker，保证失败写入的部分 mutation 不会被后续操作提交，下一次使用重新加载。
+- Host 不主动驱逐 runtime：merge/discard 或 Unit remove 后不再使用的 runtime 由空闲超时或 LRU 回收。Provider 卸载时先关闭 pool，再停止 Gateway。
+- Pool 忽略子进程 stdio，因此池化 Worker 的失败只以结构化错误码与消息返回，不再附带 stderr 诊断。
+
+Office 导入与导出由一次性 Unit Content Worker 完成：导入不需要 runtime，导出加载 runtime 后直接写出目标文件，两者都在操作完成或取消后退出，不拥有独立持久状态。Gateway 的 worktree 控制面直接提供 Unit 创建与移除端点，并通过 collaboration service 与 lifecycle event 完成操作。写操作只能针对显式 draft worktree；Gateway 是提交结果和 revision 的唯一依据。
 
 Gateway 通过 SDK `register(router)` 注册 HTTP/WebSocket Endpoint，连接跟踪保留路由参数，并在打开失败或关闭时释放记录。Worktree Unit 删除保留应用现有流程；SDK 的可撤销移除接口 `setUnitRemoved` 在本地 Adapter 中明确返回 `INVALID_REQUEST`，不写入移除状态或改变文件格式。Gateway 为 SDK collaboration service 注入 `ILogger`：warn/error 始终写入 Gateway stderr，debug/info 仅在 `UNIVER_DSH_GATEWAY_DEBUG=1` 时输出；SDK 内部失败若没有该 logger 只会表现为不可诊断的通用 500。数据库 Adapter 遵循 SDK 的快照读取契约（`getChangesets`/`getDraftChangesets` 返回裸 changeset 数组，`null` 表示 Unit 不存在）。所有 payload 列（Adapter 与迁移）共用 `univerfile-sqlite/stored-json.ts`：二进制字段编码为与 SDK SQLite Adapter 相同标记的 base64，并在 JSON replacer 中读取 `toJSON` 之前的原值：SDK 的 Rust 物化把 Sheet block 的 `data` 作为 Node `Buffer` 交给 `saveSnapshot`，而 `Buffer#toJSON` 会先于 replacer 把它变成普通对象。
 
@@ -426,7 +443,7 @@ Client 必须满足：
 
 `src` 包含插件发布的所有 application 源码；Viewer application、machine render page、render preset 和 IMPORTRANGE plugin 源码从 `univer-cli` 复制到本仓库后直接维护；`render-preset/import-export` 从 univer-pro `examples/src/*/custom-plugin/custom-import-export`（`v1.2.0`）复制，去掉移动端入口，依赖注入按本仓库约定改为 `setDependencies`/`DependentOn` 调用而非装饰器。`packages/unit-comparison-viewer` 与 `univer-workspace`、`univer-cli` 中的同名可复制组件保持行为同步，并针对本仓库的 React 18 Host 做兼容。`pnpm run build` 生成 Host/Client bundle、Unit Content Worker、Gateway、machine render page 和 Viewer；`lib` 与 `artifacts` 都被 gitignore，并在打包前重新生成。Host 构建为 Node ESM，Client 构建为 DSH ModuleLoader 可加载的浏览器 bundle，Gateway 构建为 Node CJS 子进程，Worker 构建为 Node ESM 子进程，machine render page 与 Viewer 构建为 Vite 静态资产。lib 构建同时生成 `lib/telemetry-entry.js`（卸载 hook 发送入口）与 `lib/build-info.json`（包版本、构建 commit 与遥测 endpoint）。
 
-发布包包含运行所需的 Gateway、Viewer、Unit Content Worker、Office 转换器、平台依赖、Univer license 与 bundled Skills。Gateway、Worker、Viewer 和 Host 直接使用 manifest 中精确版本的 Univer SDK/API Reference packages；JavaScript SDK 被 bundle，平台原生 package 由包管理器为目标机器安装。发布时只打包从当前源码生成的运行产物。
+发布包包含运行所需的 Gateway、Viewer、Unit Content Worker、Collaboration Runtime Worker、Office 转换器、平台依赖、Univer license 与 bundled Skills。Gateway、Worker、Viewer 和 Host 直接使用 manifest 中精确版本的 Univer SDK/API Reference packages；JavaScript SDK 被 bundle，平台原生 package 由包管理器为目标机器安装。发布时只打包从当前源码生成的运行产物。
 
 原生公式引擎、Office 转换器与 SQLite 依赖仍具有平台属性。release workflow 必须在目标平台安装 lockfile 所指定的依赖后构建和测试，不能把一个平台的 `node_modules` 复制为通用发布物。
 
@@ -473,7 +490,7 @@ Client 必须满足：
 后续实现若改变以下任一事项，必须先更新本文并重新评审：
 
 - Service 的责任范围或 Consumer 依赖方向；
-- Host、Client、Gateway 与 Unit Content Worker 的信任边界；
+- Host、Client、Gateway、Unit Content Worker 与 Collaboration Runtime Worker 的信任边界；
 - 是否依赖外部 CLI 或外部 Gateway；
 - worktree 用户审阅权归属；
 - 工具能力与 bundled Skills 的对应关系；

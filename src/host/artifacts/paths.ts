@@ -6,9 +6,18 @@ export const GATEWAY_ENTRY = fileURLToPath(new URL('../artifacts/gateway.cjs', i
 /** Bundled Viewer assets served by the Gateway. */
 export const VIEWER_ROOT = fileURLToPath(new URL('../artifacts/viewer/', import.meta.url))
 
-/** Bundled one-shot worker used for content import, inspection, execution, export, and render-source reads. */
+/**
+ * Bundled one-shot worker for Office import and export. With the runtime pool disabled it also
+ * serves inspection, execution, and render-source reads.
+ */
 export const UNIT_CONTENT_WORKER_ENTRY = fileURLToPath(
   new URL('../artifacts/unit-content-worker.mjs', import.meta.url)
+)
+
+/** Worker definition the runtime pool imports into each pooled Collaboration Runtime process. */
+export const COLLABORATION_RUNTIME_WORKER_ENTRY = new URL(
+  '../artifacts/collaboration-runtime-worker.mjs',
+  import.meta.url
 )
 
 /** Bundled machine-facing page used for layout analysis and text measurement. */

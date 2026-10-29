@@ -201,6 +201,8 @@ The defaults are designed for local use: the service starts at port `9080`. If t
 | `gatewayRequestTimeoutMs` | `3000` | State-read timeout |
 | `gatewayMutationTimeoutMs` | `60000` | Write-operation timeout |
 | `unitContentOperationTimeoutMs` | `120000` | Import, export, inspection, and execution timeout |
+| `unitContentRuntimeMaxEntries` | `20` | Unit runtimes kept warm for inspection, execution, and rendering. When all are busy, further operations fail with `COLLABORATION_POOL_CAPACITY_EXCEEDED`. `0` starts a new process for every operation |
+| `unitContentRuntimeIdleTtlMs` | `300000` | Idle time after which a warm Unit runtime exits |
 | `screenshotOperationTimeoutMs` | `120000` | Overall timeout for one browser screenshot operation |
 | `printPdfOperationTimeoutMs` | `120000` | Overall timeout for one browser PDF print operation |
 | `screenshotMaxPages` | `30` | Maximum Doc or Slide pages rendered by one screenshot call |
@@ -227,7 +229,7 @@ dsh plugin --profile web remove dsh-univer-office
 
 ## Development
 
-This project is a standard [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md). Its Host composes the Univer Service Provider, Tools Consumer, webServer Consumer, and Skill Provider. The bundle includes its Gateway, Viewer, headless Unit Content Worker, and Slide render machine. See the [architecture document](docs/architecture.md) for dependency directions and runtime boundaries.
+This project is a standard [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md). Its Host composes the Univer Service Provider, Tools Consumer, webServer Consumer, and Skill Provider. The bundle includes its Gateway, Viewer, pooled Collaboration Runtime Workers, headless Unit Content Worker, and Slide render machine. See the [architecture document](docs/architecture.md) for dependency directions and runtime boundaries.
 
 The project requires Node.js `>=22.19.0` and `pnpm@11.23.0`.
 

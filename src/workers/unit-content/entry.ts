@@ -1,13 +1,6 @@
 import { extname, isAbsolute } from 'node:path'
-import { prepareContentExecutionProgram } from '@univer-cli/content-execution'
-import { inspectContent, type ContentInspectionQuery } from '@univer-cli/content-inspection'
-import { createStandardHeadlessUniverFactory } from '@univer-cli/headless-univer'
-import {
-  createCollaborationServerAdapter,
-  createUniverCollaborationRuntimeFactory,
-  type UniverCollaborationRuntime,
-  type UniverFactoryContext
-} from '@univer-cli/univer-collaboration-runtime'
+import type { ContentInspectionQuery } from '@univer-cli/content-inspection'
+import type { UniverCollaborationRuntime } from '@univer-cli/univer-collaboration-runtime'
 import {
   DocxCompatibilityMode,
   ExchangeFormat,
@@ -18,9 +11,21 @@ import {
   type ImportOptions
 } from '@univerjs-pro/exchange-node'
 import { UniverInstanceType } from '@univerjs/core'
-import { UNIVER_LICENSE } from './license.ts'
-import { createLocalReferencedUnitProviderRegistration } from './runtime/local-referenced-unit-provider.ts'
-import { LocalSnapshotServerAdapter } from './runtime/local-snapshot-server-adapter.ts'
+import {
+  executeUnitContent,
+  inspectUnitContent,
+  pullUnitContent,
+  unitContentError as codedError,
+  unitContentKind as unitKind
+} from '../../shared/unit-content-session.ts'
+import {
+  invalidRequest,
+  isRecord,
+  loadUnitContentRuntime,
+  parseUnitContentRuntimeInit,
+  requiredString,
+  type UnitContentRuntimeInit
+} from './runtime/content-runtime.ts'
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
 type ImportOfficeFile = (
@@ -36,14 +41,8 @@ type ExportOfficeFile = (
 const importOfficeFile = importFile as unknown as ImportOfficeFile
 const exportOfficeFile = exportToFile as unknown as ExportOfficeFile
 
-interface BaseRequest {
-  readonly gatewayOrigin: string
-  readonly commitTimeoutMs: number
-  readonly fileKey: string
+interface BaseRequest extends UnitContentRuntimeInit {
   readonly filePath: string
-  readonly unitId: string
-  readonly unitType: UniverInstanceType
-  readonly worktreeId?: string
 }
 
 interface InspectRequest extends BaseRequest {
@@ -113,67 +112,18 @@ async function main(): Promise<JsonValue> {
       importOptions(request.sourcePath, request.unitType, request.docType)
     )) as unknown as JsonValue
   }
-  const urls = gatewayUrls(request)
-  const snapshotServerService = new LocalSnapshotServerAdapter(urls.snapshotServerUrl)
-  const createUniver = async (context: UniverFactoryContext) => {
-    if (context.resolveSnapshotService === undefined) {
-      throw codedError(
-        'UNIT_CONTENT_SNAPSHOT_SERVICE_REQUIRED',
-        'Referenced Unit loading requires SnapshotService'
-      )
-    }
-    return await createStandardHeadlessUniverFactory({
-      license: process.env['UNIVER_LICENSE']?.trim() || UNIVER_LICENSE,
-      embedPluginConfig: {
-        resourceRefUnitProviderRegistrations: [
-          createLocalReferencedUnitProviderRegistration({
-            resolveSnapshotService: context.resolveSnapshotService
-          })
-        ]
-      }
-    })(context)
-  }
-  const collaboration = await createUniverCollaborationRuntimeFactory({
-    backend: createCollaborationServerAdapter(urls),
-    createUniver,
-    snapshotServerService
-  }).load(request.unitId, request.unitType)
+  const collaboration = await loadUnitContentRuntime(request)
   try {
-    await pullCurrent(collaboration)
+    await pullUnitContent(collaboration)
     switch (request.operation) {
       case 'inspect':
-        return (await inspectContent(
-          {
-            unitId: request.unitId,
-            unitType: unitKind(request.unitType),
-            async execute(input) {
-              const result = await collaboration.execute(input)
-              return { value: result.value }
-            }
-          },
-          request.query
-        )) as unknown as JsonValue
+        return await inspectUnitContent(collaboration, request.query)
       case 'execute': {
-        const program = prepareContentExecutionProgram({
-          code: request.code,
-          unitId: request.unitId,
-          unitType: unitKind(request.unitType)
-        })
-        const execution = await collaboration.execute({ code: program, mode: 'write' })
-        if (execution.mutations.length === 0) {
-          return {
-            committed: false,
-            filePath: request.filePath,
-            unitId: request.unitId,
-            value: execution.value,
-            worktreeId: request.worktreeId
-          }
-        }
-        const revision = await commitAll(collaboration)
+        const execution = await executeUnitContent(collaboration, request.code)
         return {
-          committed: true,
+          committed: execution.committed,
           filePath: request.filePath,
-          revision,
+          ...(execution.revision === undefined ? {} : { revision: execution.revision }),
           unitId: request.unitId,
           value: execution.value,
           worktreeId: request.worktreeId
@@ -244,88 +194,6 @@ async function exportUnit(
   }
 }
 
-async function pullCurrent(collaboration: UniverCollaborationRuntime): Promise<void> {
-  const pulled = await collaboration.pull()
-  if (pulled.status === 'conflict') {
-    throw codedError('UNIT_CONTENT_CONFLICT', pulled.conflict.message)
-  }
-}
-
-async function commitAll(collaboration: UniverCollaborationRuntime): Promise<number> {
-  const statuses: string[] = []
-  const initialRevision = collaboration.getState().baseRevision
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const result = await collaboration.commit()
-    statuses.push(result.status)
-    if (result.status === 'confirmed') return result.state.baseRevision
-    if (result.status === 'nothing-to-commit') {
-      if (result.state.baseRevision > initialRevision) return result.state.baseRevision
-      throw codedError('UNIT_CONTENT_COMMIT_INVALID', 'Unit content had no mutation to commit')
-    }
-    if (result.status === 'unknown') {
-      await pullCurrent(collaboration)
-      const state = collaboration.getState()
-      if (
-        state.awaitingChangeset === null &&
-        state.pendingMutationCount === 0 &&
-        state.baseRevision > initialRevision
-      ) {
-        return state.baseRevision
-      }
-      continue
-    }
-    if (result.status === 'retry') continue
-    if (result.status === 'pull-required') {
-      await pullCurrent(collaboration)
-      continue
-    }
-    if (result.status === 'conflict') {
-      throw codedError('UNIT_CONTENT_CONFLICT', result.conflict.message)
-    }
-    throw codedError(
-      'UNIT_CONTENT_COMMIT_INVALID',
-      'Unit content discarded pending mutations before commit'
-    )
-  }
-  throw codedError(
-    'UNIT_CONTENT_COMMIT_RETRY_EXHAUSTED',
-    `Unit content commit could not be confirmed after three attempts (${statuses.join(', ')})`
-  )
-}
-
-function gatewayUrls(request: BaseRequest) {
-  const root = `${request.gatewayOrigin.replace(/\/$/u, '')}/uf/${request.fileKey}`
-  const wsRoot = root.replace(/^http/u, 'ws')
-  const worktree =
-    request.worktreeId === undefined ? '' : `/worktrees/${encodeURIComponent(request.worktreeId)}`
-  const base = `${root}${worktree}`
-  const wsBase = `${wsRoot}${worktree}`
-  return {
-    snapshotServerUrl: `${base}/universer-api/snapshot`,
-    collabSubmitChangesetUrl: `${base}/universer-api/comb`,
-    collabWebSocketUrl: `${wsBase}/universer-api/comb/connect`,
-    wsSessionTicketUrl: `${base}/universer-api/user/session-ticket`,
-    commitTimeoutMs: request.commitTimeoutMs
-  }
-}
-
-function unitKind(type: UniverInstanceType): 'sheet' | 'doc' | 'slide' | 'base' | 'board' {
-  switch (type) {
-    case UniverInstanceType.UNIVER_SHEET:
-      return 'sheet'
-    case UniverInstanceType.UNIVER_DOC:
-      return 'doc'
-    case UniverInstanceType.UNIVER_SLIDE:
-      return 'slide'
-    case UniverInstanceType.UNIVER_BASE:
-      return 'base'
-    case UniverInstanceType.UNIVER_BOARD:
-      return 'board'
-    default:
-      throw codedError('UNIT_CONTENT_TYPE_UNSUPPORTED', `Unsupported Unit type ${String(type)}`)
-  }
-}
-
 function sheetLikeFormat(
   extension: string,
   kind: 'Sheet' | 'Base'
@@ -386,13 +254,8 @@ function parseRequest(value: unknown): WorkerRequest {
     }
   }
   const base = {
-    gatewayOrigin: requiredHttpOrigin(request.gatewayOrigin),
-    commitTimeoutMs: requiredPositiveInteger(request.commitTimeoutMs, 'commitTimeoutMs'),
-    fileKey: requiredString(request.fileKey, 'fileKey'),
-    filePath: requiredString(request.filePath, 'filePath'),
-    unitId: requiredString(request.unitId, 'unitId'),
-    unitType: requiredUnitType(request.unitType),
-    ...optionalWorktreeId(request.worktreeId)
+    ...parseUnitContentRuntimeInit(request),
+    filePath: requiredString(request.filePath, 'filePath')
   }
   if (request.operation === 'inspect') {
     return { ...base, operation: 'inspect', query: requiredInspectionQuery(request.query) }
@@ -479,57 +342,6 @@ function requiredInspectionQuery(value: unknown): ContentInspectionQuery {
   return invalidRequest('worksheet selector must have a non-empty name or non-negative index')
 }
 
-function requiredHttpOrigin(value: unknown): string {
-  const origin = requiredString(value, 'gatewayOrigin')
-  let parsed: URL
-  try {
-    parsed = new URL(origin)
-  } catch {
-    return invalidRequest('gatewayOrigin must be a valid HTTP origin')
-  }
-  if (
-    (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
-    parsed.origin !== origin ||
-    parsed.username.length > 0 ||
-    parsed.password.length > 0
-  ) {
-    return invalidRequest('gatewayOrigin must be an HTTP origin without credentials or a path')
-  }
-  return origin
-}
-
-function requiredUnitType(value: unknown): UniverInstanceType {
-  if (!Number.isSafeInteger(value)) invalidRequest('unitType must be an integer')
-  unitKind(value as UniverInstanceType)
-  return value as UniverInstanceType
-}
-
-function requiredPositiveInteger(value: unknown, field: string): number {
-  if (!Number.isSafeInteger(value) || Number(value) < 1)
-    invalidRequest(`${field} must be a positive integer`)
-  return Number(value)
-}
-
-function requiredString(value: unknown, field: string, allowEmpty = false): string {
-  if (typeof value !== 'string' || (!allowEmpty && value.length === 0)) {
-    return invalidRequest(`${field} must be ${allowEmpty ? 'a string' : 'a non-empty string'}`)
-  }
-  return value
-}
-
-function optionalWorktreeId(value: unknown): { readonly worktreeId?: string } {
-  if (value === undefined) return {}
-  return { worktreeId: requiredString(value, 'worktreeId') }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function invalidRequest(message: string): never {
-  throw codedError('UNIT_CONTENT_WORKER_REQUEST_INVALID', message)
-}
-
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = []
   for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk))
@@ -538,10 +350,6 @@ async function readStdin(): Promise<string> {
     throw codedError('UNIT_CONTENT_WORKER_REQUEST_INVALID', 'Unit content worker request is empty')
   }
   return value
-}
-
-function codedError(code: string, message: string): Error {
-  return Object.assign(new Error(message), { code })
 }
 
 function errorCode(error: unknown): string {

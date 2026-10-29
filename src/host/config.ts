@@ -19,8 +19,15 @@ export interface Config {
   gatewayRequestTimeoutMs?: number
   /** HTTP timeout used for Gateway mutations. */
   gatewayMutationTimeoutMs?: number
-  /** Maximum lifetime of a one-shot content worker process. */
+  /** Maximum time for one content operation, or for opening a pooled runtime worker. */
   unitContentOperationTimeoutMs?: number
+  /**
+   * Pooled Collaboration Runtime Workers kept for inspection, execution, and render-source
+   * reads. `0` runs every operation one-shot.
+   */
+  unitContentRuntimeMaxEntries?: number
+  /** Idle time after which a pooled Collaboration Runtime Worker exits. */
+  unitContentRuntimeIdleTtlMs?: number
   /** Maximum lifetime of one browser-backed screenshot operation. */
   screenshotOperationTimeoutMs?: number
   /** Maximum lifetime of one browser-backed PDF print operation. */
@@ -63,6 +70,8 @@ export interface ResolvedConfig {
   readonly gatewayRequestTimeoutMs: number
   readonly gatewayMutationTimeoutMs: number
   readonly unitContentOperationTimeoutMs: number
+  readonly unitContentRuntimeMaxEntries: number
+  readonly unitContentRuntimeIdleTtlMs: number
   readonly screenshotOperationTimeoutMs: number
   readonly printPdfOperationTimeoutMs: number
   readonly screenshotMaxPages: number
@@ -100,6 +109,8 @@ export const Config: z<Config> = z.object({
   gatewayRequestTimeoutMs: z.natural().default(3_000),
   gatewayMutationTimeoutMs: z.natural().default(60_000),
   unitContentOperationTimeoutMs: z.natural().default(120_000),
+  unitContentRuntimeMaxEntries: z.natural().default(20),
+  unitContentRuntimeIdleTtlMs: z.natural().default(300_000),
   screenshotOperationTimeoutMs: z.natural().default(120_000),
   printPdfOperationTimeoutMs: z.natural().default(120_000),
   screenshotMaxPages: z.natural().default(30),
@@ -126,6 +137,8 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     gatewayRequestTimeoutMs: config.gatewayRequestTimeoutMs ?? 3_000,
     gatewayMutationTimeoutMs: config.gatewayMutationTimeoutMs ?? 60_000,
     unitContentOperationTimeoutMs: config.unitContentOperationTimeoutMs ?? 120_000,
+    unitContentRuntimeMaxEntries: config.unitContentRuntimeMaxEntries ?? 20,
+    unitContentRuntimeIdleTtlMs: config.unitContentRuntimeIdleTtlMs ?? 300_000,
     screenshotOperationTimeoutMs: config.screenshotOperationTimeoutMs ?? 120_000,
     printPdfOperationTimeoutMs: config.printPdfOperationTimeoutMs ?? 120_000,
     screenshotMaxPages: config.screenshotMaxPages ?? 30,
@@ -153,6 +166,7 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     gatewayRequestTimeoutMs: resolved.gatewayRequestTimeoutMs,
     gatewayMutationTimeoutMs: resolved.gatewayMutationTimeoutMs,
     unitContentOperationTimeoutMs: resolved.unitContentOperationTimeoutMs,
+    unitContentRuntimeIdleTtlMs: resolved.unitContentRuntimeIdleTtlMs,
     screenshotOperationTimeoutMs: resolved.screenshotOperationTimeoutMs,
     printPdfOperationTimeoutMs: resolved.printPdfOperationTimeoutMs,
     screenshotMaxPages: resolved.screenshotMaxPages,
@@ -165,6 +179,12 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
   })) {
     if (!Number.isSafeInteger(value) || value < 1)
       throw new Error(`univer: ${name} must be a positive integer`)
+  }
+  if (
+    !Number.isSafeInteger(resolved.unitContentRuntimeMaxEntries) ||
+    resolved.unitContentRuntimeMaxEntries < 0
+  ) {
+    throw new Error('univer: unitContentRuntimeMaxEntries must be a non-negative integer')
   }
   return resolved
 }

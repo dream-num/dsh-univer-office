@@ -864,6 +864,35 @@ try {
       `concurrent Collaboration SDK execution failed: ${JSON.stringify({ leftExecution, rightExecution })}`
     )
   }
+  // A pooled runtime whose write threw must not hand its partial mutation to the next operation.
+  let failedWrite
+  try {
+    await service.executeUnitContent({
+      ...scoped,
+      worktreeId,
+      unitId,
+      code: 'workbook.getActiveSheet().getRange("C1").setValue("partial"); throw new Error("stop after write");'
+    })
+  } catch (error) {
+    failedWrite = error
+  }
+  if (!(failedWrite instanceof Error) || !failedWrite.message.includes('stop after write')) {
+    throw new Error(`failing execution did not report its error: ${String(failedWrite)}`)
+  }
+  const afterFailedWrite = await service.executeUnitContent({
+    ...scoped,
+    worktreeId,
+    unitId,
+    code: 'return workbook.getActiveSheet().getRange("C1").getValue();'
+  })
+  if (
+    afterFailedWrite.result?.committed !== false ||
+    afterFailedWrite.result?.value === 'partial'
+  ) {
+    throw new Error(
+      `partial write leaked into the next operation: ${JSON.stringify(afterFailedWrite)}`
+    )
+  }
   const boardExecution = await service.executeUnitContent({
     ...scoped,
     worktreeId,
@@ -1223,6 +1252,11 @@ try {
   if (baseEdit.result?.committed !== true || baseEdit.result?.value !== 1) {
     throw new Error(`base preview edit failed: ${JSON.stringify(baseEdit)}`)
   }
+  // Warm the trunk Sheet runtime so the later read proves a reused runtime pulls new revisions.
+  const trunkBeforeAdvance = await service.inspectUnitContent({ ...scoped, unitId, range: 'E5' })
+  if (trunkBeforeAdvance.result?.ranges?.[0]?.displayValues?.[0]?.[0] === 'trunk advance') {
+    throw new Error(`trunk already contained the advance: ${JSON.stringify(trunkBeforeAdvance)}`)
+  }
   const trunkAdvance = await service.worktree({
     ...scoped,
     action: 'create',
@@ -1243,6 +1277,25 @@ try {
   }
   await expectTransition(trunkAdvanceId, 'ready', 'ready')
   await expectTransition(trunkAdvanceId, 'merge', 'merged')
+  const trunkAfterAdvance = await service.inspectUnitContent({ ...scoped, unitId, range: 'E5' })
+  if (trunkAfterAdvance.result?.ranges?.[0]?.displayValues?.[0]?.[0] !== 'trunk advance') {
+    throw new Error(
+      `reused trunk runtime missed the merged revision: ${JSON.stringify(trunkAfterAdvance)}`
+    )
+  }
+  // unitContentRuntimeMaxEntries: 0 keeps every content operation in one-shot workers.
+  const oneShotService = new GatewayUniverService(
+    new Context(),
+    resolveConfig({ gatewayPort: occupiedPort, tools: false, unitContentRuntimeMaxEntries: 0 })
+  )
+  try {
+    const oneShot = await oneShotService.inspectUnitContent({ ...scoped, unitId, range: 'E5' })
+    if (oneShot.result?.ranges?.[0]?.displayValues?.[0]?.[0] !== 'trunk advance') {
+      throw new Error(`one-shot inspection diverged: ${JSON.stringify(oneShot)}`)
+    }
+  } finally {
+    await oneShotService.dispose()
+  }
   await expectTransition(comparisonWorktreeId, 'ready', 'ready')
   await assertMaterializedPreview(origin, gatewayKey, comparisonWorktreeId, unitId, {
     label: 'Sheet merge preview',

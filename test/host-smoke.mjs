@@ -27,6 +27,15 @@ if (defaultConfig.screenshotMaxPages !== 30 || defaultConfig.screenshotMaxPixels
 if (defaultConfig.printPdfOperationTimeoutMs !== 120_000) {
   throw new Error(`default PDF print timeout drifted: ${JSON.stringify(defaultConfig)}`)
 }
+if (
+  defaultConfig.unitContentRuntimeMaxEntries !== 20 ||
+  defaultConfig.unitContentRuntimeIdleTtlMs !== 300_000
+) {
+  throw new Error(`default runtime pool limits drifted: ${JSON.stringify(defaultConfig)}`)
+}
+if (resolveConfig({ unitContentRuntimeMaxEntries: 0 }).unitContentRuntimeMaxEntries !== 0) {
+  throw new Error('unitContentRuntimeMaxEntries 0 must stay available to disable pooling')
+}
 if (!defaultConfig.resourceCacheRoot.endsWith(join('cache', 'dsh-univer-office', 'resources'))) {
   throw new Error(`default resource cache root drifted: ${defaultConfig.resourceCacheRoot}`)
 }
@@ -39,6 +48,9 @@ if (!hostBundle.includes('ELECTRON_RUN_AS_NODE')) {
     'Host bundle must set ELECTRON_RUN_AS_NODE so bundled Gateway/Worker entry scripts run as plain Node inside an Electron Desktop host'
   )
 }
+// The inlined runtime pool forks its bootstrap from beside lib/index.js.
+await readFile(new URL('../lib/worker-child.mjs', import.meta.url), 'utf8')
+await readFile(new URL('../artifacts/collaboration-runtime-worker.mjs', import.meta.url), 'utf8')
 if (hostBundle.includes('settingsNamespace')) {
   throw new Error(
     'Host bundle must not import the settingsNamespace export removed in DSH 0.1.2-alpha.2'
@@ -53,6 +65,8 @@ try {
 for (const invalid of [
   { screenshotMaxPages: 0 },
   { printPdfOperationTimeoutMs: 0 },
+  { unitContentRuntimeMaxEntries: -1 },
+  { unitContentRuntimeIdleTtlMs: 0 },
   { resourceCacheRoot: 'relative/cache' },
   { browserExecutablePath: 'msedge.exe' },
   { browserExecutablePath: '  ' }
