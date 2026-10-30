@@ -1384,9 +1384,41 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
               q('.uvf_windowBody')?.hidden === true
           )
           expect(q('.uvf_frame'), 'fold keeps the Viewer iframe mounted').toBe(frame)
+          expect(
+            qa('.uvf_resizeHandle').map((handle) => handle.getAttribute('data-direction')),
+            'a folded title bar keeps only its horizontal resize handles'
+          ).toEqual(['w', 'e'])
+          const width = box().width
+          drag(q('[data-direction=e]'), 16, [240, 20], [200, 20])
+          await waitFor('折叠后仍可调整宽度', () => box().width === width - 40)
+          drag(q('[data-direction=e]'), 17, [200, 20], [240, 20])
+          await waitFor('折叠后宽度可还原', () => box().width === width)
           click(q('[data-window-action=fold]'))
           await waitFor('展开后 Viewer 恢复', () => q('.uvf_windowBody')?.hidden === false)
           expect(q('.uvf_frame'), 'expand reuses the loaded Viewer iframe').toBe(frame)
+        })
+
+        it('lets a folded title bar reach the viewport bottom and lifts it on expand', async () => {
+          const start = box()
+          const foldedBottom = 1000 - 12 - 48
+          click(q('[data-window-action=fold]'))
+          await waitFor('折叠', () => win.className.includes('uvf_win_folded'))
+          expect(px('height'), 'a folded window renders only its title bar').toBe(48)
+          drag(header, 18, [100, 20], [100, 10000])
+          await waitFor('折叠后可拖到视口底部', () => px('top') === foldedBottom)
+          drag(q('[data-direction=e]'), 19, [240, 20], [200, 20])
+          await waitFor('底部折叠条调宽度时不跳位', () => px('width') === start.width - 40)
+          expect(px('top')).toBe(foldedBottom)
+          drag(q('[data-direction=e]'), 20, [200, 20], [240, 20])
+          await waitFor('宽度还原', () => px('width') === start.width)
+          click(q('[data-window-action=fold]'))
+          const expandedBottom = 1000 - 12 - start.height
+          await waitFor(
+            '展开后整窗收回视口',
+            () => px('top') === expandedBottom && px('height') === start.height
+          )
+          drag(header, 21, [100, 20], [100, 20 + start.top - expandedBottom])
+          await waitFor('移回原位', () => px('top') === start.top)
         })
 
         it.each([

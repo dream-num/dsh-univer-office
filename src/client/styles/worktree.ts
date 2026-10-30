@@ -5,7 +5,6 @@ export const worktreeStyles = `
 .uvf_win:hover{border-color:color-mix(in srgb,var(--uvf-accent) 28%,var(--dsw-alias-border-l2,#dfe3eb));box-shadow:0 2px 5px rgba(13,22,38,.1),0 22px 58px rgba(13,22,38,.24),0 0 0 1px rgba(255,255,255,.5) inset}
 .uvf_win[data-interaction]{transition:none;user-select:none}
 .uvf_win[data-interaction]::after{content:"";position:absolute;inset:0;z-index:18;background:transparent}
-.uvf_win_folded{height:48px!important}
 .uvf_win_max{inset:calc(12px + var(--dsh-frame-top-clearance,0px)) 12px 12px!important;width:auto!important;height:auto!important;border-radius:18px;z-index:1300}
 .uvf_windowHeader{position:relative;z-index:10;display:flex;align-items:center;gap:10px;height:48px;padding:0 8px 0 10px;flex:none;cursor:grab;touch-action:none;user-select:none;background:#f7f8fb;background:linear-gradient(180deg,color-mix(in srgb,var(--dsw-alias-bg-base,#fff) 96%,#7583ff),color-mix(in srgb,var(--dsw-alias-bg-base,#fff) 92%,#dfe3f5));border-bottom:1px solid color-mix(in srgb,var(--dsw-alias-border-l2,#dfe3eb) 78%,transparent)}
 .uvf_win[data-interaction=move] .uvf_windowHeader{cursor:grabbing}.uvf_win_max .uvf_windowHeader{cursor:default}.uvf_win_folded .uvf_windowHeader{border-bottom:0}
