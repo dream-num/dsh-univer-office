@@ -223,6 +223,7 @@ artifacts/                            # gitignored 的发布运行产物
   upgrade-worker.cjs                 # Windows .univer 升级 helper，从 migration/upgrade-worker 生成
   unit-content-worker.mjs           # 从 workers/unit-content 生成
   collaboration-runtime-worker.mjs  # 从 workers/collaboration-runtime 生成
+  worker-chunks/                    # 两个 Worker 共享的 SDK chunk，同一次构建生成
 test/
   unit/                              # Vitest unit project：直接加载源码，无需构建
   integration/                       # Vitest integration project：加载 lib/ 与 artifacts/，自带 Gateway

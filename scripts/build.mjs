@@ -4,7 +4,8 @@
 //
 //   pnpm run build:lib     → lib/index.js (host) + lib/client.js (client bundle)
 //   pnpm run build:worker  → artifacts/unit-content-worker.mjs and
-//                            artifacts/collaboration-runtime-worker.mjs
+//                            artifacts/collaboration-runtime-worker.mjs over
+//                            their shared artifacts/worker-chunks/
 //   pnpm run build:gateway → artifacts/gateway.cjs and artifacts/upgrade-worker.cjs
 //   pnpm run build:render  → artifacts/render-machine/
 //   pnpm run build:viewer  → artifacts/viewer/
@@ -49,6 +50,54 @@ const external = [
   'puppeteer-core'
 ]
 
+// The Host needs only `CollaborationRuntimeError` from the collaboration runtime (through the
+// runtime pool), yet the package entry pulls in the whole Univer engine. Resolve it to an
+// engine-free copy of that class until the Univer CLI SDK exposes it without the engine (CLI SDK
+// issue #83). Only ESM imports are redirected, so any other named import fails the build with a
+// missing-export error; a `require` would bypass that check, so it fails the build outright.
+function collaborationRuntimeErrorOnlyPlugin() {
+  return {
+    name: 'collaboration-runtime-error-only',
+    setup(pluginBuild) {
+      pluginBuild.onResolve({ filter: /^@univer-cli\/univer-collaboration-runtime$/ }, (args) =>
+        args.kind === 'import-statement'
+          ? { path: resolve('src/host/adapters/unit-content/collaboration-runtime-error.ts') }
+          : {
+              errors: [
+                {
+                  text: `${args.importer} loads @univer-cli/univer-collaboration-runtime by ${args.kind}; the Host build only supports ESM imports of CollaborationRuntimeError`
+                }
+              ]
+            }
+      )
+    }
+  }
+}
+
+// Univer packages ship both CJS and ESM builds. The Gateway's CJS dependencies `require` them
+// while its sources and ESM dependencies `import` them, so esbuild bundled both builds: two
+// copies of the engine (+27 MB) and two instances of every Univer module in one process. Resolve
+// every Univer package as `require` so the CJS bundle holds only the CJS build; the ESM builds
+// read import.meta.url, which CJS output leaves undefined.
+function univerCjsOnlyPlugin() {
+  return {
+    name: 'univer-cjs-only',
+    setup(pluginBuild) {
+      pluginBuild.onResolve({ filter: /^@univerjs(?:-pro)?\// }, async (args) => {
+        if (args.kind === 'require-call' || args.pluginData?.univerCjsOnly) return undefined
+        const result = await pluginBuild.resolve(args.path, {
+          kind: 'require-call',
+          importer: args.importer,
+          resolveDir: args.resolveDir,
+          pluginData: { univerCjsOnly: true }
+        })
+        if (result.errors.length > 0) return { errors: result.errors }
+        return { path: result.path, external: result.external, sideEffects: result.sideEffects }
+      })
+    }
+  }
+}
+
 if (target === 'all' || target === 'lib') {
   await rm('lib', { recursive: true, force: true })
   await mkdir('lib', { recursive: true })
@@ -64,6 +113,7 @@ if (target === 'all' || target === 'lib') {
     format: 'esm',
     sourcemap: false,
     legalComments: 'none',
+    plugins: [collaborationRuntimeErrorOnlyPlugin()],
     // Bundled CJS dependencies (the WS relay uses `ws`) require bare Node builtins
     // (`events`, `stream`); ESM output has no ambient `require`, so provide one.
     banner: {
@@ -139,6 +189,9 @@ if (target === 'all' || target === 'worker') {
   // packages, which resolve at runtime from the plugin's node_modules:
   //   - the one-shot Unit Content Worker (src/workers/unit-content)
   //   - the Collaboration Runtime Worker definition the Host's runtime pool imports
+  // Both share one build so the SDK they inline ships once, in artifacts/worker-chunks/.
+  const workerChunks = 'artifacts/worker-chunks'
+  await rm(workerChunks, { recursive: true, force: true })
   const workerExternal = [
     ...builtinModules.map((id) => `node:${id}`),
     ...builtinModules,
@@ -147,25 +200,28 @@ if (target === 'all' || target === 'worker') {
     '@univerjs-pro/exchange-node-binding',
     'libsql'
   ]
-  const workers = [
-    ['src/workers/unit-content/entry.ts', 'artifacts/unit-content-worker.mjs'],
-    ['src/workers/collaboration-runtime/entry.ts', 'artifacts/collaboration-runtime-worker.mjs']
-  ]
-  for (const [entryPoint, workerOut] of workers) {
-    await build({
-      entryPoints: [entryPoint],
-      outfile: workerOut,
-      bundle: true,
-      packages: 'bundle',
-      external: workerExternal,
-      platform: 'node',
-      target: 'node22.19',
-      format: 'esm',
-      legalComments: 'none',
-      sourcemap: false
-    })
-    console.log('built', workerOut)
-  }
+  await build({
+    entryPoints: {
+      'unit-content-worker': 'src/workers/unit-content/entry.ts',
+      'collaboration-runtime-worker': 'src/workers/collaboration-runtime/entry.ts'
+    },
+    outdir: 'artifacts',
+    outExtension: { '.js': '.mjs' },
+    chunkNames: 'worker-chunks/[name]-[hash]',
+    splitting: true,
+    bundle: true,
+    packages: 'bundle',
+    external: workerExternal,
+    platform: 'node',
+    target: 'node22.19',
+    format: 'esm',
+    legalComments: 'none',
+    sourcemap: false
+  })
+  console.log(
+    'built artifacts/unit-content-worker.mjs + artifacts/collaboration-runtime-worker.mjs + ' +
+      workerChunks
+  )
 }
 
 if (target === 'all' || target === 'gateway') {
@@ -194,7 +250,8 @@ if (target === 'all' || target === 'gateway') {
     target: 'node22',
     format: 'cjs',
     legalComments: 'none',
-    sourcemap: false
+    sourcemap: false,
+    plugins: [univerCjsOnlyPlugin()]
   })
   console.log('built', gatewayOut)
   const upgradeWorkerOut = 'artifacts/upgrade-worker.cjs'
@@ -209,7 +266,8 @@ if (target === 'all' || target === 'gateway') {
     target: 'node22',
     format: 'cjs',
     legalComments: 'none',
-    sourcemap: false
+    sourcemap: false,
+    plugins: [univerCjsOnlyPlugin()]
   })
   console.log('built', upgradeWorkerOut)
 }
