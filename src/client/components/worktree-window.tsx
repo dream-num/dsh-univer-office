@@ -22,11 +22,14 @@ type ResizeDirection = (typeof RESIZE_DIRECTIONS)[number]
 type Interaction = 'move' | ResizeDirection
 
 const RESIZE_DIRECTIONS = ['nw', 'n', 'ne', 'w', 'e', 'sw', 's', 'se'] as const
+// A folded window is a fixed-height title bar, so only its width stays adjustable.
+const FOLDED_RESIZE_DIRECTIONS: readonly ResizeDirection[] = ['w', 'e']
 const VIEWPORT_GUTTER = 12
 const DEFAULT_WIDTH = 560
 const DEFAULT_HEIGHT = 420
 const MIN_WIDTH = 360
 const MIN_HEIGHT = 260
+const FOLDED_HEIGHT = 48
 const CASCADE_OFFSET = 24
 
 interface WorktreeWindowProps {
@@ -63,10 +66,12 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
   }, [props.preferredUnitId])
 
   React.useEffect(() => {
-    const onViewportResize = (): void => setRect((current) => fitRect(current, viewportSize()))
-    window.addEventListener('resize', onViewportResize)
-    return () => window.removeEventListener('resize', onViewportResize)
-  }, [])
+    // Expanding refits too, lifting a title bar parked low enough to hide the body.
+    const refit = (): void => setRect((current) => fitRect(current, viewportSize(), folded))
+    refit()
+    window.addEventListener('resize', refit)
+    return () => window.removeEventListener('resize', refit)
+  }, [folded])
 
   React.useEffect(() => () => cancelPointerSessionRef.current(), [])
 
@@ -124,8 +129,8 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
       const dy = next.clientY - origin.y
       setRect(
         kind === 'move'
-          ? moveRect(start, dx, dy, viewportSize())
-          : resizeRect(start, kind, dx, dy, viewportSize())
+          ? moveRect(start, dx, dy, viewportSize(), folded)
+          : resizeRect(start, kind, dx, dy, viewportSize(), folded)
       )
     }
     const cleanup = (): void => {
@@ -166,6 +171,7 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
     if ((event.target as Element).closest('[data-window-control]') === null) toggleMaximized()
   }
 
+  const resizeDirections = maximized ? [] : folded ? FOLDED_RESIZE_DIRECTIONS : RESIZE_DIRECTIONS
   const className = ['uvf_win', folded ? 'uvf_win_folded' : '', maximized ? 'uvf_win_max' : '']
     .filter(Boolean)
     .join(' ')
@@ -173,7 +179,7 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
     left: rect.x,
     top: rect.y,
     width: rect.width,
-    height: rect.height
+    height: folded ? FOLDED_HEIGHT : rect.height
   }
 
   return (
@@ -211,7 +217,7 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
             label={props.t(folded ? 'dock.expand' : 'dock.fold')}
             onClick={toggleFolded}
           >
-            <FoldIcon expanded={folded} />
+            <FoldIcon folded={folded} />
           </WindowControl>
           <WindowControl
             action="maximize"
@@ -245,16 +251,14 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
           )}
         </div>
       </div>
-      {!folded && !maximized
-        ? RESIZE_DIRECTIONS.map((direction) => (
-            <span
-              key={direction}
-              className={`uvf_resizeHandle uvf_resize_${direction}`}
-              data-direction={direction}
-              onPointerDown={(event) => beginPointerSession(event, direction)}
-            />
-          ))
-        : null}
+      {resizeDirections.map((direction) => (
+        <span
+          key={direction}
+          className={`uvf_resizeHandle uvf_resize_${direction}`}
+          data-direction={direction}
+          onPointerDown={(event) => beginPointerSession(event, direction)}
+        />
+      ))}
     </section>
   )
 }
@@ -290,10 +294,10 @@ function GridIcon(): React.ReactElement {
   )
 }
 
-function FoldIcon(props: { readonly expanded: boolean }): React.ReactElement {
+function FoldIcon(props: { readonly folded: boolean }): React.ReactElement {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true">
-      {props.expanded ? <path d="m4 10 4-4 4 4" /> : <path d="M4 9h8" />}
+      {props.folded ? <path d="m4 6 4 4 4-4" /> : <path d="M4 9h8" />}
     </svg>
   )
 }
@@ -349,7 +353,8 @@ function initialRect(stackIndex: number, viewport: ViewportSize): WindowRect {
   )
 }
 
-function fitRect(rect: WindowRect, viewport: ViewportSize): WindowRect {
+/** Clamps a window into the viewport; a folded one only needs room for its title bar. */
+function fitRect(rect: WindowRect, viewport: ViewportSize, folded = false): WindowRect {
   const availableWidth = Math.max(1, viewport.width - VIEWPORT_GUTTER * 2)
   const availableHeight = Math.max(1, viewport.height - viewport.top - VIEWPORT_GUTTER)
   const width = clamp(rect.width, Math.min(MIN_WIDTH, availableWidth), availableWidth)
@@ -363,15 +368,21 @@ function fitRect(rect: WindowRect, viewport: ViewportSize): WindowRect {
     y: clamp(
       rect.y,
       viewport.top,
-      Math.max(viewport.top, viewport.height - VIEWPORT_GUTTER - height)
+      Math.max(viewport.top, viewport.height - VIEWPORT_GUTTER - (folded ? FOLDED_HEIGHT : height))
     ),
     width,
     height
   }
 }
 
-function moveRect(start: WindowRect, dx: number, dy: number, viewport: ViewportSize): WindowRect {
-  return fitRect({ ...start, x: start.x + dx, y: start.y + dy }, viewport)
+function moveRect(
+  start: WindowRect,
+  dx: number,
+  dy: number,
+  viewport: ViewportSize,
+  folded: boolean
+): WindowRect {
+  return fitRect({ ...start, x: start.x + dx, y: start.y + dy }, viewport, folded)
 }
 
 function resizeRect(
@@ -379,9 +390,10 @@ function resizeRect(
   direction: ResizeDirection,
   dx: number,
   dy: number,
-  viewport: ViewportSize
+  viewport: ViewportSize,
+  folded: boolean
 ): WindowRect {
-  const fitted = fitRect(start, viewport)
+  const fitted = fitRect(start, viewport, folded)
   const minWidth = Math.min(MIN_WIDTH, Math.max(1, viewport.width - VIEWPORT_GUTTER * 2))
   const minHeight = Math.min(
     MIN_HEIGHT,
