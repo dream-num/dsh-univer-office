@@ -74,6 +74,30 @@ function collaborationRuntimeErrorOnlyPlugin() {
   }
 }
 
+// Univer packages ship both CJS and ESM builds. The Gateway's CJS dependencies `require` them
+// while its sources and ESM dependencies `import` them, so esbuild bundled both builds: two
+// copies of the engine (+27 MB) and two instances of every Univer module in one process. Resolve
+// every Univer package as `require` so the CJS bundle holds only the CJS build; the ESM builds
+// read import.meta.url, which CJS output leaves undefined.
+function univerCjsOnlyPlugin() {
+  return {
+    name: 'univer-cjs-only',
+    setup(pluginBuild) {
+      pluginBuild.onResolve({ filter: /^@univerjs(?:-pro)?\// }, async (args) => {
+        if (args.kind === 'require-call' || args.pluginData?.univerCjsOnly) return undefined
+        const result = await pluginBuild.resolve(args.path, {
+          kind: 'require-call',
+          importer: args.importer,
+          resolveDir: args.resolveDir,
+          pluginData: { univerCjsOnly: true }
+        })
+        if (result.errors.length > 0) return { errors: result.errors }
+        return { path: result.path, external: result.external, sideEffects: result.sideEffects }
+      })
+    }
+  }
+}
+
 if (target === 'all' || target === 'lib') {
   await rm('lib', { recursive: true, force: true })
   await mkdir('lib', { recursive: true })
@@ -226,7 +250,8 @@ if (target === 'all' || target === 'gateway') {
     target: 'node22',
     format: 'cjs',
     legalComments: 'none',
-    sourcemap: false
+    sourcemap: false,
+    plugins: [univerCjsOnlyPlugin()]
   })
   console.log('built', gatewayOut)
   const upgradeWorkerOut = 'artifacts/upgrade-worker.cjs'
@@ -241,7 +266,8 @@ if (target === 'all' || target === 'gateway') {
     target: 'node22',
     format: 'cjs',
     legalComments: 'none',
-    sourcemap: false
+    sourcemap: false,
+    plugins: [univerCjsOnlyPlugin()]
   })
   console.log('built', upgradeWorkerOut)
 }
