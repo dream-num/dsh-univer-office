@@ -77,7 +77,7 @@
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.client.json && tsc --project tsconfig.viewer.json --noEmit && tsc --project tsconfig.render.json --noEmit && tsc --project tsconfig.test.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.client.json && tsc --project tsconfig.viewer.json --noEmit && tsc --project tsconfig.render.json --noEmit && tsc --project tsconfig.test.json && pnpm --filter @univer/univerfile-sqlite typecheck",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",

@@ -1,7 +1,7 @@
 import type Database from 'libsql'
 import { UniverType } from '@univerjs/protocol'
-import { runUniverfileSQLiteTransaction } from '../connection.js'
-import { decodeStoredJson, encodeStoredJson } from '../stored-json.js'
+import { runUniverfileSQLiteTransaction } from '../connection.ts'
+import { decodeStoredJson, encodeStoredJson } from '../stored-json.ts'
 
 const APPLY_BASE_JSON1_MUTATION_ID = 'base.mutation.apply-base-json1'
 const SET_SUPER_TABLE_MUTATION_ID = 'formula.mutation.set-super-table'

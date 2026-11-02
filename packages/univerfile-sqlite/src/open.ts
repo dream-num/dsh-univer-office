@@ -1,15 +1,15 @@
 import { existsSync, unlinkSync } from 'node:fs'
-import { UniverfileSQLiteConnection } from './connection.js'
-import { UniverfileSQLiteAssetStore } from './database-adapters/asset-store.js'
-import { UniverfileSQLiteDatabaseAdapter } from './database-adapters/collaboration-database-adapter.js'
-import { UniverfileSQLiteHistoryDatabaseAdapter } from './database-adapters/history-database-adapter.js'
-import { UniverfileSQLiteWorktreeDatabaseAdapter } from './database-adapters/worktree-database-adapter.js'
-import { UniverfileSQLiteError } from './errors.js'
+import { UniverfileSQLiteConnection } from './connection.ts'
+import { UniverfileSQLiteAssetStore } from './database-adapters/asset-store.ts'
+import { UniverfileSQLiteDatabaseAdapter } from './database-adapters/collaboration-database-adapter.ts'
+import { UniverfileSQLiteHistoryDatabaseAdapter } from './database-adapters/history-database-adapter.ts'
+import { UniverfileSQLiteWorktreeDatabaseAdapter } from './database-adapters/worktree-database-adapter.ts'
+import { UniverfileSQLiteError } from './errors.ts'
 import {
   upgradeUniverfileSQLite,
   type UniverfileUpgradeResult,
   type UpgradeUniverfileSQLiteOptions
-} from './migration/upgrade.js'
+} from './migration/upgrade.ts'
 
 export interface OpenUniverfileSQLiteOptions extends UpgradeUniverfileSQLiteOptions {
   readonly busyTimeoutMs?: number

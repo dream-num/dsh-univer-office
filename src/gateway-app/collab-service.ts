@@ -48,17 +48,14 @@ import { externalizeEmbeddedImages } from './assets/externalize-embedded-images.
 import { CollabGatewayAssetScopeNotFoundError } from './assets/errors.js'
 import { GatewayFileRuntime } from './gateway-file-runtime.js'
 import { GATEWAY_UNIT_RUNTIME } from './sdk-runtime.js'
-import type { UniverfileAssetRecord, UniverfileOpenedAsset } from './univerfile-sqlite/index.js'
-import {
-  UNIVERFILE_UNIT_METADATA_KEY,
-  type UniverfileUnitSummary
-} from './univerfile-sqlite/index.js'
+import type { UniverfileAssetRecord, UniverfileOpenedAsset } from '@univer/univerfile-sqlite'
+import { UNIVERFILE_UNIT_METADATA_KEY, type UniverfileUnitSummary } from '@univer/univerfile-sqlite'
 import {
   UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY,
   UNIVERFILE_WORKTREE_METADATA_KEY,
   type UniverfileWorktreeSummary,
   type UniverfileWorktreeUnitSummary
-} from './univerfile-sqlite/index.js'
+} from '@univer/univerfile-sqlite'
 import { unitAdapter } from './univer/unit-types.js'
 import { KeyedLock } from './util/lock.js'
 import { GatewayExchangeService } from './exchange/gateway-exchange-service.js'

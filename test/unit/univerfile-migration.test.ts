@@ -33,14 +33,17 @@ beforeAll(async () => {
   bundle = join(bundleDirectory, 'entry.mjs')
   await build({
     stdin: {
-      contents: `export * from './src/gateway-app/univerfile-sqlite/index.ts';
+      contents: `export * from './packages/univerfile-sqlite/src/index.ts';
         export { CollabService } from './src/gateway-app/collab-service.ts';
-        export * from './src/gateway-app/univerfile-sqlite/stored-json.ts';`,
+        export * from './packages/univerfile-sqlite/src/stored-json.ts';`,
       resolveDir: repoPath()
     },
     outfile: bundle,
     bundle: true,
     packages: 'external',
+    alias: {
+      '@univer/univerfile-sqlite': repoPath('packages', 'univerfile-sqlite', 'src', 'index.ts')
+    },
     platform: 'node',
     format: 'esm'
   })

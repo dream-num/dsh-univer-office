@@ -1,5 +1,5 @@
-import type { UniverfileSQLiteConnection } from '../../connection.js'
-import { runUniverfileSQLiteTransaction } from '../../connection.js'
+import type { UniverfileSQLiteConnection } from '../../connection.ts'
+import { runUniverfileSQLiteTransaction } from '../../connection.ts'
 
 export function migrateV1CandidateToV2(connection: UniverfileSQLiteConnection): number {
   const { database } = connection

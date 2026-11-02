@@ -174,7 +174,6 @@ src/
     collab-service.ts                # Gateway 协作领域实现
     comparison/                      # 固定版本物化与 Pro History 语义比较
     contract/                        # Gateway wire types
-    univerfile-sqlite/               # `.univer` 持久化
   viewer-app/                        # Viewer browser application
   viewer-support/
     render-preset/                   # Viewer 的 Univer 渲染组合
@@ -212,6 +211,7 @@ src/
       actions.ts
 packages/
   unit-comparison-viewer/            # 五类 Unit 的只读双栏比较与差异导航
+  univerfile-sqlite/                 # `.univer` 持久化、schema 与升级
 lib/
   index.js                           # gitignored 的 Host 生成入口
   client.js                          # gitignored 的 ModuleLoader Client bundle
@@ -332,7 +332,7 @@ Unit 的检查、执行和 render-source 读取（lint、截图与 PDF 打印的
 
 Office 导入与导出由一次性 Unit Content Worker 完成：导入不需要 runtime，导出加载 runtime 后直接写出目标文件，两者都在操作完成或取消后退出，不拥有独立持久状态。Gateway 的 worktree 控制面直接提供 Unit 创建与移除端点，并通过 collaboration service 与 lifecycle event 完成操作。写操作只能针对显式 draft worktree；Gateway 是提交结果和 revision 的唯一依据。
 
-Gateway 通过 SDK `register(router)` 注册 HTTP/WebSocket Endpoint，连接跟踪保留路由参数，并在打开失败或关闭时释放记录。Worktree Unit 删除保留应用现有流程；SDK 的可撤销移除接口 `setUnitRemoved` 在本地 Adapter 中明确返回 `INVALID_REQUEST`，不写入移除状态或改变文件格式。Gateway 为 SDK collaboration service 注入 `ILogger`：warn/error 始终写入 Gateway stderr，debug/info 仅在 `UNIVER_DSH_GATEWAY_DEBUG=1` 时输出；SDK 内部失败若没有该 logger 只会表现为不可诊断的通用 500。数据库 Adapter 遵循 SDK 的快照读取契约（`getChangesets`/`getDraftChangesets` 返回裸 changeset 数组，`null` 表示 Unit 不存在）。所有 payload 列（Adapter 与迁移）共用 `univerfile-sqlite/stored-json.ts`：二进制字段编码为与 SDK SQLite Adapter 相同标记的 base64，并在 JSON replacer 中读取 `toJSON` 之前的原值：SDK 的 Rust 物化把 Sheet block 的 `data` 作为 Node `Buffer` 交给 `saveSnapshot`，而 `Buffer#toJSON` 会先于 replacer 把它变成普通对象。
+Gateway 通过 SDK `register(router)` 注册 HTTP/WebSocket Endpoint，连接跟踪保留路由参数，并在打开失败或关闭时释放记录。Worktree Unit 删除保留应用现有流程；SDK 的可撤销移除接口 `setUnitRemoved` 在本地 Adapter 中明确返回 `INVALID_REQUEST`，不写入移除状态或改变文件格式。Gateway 为 SDK collaboration service 注入 `ILogger`：warn/error 始终写入 Gateway stderr，debug/info 仅在 `UNIVER_DSH_GATEWAY_DEBUG=1` 时输出；SDK 内部失败若没有该 logger 只会表现为不可诊断的通用 500。数据库 Adapter 遵循 SDK 的快照读取契约（`getChangesets`/`getDraftChangesets` 返回裸 changeset 数组，`null` 表示 Unit 不存在）。所有 payload 列（Adapter 与迁移）共用 `packages/univerfile-sqlite/src/stored-json.ts`：二进制字段编码为与 SDK SQLite Adapter 相同标记的 base64，并在 JSON replacer 中读取 `toJSON` 之前的原值：SDK 的 Rust 物化把 Sheet block 的 `data` 作为 Node `Buffer` 交给 `saveSnapshot`，而 `Buffer#toJSON` 会先于 replacer 把它变成普通对象。
 
 Gateway 中的 Collaboration SDK runtime（trunk Service、Worktree Service、Unit Snapshot Materializer 与 `createUnitRuntime`）统一使用 `execution: { mode: 'in-process' }`。SDK 1.0.4 起默认改为 worker thread，并从 SDK 模块旁加载 `unit-runtime-worker.cjs`；Gateway 打包为单个 CJS，运行时旁边没有该文件，而且按请求创建的 materializer 会为每次调用启动和销毁整个 worker 池。
 

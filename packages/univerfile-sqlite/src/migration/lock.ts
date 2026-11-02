@@ -1,5 +1,5 @@
 import { mkdirSync, rmdirSync } from 'node:fs'
-import { UniverfileSQLiteError } from '../errors.js'
+import { UniverfileSQLiteError } from '../errors.ts'
 
 const WAIT_BUFFER = new Int32Array(new SharedArrayBuffer(4))
 

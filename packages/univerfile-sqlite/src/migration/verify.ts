@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto'
-import { UniverfileSQLiteConnection } from '../connection.js'
-import { UniverfileSQLiteAssetStore } from '../database-adapters/asset-store.js'
-import { UniverfileSQLiteDatabaseAdapter } from '../database-adapters/collaboration-database-adapter.js'
-import { UniverfileSQLiteHistoryDatabaseAdapter } from '../database-adapters/history-database-adapter.js'
-import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../database-adapters/worktree-database-adapter.js'
-import { UniverfileSQLiteError } from '../errors.js'
-import { detectUniverfileSQLiteFormat } from '../schema/detect.js'
+import { UniverfileSQLiteConnection } from '../connection.ts'
+import { UniverfileSQLiteAssetStore } from '../database-adapters/asset-store.ts'
+import { UniverfileSQLiteDatabaseAdapter } from '../database-adapters/collaboration-database-adapter.ts'
+import { UniverfileSQLiteHistoryDatabaseAdapter } from '../database-adapters/history-database-adapter.ts'
+import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../database-adapters/worktree-database-adapter.ts'
+import { UniverfileSQLiteError } from '../errors.ts'
+import { detectUniverfileSQLiteFormat } from '../schema/detect.ts'
 
 interface AssetRow {
   readonly asset_id: string

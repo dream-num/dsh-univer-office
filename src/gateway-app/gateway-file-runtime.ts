@@ -25,7 +25,7 @@ import {
   type UniverfileSQLiteHistoryDatabaseAdapter,
   type UniverfileUpgradeResult,
   type UniverfileSQLiteWorktreeDatabaseAdapter
-} from './univerfile-sqlite/index.js'
+} from '@univer/univerfile-sqlite'
 import { createSdkCollabLogger } from './sdk-logger.js'
 import { GATEWAY_UNIT_RUNTIME } from './sdk-runtime.js'
 export interface GatewayFileRuntimeOptions {

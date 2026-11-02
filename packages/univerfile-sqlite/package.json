@@ -1,0 +1,30 @@
+{
+  "name": "@univer/univerfile-sqlite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SQLite persistence, schema, and safe upgrades for .univer files.",
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit --pretty false"
+  },
+  "dependencies": {
+    "@univerjs-pro/collaboration-history-service": "1.2.0",
+    "@univerjs-pro/collaboration-service": "1.2.0",
+    "@univerjs-pro/collaboration-worktree-service": "1.2.0",
+    "@univerjs/protocol": "1.2.0",
+    "libsql": "^0.5.29"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}

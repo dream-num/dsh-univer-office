@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type Database from 'libsql'
-import type { UniverfileSQLiteConnection } from '../connection.js'
-import { runUniverfileSQLiteTransaction } from '../connection.js'
+import type { UniverfileSQLiteConnection } from '../connection.ts'
+import { runUniverfileSQLiteTransaction } from '../connection.ts'
 
 const ASSET_SCHEMA_COMPONENT = 'assets'
 const ASSET_SCHEMA_VERSION = 1

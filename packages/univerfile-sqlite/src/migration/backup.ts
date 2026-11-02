@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { copyFileSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import { UniverfileSQLiteError } from '../errors.js'
+import { UniverfileSQLiteError } from '../errors.ts'
 
 export interface UniverfileBackup {
   readonly path: string
