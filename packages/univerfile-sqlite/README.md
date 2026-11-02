@@ -2,6 +2,14 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
+A univerfile (`.univer`) is a local-first container for Univer documents. One SQLite file holds a
+set of Sheet, Doc, Slide, Base, and Board Units, the revision history of each Unit, Worktrees that
+keep draft changes apart from trunk until they are merged, and the embedded assets the content
+uses. No server is involved: an application runs the Collaboration SDK services on top of this
+package and gets revisions, History, Worktrees, and merges locally, while the data stays in a single
+file that can be copied, backed up, or moved. Univer CLI and the DSH Univer Office plugin both store
+their documents this way.
+
 `@univer/univerfile-sqlite` stores `.univer` files in SQLite through the built-in `node:sqlite`
 driver. It owns the current schema, recognizes and upgrades older formats, and gives the
 Collaboration SDK services the stores they persist through.
