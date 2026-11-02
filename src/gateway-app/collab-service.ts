@@ -48,17 +48,14 @@ import { externalizeEmbeddedImages } from './assets/externalize-embedded-images.
 import { CollabGatewayAssetScopeNotFoundError } from './assets/errors.js'
 import { GatewayFileRuntime } from './gateway-file-runtime.js'
 import { GATEWAY_UNIT_RUNTIME } from './sdk-runtime.js'
-import type { UniverfileAssetRecord, UniverfileOpenedAsset } from './univerfile-sqlite/index.js'
-import {
-  UNIVERFILE_UNIT_METADATA_KEY,
-  type UniverfileUnitSummary
-} from './univerfile-sqlite/index.js'
+import type { UniverfileAssetRecord, UniverfileOpenedAsset } from '@univer/univerfile-sqlite'
+import { UNIVERFILE_UNIT_METADATA_KEY, type UniverfileUnitSummary } from '@univer/univerfile-sqlite'
 import {
   UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY,
   UNIVERFILE_WORKTREE_METADATA_KEY,
   type UniverfileWorktreeSummary,
   type UniverfileWorktreeUnitSummary
-} from './univerfile-sqlite/index.js'
+} from '@univer/univerfile-sqlite'
 import { unitAdapter } from './univer/unit-types.js'
 import { KeyedLock } from './util/lock.js'
 import { GatewayExchangeService } from './exchange/gateway-exchange-service.js'
@@ -181,7 +178,7 @@ export class CollabService {
     }
   }
 
-  public createWorktree(agentId = '', name = ''): WorktreeRecord {
+  public async createWorktree(agentId = '', name = ''): Promise<WorktreeRecord> {
     const worktreeId = newWorktreeId()
     const units = this.listUnits()
     const records = new Map(
@@ -195,10 +192,9 @@ export class CollabService {
         unitNames: Object.fromEntries(units.map((unit) => [unit.unitId, unit.name]))
       }
     })
-    // Worktree creation is the sole synchronous compatibility entry; it executes the same
-    // SDK-compatible adapter transaction. Subsequent lifecycle/read/submit/merge semantics are
-    // SDK Service-owned.
-    this.runtime.worktreeAdapter.createWorktreeForGateway(databaseContext(options), {
+    // The Gateway creates the Worktree record through the adapter so the record carries its
+    // metadata; subsequent lifecycle/read/submit/merge semantics are SDK Service-owned.
+    await this.runtime.worktreeAdapter.createWorktree(databaseContext(options), {
       record: {
         worktreeID: worktreeId,
         sid: randomUUID(),
@@ -933,18 +929,6 @@ export class CollabService {
       return null
     }
     return opened
-  }
-
-  public getConfirmedChangeset(unitId: string, revision: number): IProtocolChangeset | undefined {
-    return this.runtime.trunkAdapter.getChangeset(unitId, revision)
-  }
-
-  public getConfirmedChangesetBySid(
-    unitId: string,
-    sid: string,
-    reqId: number
-  ): IProtocolChangeset | undefined {
-    return this.runtime.trunkAdapter.getChangesetBySid(unitId, sid, reqId)
   }
 
   public hasConnections(): boolean {

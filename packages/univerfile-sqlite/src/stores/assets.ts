@@ -1,0 +1,246 @@
+import { createHash, randomUUID } from 'node:crypto'
+import type { DatabaseSync } from 'node:sqlite'
+import type { UniverfileSQLiteConnection } from '../driver/connection.ts'
+import { runUniverfileSQLiteTransaction } from '../driver/transaction.ts'
+
+export const MAX_UNIVERFILE_ASSET_BYTES = 50 * 1024 * 1024
+
+export interface UniverfileAssetRecord {
+  readonly assetId: string
+  readonly unitId: string
+  readonly worktreeId: string | null
+  readonly digest: string
+  readonly originalFilename: string
+  readonly mediaType: string
+  readonly byteSize: number
+  readonly createdAtMs: number
+}
+
+export interface UniverfileOpenedAsset {
+  readonly record: UniverfileAssetRecord
+  readonly bytes: Uint8Array
+}
+
+interface AssetRow {
+  readonly asset_id: string
+  readonly unit_id: string
+  readonly worktree_id: string | null
+  readonly digest: string
+  readonly original_filename: string
+  readonly media_type: string
+  readonly byte_size: number
+  readonly created_at_ms: number
+}
+
+interface OpenedAssetRow extends AssetRow {
+  readonly bytes: Uint8Array | ArrayBuffer
+}
+
+export interface UniverfileStoreAssetInput {
+  readonly unitId: string
+  /** Omitted for a trunk asset. */
+  readonly worktreeId?: string
+  readonly originalFilename: string
+  readonly mediaType: string
+  readonly bytes: Uint8Array
+  /** Return an existing asset with the same bytes in the same Unit and Worktree scope. */
+  readonly reuseInScope?: boolean
+}
+
+/** Content-addressed embedded assets of one `.univer` file. */
+export interface UniverfileAssetStore {
+  store(input: UniverfileStoreAssetInput): UniverfileAssetRecord
+  open(assetId: string): UniverfileOpenedAsset | null
+  /** Moves the assets of the given Units from the Worktree scope to trunk; returns how many moved. */
+  publishWorktreeAssets(worktreeId: string, unitIds: readonly string[]): number
+}
+
+export interface AssetStoreOptions {
+  readonly connection: UniverfileSQLiteConnection
+}
+
+/**
+ * Immutable embedded-asset metadata plus content-addressed bytes inside one `.univer` SQLite file.
+ * Snapshot and changeset payloads only carry the opaque `assetId`; repeated uploads may create
+ * distinct scoped identities, while the digest table stores identical bytes once.
+ */
+export class AssetStore implements UniverfileAssetStore {
+  private readonly _database: DatabaseSync
+
+  public constructor(options: AssetStoreOptions) {
+    this._database = options.connection.database
+  }
+
+  public store(input: UniverfileStoreAssetInput): UniverfileAssetRecord {
+    validateStoredAsset(input)
+    const bytes = Uint8Array.from(input.bytes)
+    const digest = createHash('sha256').update(bytes).digest('hex')
+    const worktreeId = input.worktreeId ?? null
+
+    return runUniverfileSQLiteTransaction(this._database, () => {
+      if (input.reuseInScope === true) {
+        const existing = this._findByDigest(input.unitId, worktreeId, digest)
+        if (existing !== null) return existing
+      }
+
+      this._database
+        .prepare(
+          `INSERT INTO collaboration_asset_blobs (digest, byte_size, bytes)
+           VALUES (?, ?, ?)
+           ON CONFLICT(digest) DO NOTHING`
+        )
+        .run(digest, bytes.byteLength, Buffer.from(bytes))
+      const blob = this._database
+        .prepare('SELECT byte_size FROM collaboration_asset_blobs WHERE digest = ?')
+        .get(digest) as { readonly byte_size: number } | undefined
+      if (blob?.byte_size !== bytes.byteLength) {
+        throw new Error('Stored asset digest has conflicting byte length')
+      }
+
+      const assetId = randomUUID()
+      const createdAtMs = Date.now()
+      this._database
+        .prepare(
+          `INSERT INTO collaboration_assets
+             (asset_id, unit_id, worktree_id, digest, original_filename, media_type, byte_size,
+              created_at_ms)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          assetId,
+          input.unitId,
+          worktreeId,
+          digest,
+          input.originalFilename,
+          input.mediaType,
+          bytes.byteLength,
+          createdAtMs
+        )
+      return this._require(assetId)
+    })
+  }
+
+  public open(assetId: string): UniverfileOpenedAsset | null {
+    const row = this._database
+      .prepare(
+        `SELECT a.asset_id, a.unit_id, a.worktree_id, a.digest, a.original_filename,
+                a.media_type, a.byte_size, a.created_at_ms, b.bytes
+         FROM collaboration_assets AS a
+         JOIN collaboration_asset_blobs AS b ON b.digest = a.digest
+         WHERE a.asset_id = ?`
+      )
+      .get(assetId) as OpenedAssetRow | undefined
+    if (row === undefined) return null
+    return { record: toRecord(row), bytes: normalizeBlob(row.bytes) }
+  }
+
+  public publishWorktreeAssets(worktreeId: string, unitIds: readonly string[]): number {
+    const publish = this._database.prepare(
+      `UPDATE collaboration_assets
+       SET worktree_id = NULL
+       WHERE worktree_id = ? AND unit_id = ?`
+    )
+    return runUniverfileSQLiteTransaction(this._database, () => {
+      let count = 0
+      for (const unitId of new Set(unitIds)) {
+        count += Number(publish.run(worktreeId, unitId).changes)
+      }
+      return count
+    })
+  }
+
+  private _findByDigest(
+    unitId: string,
+    worktreeId: string | null,
+    digest: string
+  ): UniverfileAssetRecord | null {
+    const row = this._database
+      .prepare(
+        `SELECT asset_id, unit_id, worktree_id, digest, original_filename, media_type, byte_size,
+                created_at_ms
+         FROM collaboration_assets
+         WHERE unit_id = ? AND worktree_id IS ? AND digest = ?
+         ORDER BY created_at_ms, asset_id
+         LIMIT 1`
+      )
+      .get(unitId, worktreeId, digest) as AssetRow | undefined
+    return row === undefined ? null : toRecord(row)
+  }
+
+  private _require(assetId: string): UniverfileAssetRecord {
+    const row = this._database
+      .prepare(
+        `SELECT asset_id, unit_id, worktree_id, digest, original_filename, media_type, byte_size,
+                created_at_ms
+         FROM collaboration_assets
+         WHERE asset_id = ?`
+      )
+      .get(assetId) as AssetRow | undefined
+    if (row === undefined) throw new Error('Stored collaboration asset is missing')
+    return toRecord(row)
+  }
+}
+
+function normalizeBlob(bytes: Uint8Array | ArrayBuffer): Uint8Array {
+  return bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : Uint8Array.from(bytes)
+}
+
+function toRecord(row: AssetRow): UniverfileAssetRecord {
+  return {
+    assetId: row.asset_id,
+    unitId: row.unit_id,
+    worktreeId: row.worktree_id,
+    digest: row.digest,
+    originalFilename: row.original_filename,
+    mediaType: row.media_type,
+    byteSize: row.byte_size,
+    createdAtMs: row.created_at_ms
+  }
+}
+
+function validateStoredAsset(input: {
+  readonly unitId: string
+  readonly worktreeId?: string
+  readonly originalFilename: string
+  readonly mediaType: string
+  readonly bytes: Uint8Array
+}): void {
+  if (input.unitId.length === 0 || input.unitId.length > 255) {
+    throw new Error('Asset Unit ID is invalid')
+  }
+  if (input.worktreeId !== undefined && input.worktreeId.length === 0) {
+    throw new Error('Asset Worktree ID is invalid')
+  }
+  if (input.originalFilename.length === 0 || input.originalFilename.length > 1024) {
+    throw new Error('Asset filename is invalid')
+  }
+  if (input.mediaType.length === 0 || input.mediaType.length > 255) {
+    throw new Error('Asset media type is invalid')
+  }
+  if (input.bytes.byteLength > MAX_UNIVERFILE_ASSET_BYTES) {
+    throw new Error(`Asset exceeds the ${MAX_UNIVERFILE_ASSET_BYTES} byte limit`)
+  }
+}
+
+/**
+ * Deletes the assets scoped to one Worktree, then the blobs that no remaining asset references.
+ * Runs inside the caller's transaction and returns how many assets were deleted.
+ */
+export function deleteWorktreeAssets(database: DatabaseSync, worktreeId: string): number {
+  const digests = (
+    database
+      .prepare('SELECT DISTINCT digest FROM collaboration_assets WHERE worktree_id = ?')
+      .all(worktreeId) as unknown as { readonly digest: string }[]
+  ).map(({ digest }) => digest)
+  const deleted = Number(
+    database.prepare('DELETE FROM collaboration_assets WHERE worktree_id = ?').run(worktreeId)
+      .changes
+  )
+  const deleteBlob = database.prepare(
+    `DELETE FROM collaboration_asset_blobs
+     WHERE digest = ?
+       AND NOT EXISTS (SELECT 1 FROM collaboration_assets WHERE digest = ?)`
+  )
+  for (const digest of digests) deleteBlob.run(digest, digest)
+  return deleted
+}

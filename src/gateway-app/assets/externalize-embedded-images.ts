@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { MAX_UNIVERFILE_ASSET_BYTES } from '../univerfile-sqlite/index.js'
+import { MAX_UNIVERFILE_ASSET_BYTES } from '@univer/univerfile-sqlite'
 
 type SupportedImageMediaType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
 

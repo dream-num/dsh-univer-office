@@ -17,7 +17,7 @@ import type {
   UnitComparisonContextQuery
 } from '../contract/index.js'
 import { CollabGatewayAssetScopeNotFoundError } from '../assets/errors.js'
-import { MAX_UNIVERFILE_ASSET_BYTES } from '../univerfile-sqlite/index.js'
+import { MAX_UNIVERFILE_ASSET_BYTES } from '@univer/univerfile-sqlite'
 import { ExchangeHttpError, MAX_EXCHANGE_FILE_BYTES } from '../exchange/gateway-exchange-service.js'
 import type { Univerfile, UniverfileManager } from '../univerfile-manager.js'
 import {

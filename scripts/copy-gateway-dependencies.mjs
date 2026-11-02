@@ -8,31 +8,14 @@ import { fileURLToPath } from 'node:url'
 const script = fileURLToPath(import.meta.url)
 const packageRoot = resolve(dirname(script), '..')
 const requireFromPlugin = createRequire(join(packageRoot, 'package.json'))
-const nativePackages = [
-  '@libsql/darwin-arm64',
-  '@libsql/darwin-x64',
-  '@libsql/linux-arm64-gnu',
-  '@libsql/linux-arm64-musl',
-  '@libsql/linux-x64-gnu',
-  '@libsql/linux-x64-musl',
-  '@libsql/linux-arm-gnueabihf',
-  '@libsql/linux-arm-musleabihf',
-  '@libsql/win32-x64-msvc'
-]
 const runtimePackages = [
   '@univerjs-pro/engine-formula-rust-binding',
   '@univerjs-pro/exchange-node-binding',
   '@univerjs-pro/cli-assets'
 ]
 
-/** Copy libsql's JavaScript packages, platform binary, and bundled license files. */
+/** Copy the Gateway's external runtime packages and the platform bindings they resolve. */
 export function copyGatewayDependencies(targetRoot) {
-  const libsql = locatePackage('libsql', requireFromPlugin)
-  const requireFromLibsql = createRequire(join(libsql, 'index.js'))
-  for (const name of ['libsql', '@neon-rs/load', 'detect-libc']) {
-    const source = name === 'libsql' ? libsql : locatePackage(name, requireFromLibsql)
-    copyPackage(source, join(targetRoot, 'node_modules', ...name.split('/')))
-  }
   for (const name of runtimePackages) {
     const source = locatePackage(name, requireFromPlugin)
     copyPackage(source, join(targetRoot, 'node_modules', ...name.split('/')))
@@ -47,20 +30,6 @@ export function copyGatewayDependencies(targetRoot) {
       }
     }
   }
-  let nativeCount = 0
-  for (const name of nativePackages) {
-    try {
-      copyPackage(
-        locatePackage(name, requireFromLibsql),
-        join(targetRoot, 'node_modules', ...name.split('/'))
-      )
-      nativeCount++
-    } catch (error) {
-      if (error?.code !== 'MODULE_NOT_FOUND') throw error
-    }
-  }
-  if (nativeCount === 0) throw new Error('libsql platform package is not installed')
-  return nativeCount
 }
 
 function locatePackage(name, requireFrom) {
@@ -102,6 +71,6 @@ function copyPackage(source, destination) {
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === script) {
   const target = process.argv[2]
   if (target === undefined) throw new Error('usage: copy-gateway-dependencies.mjs <package-root>')
-  const count = copyGatewayDependencies(resolve(target))
-  console.log(`Copied Gateway dependencies (${count} platform package${count === 1 ? '' : 's'})`)
+  copyGatewayDependencies(resolve(target))
+  console.log('Copied Gateway dependencies')
 }

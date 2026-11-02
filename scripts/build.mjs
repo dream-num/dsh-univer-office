@@ -6,7 +6,7 @@
 //   pnpm run build:worker  → artifacts/unit-content-worker.mjs and
 //                            artifacts/collaboration-runtime-worker.mjs over
 //                            their shared artifacts/worker-chunks/
-//   pnpm run build:gateway → artifacts/gateway.cjs and artifacts/upgrade-worker.cjs
+//   pnpm run build:gateway → artifacts/gateway.cjs
 //   pnpm run build:render  → artifacts/render-machine/
 //   pnpm run build:viewer  → artifacts/viewer/
 //   pnpm run build         → all five applications
@@ -42,7 +42,6 @@ const external = [
   '@deepseek-ai/dsh-tools',
   '@deepseek-ai/schemastery',
   // Large / binary packages: never inlined, declared as runtime dependencies
-  'libsql',
   '@univerjs-pro/exchange-node-binding',
   '@univerjs-pro/engine-formula-rust-binding',
   '@univerjs-pro/cli-assets',
@@ -197,8 +196,7 @@ if (target === 'all' || target === 'worker') {
     ...builtinModules,
     '@univerjs-pro/cli-assets',
     '@univerjs-pro/engine-formula-rust-binding',
-    '@univerjs-pro/exchange-node-binding',
-    'libsql'
+    '@univerjs-pro/exchange-node-binding'
   ]
   await build({
     entryPoints: {
@@ -228,10 +226,16 @@ if (target === 'all' || target === 'gateway') {
   // Collaboration Gateway: a standalone server built from the plugin-owned
   // gateway application sources (src/gateway-app) over the collaboration SDK.
   const gatewayOut = 'artifacts/gateway.cjs'
+  const gatewayAlias = {
+    // The ESM entry creates a require function from import.meta.url, which is
+    // not defined in the Gateway's CJS output. Bundle the package's equivalent
+    // CJS entry so its native binding continues to resolve from __filename.
+    '@univerjs-pro/exchange-node': require.resolve('@univerjs-pro/exchange-node'),
+    '@univer/univerfile-sqlite': resolve('packages/univerfile-sqlite/src/index.ts')
+  }
   const gatewayExternal = [
     ...builtinModules.map((id) => `node:${id}`),
     ...builtinModules,
-    'libsql',
     '@univerjs-pro/exchange-node-binding',
     '@univerjs-pro/engine-formula-rust-binding',
     '@univerjs-pro/cli-assets'
@@ -241,10 +245,7 @@ if (target === 'all' || target === 'gateway') {
     outfile: gatewayOut,
     bundle: true,
     packages: 'bundle',
-    // The ESM entry creates a require function from import.meta.url, which is
-    // not defined in the Gateway's CJS output. Bundle the package's equivalent
-    // CJS entry so its native binding continues to resolve from __filename.
-    alias: { '@univerjs-pro/exchange-node': require.resolve('@univerjs-pro/exchange-node') },
+    alias: gatewayAlias,
     external: gatewayExternal,
     platform: 'node',
     target: 'node22',
@@ -254,22 +255,6 @@ if (target === 'all' || target === 'gateway') {
     plugins: [univerCjsOnlyPlugin()]
   })
   console.log('built', gatewayOut)
-  const upgradeWorkerOut = 'artifacts/upgrade-worker.cjs'
-  await build({
-    entryPoints: ['src/gateway-app/univerfile-sqlite/migration/upgrade-worker.ts'],
-    outfile: upgradeWorkerOut,
-    bundle: true,
-    packages: 'bundle',
-    alias: { '@univerjs-pro/exchange-node': require.resolve('@univerjs-pro/exchange-node') },
-    external: gatewayExternal,
-    platform: 'node',
-    target: 'node22',
-    format: 'cjs',
-    legalComments: 'none',
-    sourcemap: false,
-    plugins: [univerCjsOnlyPlugin()]
-  })
-  console.log('built', upgradeWorkerOut)
 }
 
 if (target === 'all' || target === 'render') {

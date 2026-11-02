@@ -35,7 +35,7 @@ describe.skipIf(runtime === undefined)('Host settings in a real DSH Profile', ()
       join(dir, 'node_modules/@deepseek-ai')
     )
     await Promise.all(
-      ['libsql', 'puppeteer-core', '@puppeteer', '@univerjs-pro'].map((dependency) =>
+      ['puppeteer-core', '@puppeteer', '@univerjs-pro'].map((dependency) =>
         symlink(join(REPO_ROOT, 'node_modules', dependency), join(dir, 'node_modules', dependency))
       )
     )

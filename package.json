@@ -77,11 +77,12 @@
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.client.json && tsc --project tsconfig.viewer.json --noEmit && tsc --project tsconfig.render.json --noEmit && tsc --project tsconfig.test.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.client.json && tsc --project tsconfig.viewer.json --noEmit && tsc --project tsconfig.render.json --noEmit && tsc --project tsconfig.test.json && pnpm --filter @univer/univerfile-sqlite typecheck",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",
     "test:comparison": "pnpm --filter @univer/unit-comparison-viewer test",
+    "test:univerfile": "pnpm --filter @univer/univerfile-sqlite test",
     "test": "pnpm run build && vitest run",
     "verify:public-dependencies": "node scripts/verify-public-runtime-dependencies.mjs",
     "prepublishOnly": "pnpm run build && pnpm run test"
@@ -89,7 +90,6 @@
   "dependencies": {
     "@puppeteer/browsers": "^3.2.0",
     "@univerjs-pro/cli-assets": "0.1.0",
-    "libsql": "^0.5.29",
     "puppeteer-core": "^25.7.0"
   },
   "peerDependencies": {
