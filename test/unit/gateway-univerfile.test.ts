@@ -13,6 +13,7 @@ import {
   createV2,
   createdAt
 } from '../../packages/univerfile-sqlite/test/support/legacy.ts'
+import { openUniverfile } from '../../packages/univerfile-sqlite/src/index.ts'
 import { repoPath } from '../support/paths.ts'
 
 let api: any
@@ -109,6 +110,57 @@ it.each([
   }
 })
 
+// Deleting intermediate trunk snapshots keeps every revision readable: the SDK replays the
+// remaining changesets from an earlier snapshot and reaches the same head.
+it('materializes the same head after intermediate snapshots are deleted', async () => {
+  const file = join(workspace, 'snapshots.univer')
+  await copyFile(
+    repoPath('packages', 'univerfile-sqlite', 'test', 'fixtures', 'v2-univer-cli-0.5.0.univer'),
+    file
+  )
+  const writer = new api.CollabService({ dbPath: file })
+  let head: unknown
+  let unit: { unitId: string; type: number }
+  try {
+    unit = writer.listUnits()[0]
+    for (const revision of [3, 4, 5]) {
+      const submitted = await writer.submit(unit.unitId, revision, {
+        ...changeset(revision, Date.now()),
+        unitID: unit.unitId,
+        type: unit.type
+      })
+      expect(submitted.success).toBe(true)
+      const materialized = await writer.materializeUnit(unit.unitId, unit.type)
+      await writer.runtime.trunkAdapter.saveSnapshot(context, materialized)
+    }
+    head = withoutBlockIds(await writer.materializeUnit(unit.unitId, unit.type))
+  } finally {
+    await writer.dispose()
+  }
+
+  const opened = openUniverfile(file)
+  try {
+    expect(opened.trunk.listSnapshotRevisions()).toEqual([
+      { unitId: unit.unitId, revisions: [1, 3, 4, 5] }
+    ])
+    expect(opened.trunk.deleteSnapshots(unit.unitId, [3, 4]).snapshots).toBe(2)
+  } finally {
+    await opened.close()
+  }
+
+  const reader = new api.CollabService({ dbPath: file })
+  try {
+    expect(withoutBlockIds(await reader.materializeUnit(unit.unitId, unit.type))).toEqual(head)
+    const history = await reader.runtime.historyService.getHistoryList(
+      { unitID: unit.unitId, length: 20 },
+      context
+    )
+    expect(Object.keys(history.entities.datas).length).toBeGreaterThan(0)
+  } finally {
+    await reader.dispose()
+  }
+})
+
 // Trunk submits store server time in Unix seconds, and retries keep the first commit time.
 it('stores trunk submit time in seconds and keeps it across retries', async () => {
   const file = join(workspace, 'submit.univer')
@@ -136,3 +188,28 @@ it('stores trunk submit time in seconds and keeps it across retries', async () =
     await reopened.dispose()
   }
 })
+
+/** Each materialization names its Sheet blocks afresh; compare the content, not the ids. */
+function withoutBlockIds(materialized: any): unknown {
+  const ids = new Map<string, string>()
+  const rename = (id: string) => {
+    if (!ids.has(id)) ids.set(id, `block-${ids.size}`)
+    return ids.get(id)
+  }
+  const blockMeta = materialized.snapshot.workbook?.blockMeta ?? {}
+  return {
+    sheetBlocks: materialized.sheetBlocks.map((block: any) => ({ ...block, id: rename(block.id) })),
+    snapshot: {
+      ...materialized.snapshot,
+      workbook: materialized.snapshot.workbook && {
+        ...materialized.snapshot.workbook,
+        blockMeta: Object.fromEntries(
+          Object.entries(blockMeta).map(([sheetId, meta]: [string, any]) => [
+            sheetId,
+            { ...meta, blocks: meta.blocks.map(rename) }
+          ])
+        )
+      }
+    }
+  }
+}

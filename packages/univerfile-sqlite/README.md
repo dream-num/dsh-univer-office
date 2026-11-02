@@ -28,8 +28,8 @@ The handle exposes one store per functional area, matching the Collaboration SDK
 
 | Store      | Interface                                                                                     |
 | ---------- | --------------------------------------------------------------------------------------------- |
-| `trunk`    | `IDatabaseAdapter`, plus `listUnits()` and `listUnitRecords()`                                |
-| `worktree` | `IWorktreeDatabaseAdapter`, plus `listWorktrees()`, `listWorktreeUnits()`, `listDeletedUnits()`, and `deleteUnit()` |
+| `trunk`    | `IDatabaseAdapter`, plus `listUnits()`, `listUnitRecords()`, `listSnapshotRevisions()`, and `deleteSnapshots()` |
+| `worktree` | `IWorktreeDatabaseAdapter`, plus `listWorktrees()`, `listWorktreeUnits()`, `listDeletedUnits()`, `deleteUnit()`, and `deleteWorktree()` |
 | `history`  | `IHistoryDatabaseAdapter`                                                                     |
 | `assets`   | `store()`, `open()`, and `publishWorktreeAssets()` for content-addressed embedded assets      |
 
@@ -38,6 +38,20 @@ file does not support the SDK's revocable `setUnitRemoved`, which returns `INVAL
 `worktree.deleteUnit()` removes a Unit from a Worktree instead. Application metadata reaches the
 stores through the SDK call's `customData` under `UNIVERFILE_UNIT_METADATA_KEY`,
 `UNIVERFILE_WORKTREE_METADATA_KEY`, and `UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY`.
+
+## Maintenance operations
+
+Each operation keeps the file valid on its own; the application decides which ones to combine
+and in what order.
+
+| Operation                                   | Effect                                                                                     |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `copyUniverfile(source, target)`            | Writes a consistent copy through a read-only connection. The source is never upgraded; `target` must not exist |
+| `worktree.deleteWorktree(id)`               | Deletes a Worktree with its Units, changesets, seeds, merge artifacts, scoped assets, and blobs no other asset uses. Refuses a merging Worktree |
+| `trunk.listSnapshotRevisions()`             | Lists the stored snapshot revisions of every Unit, including soft-deleted ones             |
+| `trunk.deleteSnapshots(unitId, revisions)`  | Deletes snapshots and the Sheet blocks only they referenced. Changesets stay, so every revision remains readable; the earliest snapshot cannot be deleted |
+| `file.verify()`                             | Checks integrity and foreign keys, reads every Unit and Worktree back, and checks every asset digest |
+| `file.vacuum()`                             | Rebuilds the file to reclaim the space of deleted rows                                      |
 
 ## Behaviour
 

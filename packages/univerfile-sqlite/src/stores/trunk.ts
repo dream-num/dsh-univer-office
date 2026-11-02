@@ -30,6 +30,11 @@ interface UnitRow {
   readonly soft_deleted_at_ms: number | null
 }
 
+interface SnapshotPayloadRow {
+  readonly revision: number
+  readonly payload_json: string
+}
+
 interface PayloadRow {
   readonly payload_json: string
 }
@@ -67,10 +72,29 @@ export interface UniverfileUnitSummary {
  */
 export const UNIVERFILE_UNIT_METADATA_KEY = '@univer/univerfile-sqlite/unit-metadata'
 
-/** Trunk persistence: the SDK contract plus the Unit listings the application needs. */
+export interface UniverfileUnitSnapshots {
+  readonly unitId: string
+  /** Revisions of the stored snapshots, ascending. */
+  readonly revisions: readonly number[]
+}
+
+export interface UniverfileDeletedSnapshots {
+  readonly snapshots: number
+  readonly sheetBlocks: number
+}
+
+/** Trunk persistence: the SDK contract plus the Unit listings and maintenance the application needs. */
 export interface UniverfileTrunkStore extends IDatabaseAdapter {
   listUnits(): readonly UniverfileUnitSummary[]
   listUnitRecords(): readonly UnitRecord[]
+  /** Stored snapshot revisions of every Unit, including soft-deleted ones, ordered by Unit id. */
+  listSnapshotRevisions(): readonly UniverfileUnitSnapshots[]
+  /**
+   * Deletes the given snapshots of one Unit, and the Sheet blocks that only those snapshots
+   * referenced. Changesets stay, so every revision remains readable by replaying from an earlier
+   * snapshot; for the same reason the Unit's earliest snapshot cannot be deleted.
+   */
+  deleteSnapshots(unitID: string, revisions: readonly number[]): UniverfileDeletedSnapshots
 }
 
 export class TrunkStore implements UniverfileTrunkStore {
@@ -80,6 +104,66 @@ export class TrunkStore implements UniverfileTrunkStore {
   constructor(options: TrunkStoreOptions) {
     validateOptions(options)
     this._database = options.connection.database
+  }
+
+  public listSnapshotRevisions(): readonly UniverfileUnitSnapshots[] {
+    this._assertOpen()
+    const rows = this._database
+      .prepare(
+        `SELECT unit_id, revision
+         FROM collaboration_snapshots
+         ORDER BY unit_id, revision`
+      )
+      .all() as unknown as { readonly unit_id: string; readonly revision: number }[]
+    const byUnit = new Map<string, number[]>()
+    for (const row of rows) {
+      const revisions = byUnit.get(row.unit_id) ?? []
+      revisions.push(row.revision)
+      byUnit.set(row.unit_id, revisions)
+    }
+    return [...byUnit].map(([unitId, revisions]) => ({ unitId, revisions }))
+  }
+
+  public deleteSnapshots(unitID: string, revisions: readonly number[]): UniverfileDeletedSnapshots {
+    this._assertOpen()
+    return this._transaction(() => {
+      const rows = this._database
+        .prepare(
+          `SELECT revision, payload_json
+           FROM collaboration_snapshots
+           WHERE unit_id = ?
+           ORDER BY revision`
+        )
+        .all(unitID) as unknown as SnapshotPayloadRow[]
+      const requested = new Set(revisions)
+      if (rows[0] !== undefined && requested.has(rows[0].revision)) {
+        throw invalidRequest(
+          `Snapshot ${rows[0].revision} is the earliest snapshot of Unit ${unitID} and cannot be deleted`
+        )
+      }
+      const deleted = rows.filter(({ revision }) => requested.has(revision))
+      const kept = rows.filter(({ revision }) => !requested.has(revision))
+      const stillReferenced = new Set(
+        kept.flatMap(({ payload_json }) => sheetBlockIds(payload_json))
+      )
+      const orphaned = new Set(
+        deleted
+          .flatMap(({ payload_json }) => sheetBlockIds(payload_json))
+          .filter((blockID) => !stillReferenced.has(blockID))
+      )
+      const deleteSnapshot = this._database.prepare(
+        'DELETE FROM collaboration_snapshots WHERE unit_id = ? AND revision = ?'
+      )
+      for (const { revision } of deleted) deleteSnapshot.run(unitID, revision)
+      const deleteBlock = this._database.prepare(
+        'DELETE FROM collaboration_sheet_blocks WHERE unit_id = ? AND block_id = ?'
+      )
+      let sheetBlocks = 0
+      for (const blockID of orphaned) {
+        sheetBlocks += Number(deleteBlock.run(unitID, blockID).changes)
+      }
+      return { snapshots: deleted.length, sheetBlocks }
+    })
   }
 
   async getUnit(_context: DatabaseContext, unitID: string): Promise<UnitRecord | null> {
@@ -640,6 +724,16 @@ function readOptionalUnitName(context: DatabaseContext, unitID: string): string 
     : typeof value?.name === 'string'
       ? value.name
       : undefined
+}
+
+/** Sheet block ids a stored snapshot lists in `workbook.blockMeta`; other Unit types have none. */
+function sheetBlockIds(payload: string): string[] {
+  const snapshot = decodeStoredJson<{
+    readonly workbook?: { readonly blockMeta?: Record<string, { readonly blocks?: unknown }> }
+  }>(payload)
+  return Object.values(snapshot.workbook?.blockMeta ?? {}).flatMap(({ blocks }) =>
+    Array.isArray(blocks) ? blocks.filter((id): id is string => typeof id === 'string') : []
+  )
 }
 
 function invalidRequest(message: string): CollabError {

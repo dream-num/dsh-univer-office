@@ -7,6 +7,7 @@ import { HistoryStore, type UniverfileHistoryStore } from './stores/history.ts'
 import { TrunkStore, type UniverfileTrunkStore } from './stores/trunk.ts'
 import { WorktreeStore, type UniverfileWorktreeStore } from './stores/worktree.ts'
 import { upgradeUniverfileSQLite, type UniverfileUpgradeOutcome } from './upgrade/upgrade.ts'
+import { verifyUniverfile, type UniverfileVerification } from './upgrade/verify.ts'
 
 const MEMORY = ':memory:'
 
@@ -27,6 +28,13 @@ export interface Univerfile {
   readonly worktree: UniverfileWorktreeStore
   readonly history: UniverfileHistoryStore
   readonly assets: UniverfileAssetStore
+  /**
+   * Checks SQLite integrity and foreign keys, reads every Unit and Worktree back through the
+   * stores, and checks every asset's size and digest. Throws `VERIFICATION_FAILED`.
+   */
+  verify(): UniverfileVerification
+  /** Rebuilds the file to reclaim the space of deleted rows. Must not run inside a store call. */
+  vacuum(): void
   /**
    * Closes the connection. Once this resolves the process holds no handle to the file, so it can
    * be renamed or deleted right away, including on Windows. Store calls after closing throw.
@@ -77,6 +85,8 @@ function assemble(path: string, upgrade: UniverfileUpgradeOutcome, install: bool
       worktree,
       history,
       assets,
+      verify: () => verifyUniverfile(connection),
+      vacuum: () => connection.database.exec('VACUUM'),
       async close(): Promise<void> {
         await history.dispose()
         await worktree.dispose()

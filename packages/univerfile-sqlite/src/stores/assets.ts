@@ -221,3 +221,26 @@ function validateStoredAsset(input: {
     throw new Error(`Asset exceeds the ${MAX_UNIVERFILE_ASSET_BYTES} byte limit`)
   }
 }
+
+/**
+ * Deletes the assets scoped to one Worktree, then the blobs that no remaining asset references.
+ * Runs inside the caller's transaction and returns how many assets were deleted.
+ */
+export function deleteWorktreeAssets(database: DatabaseSync, worktreeId: string): number {
+  const digests = (
+    database
+      .prepare('SELECT DISTINCT digest FROM collaboration_assets WHERE worktree_id = ?')
+      .all(worktreeId) as unknown as { readonly digest: string }[]
+  ).map(({ digest }) => digest)
+  const deleted = Number(
+    database.prepare('DELETE FROM collaboration_assets WHERE worktree_id = ?').run(worktreeId)
+      .changes
+  )
+  const deleteBlob = database.prepare(
+    `DELETE FROM collaboration_asset_blobs
+     WHERE digest = ?
+       AND NOT EXISTS (SELECT 1 FROM collaboration_assets WHERE digest = ?)`
+  )
+  for (const digest of digests) deleteBlob.run(digest, digest)
+  return deleted
+}

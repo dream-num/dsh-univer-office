@@ -46,6 +46,14 @@ export class UniverfileSQLiteConnection {
   }
 }
 
+/** Opens an existing file read-only; like any reader, it waits for a writer that holds the lock. */
+export function openReadOnlyDatabase(filename: string): DatabaseSync {
+  return new DatabaseSync(filename, {
+    readOnly: true,
+    timeout: DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS
+  })
+}
+
 function validateOptions(options: UniverfileSQLiteConnectionOptions): void {
   if (typeof options.filename !== 'string' || options.filename.length === 0) {
     throw new TypeError('filename must be a non-empty string')

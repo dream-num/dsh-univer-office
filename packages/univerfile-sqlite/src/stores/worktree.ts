@@ -29,6 +29,7 @@ import { UniverType, type IChangeset } from '@univerjs/protocol'
 import type { UniverfileSQLiteConnection } from '../driver/connection.ts'
 import { runUniverfileSQLiteTransaction } from '../driver/transaction.ts'
 import { decodeStoredJson, encodeStoredJson } from '../codec/stored-json.ts'
+import { deleteWorktreeAssets } from './assets.ts'
 
 const SUPPORTED_UNIT_TYPES = new Set<UniverType>([
   UniverType.UNIVER_SHEET,
@@ -131,6 +132,10 @@ export interface UniverfileDeletedWorktreeUnit {
   readonly deleteFromTrunk: boolean
 }
 
+export type DeleteWorktreeResult =
+  | { readonly status: 'deleted'; readonly assets: number }
+  | { readonly status: 'not-found' | 'merging' }
+
 export type DeleteWorktreeUnitResult =
   | { readonly status: 'deleted' | 'already-deleted' }
   | { readonly status: 'not-found' | 'not-editable' }
@@ -149,6 +154,12 @@ export interface UniverfileWorktreeStore extends IWorktreeDatabaseAdapter {
    * SDK's revocable `setUnitRemoved`, which always returns `INVALID_REQUEST` here.
    */
   deleteUnit(context: DatabaseContext, worktreeID: string, unitID: string): DeleteWorktreeUnitResult
+  /**
+   * Deletes a Worktree with its Units, changesets, seeds, merge artifacts, deletion records, and
+   * assets, and the blobs no other asset uses. A merging Worktree is refused: its merge may still
+   * be writing to trunk.
+   */
+  deleteWorktree(worktreeID: string): DeleteWorktreeResult
 }
 
 export class WorktreeStore implements UniverfileWorktreeStore {
@@ -705,6 +716,23 @@ export class WorktreeStore implements UniverfileWorktreeStore {
         previousStatus: 'ready',
         aggregate: this._requireAggregate(worktreeID)
       }
+    })
+  }
+
+  public deleteWorktree(worktreeID: string): DeleteWorktreeResult {
+    this._assertOpen()
+    return this._transaction(() => {
+      const row = this._database
+        .prepare('SELECT status FROM collaboration_worktrees WHERE worktree_id = ?')
+        .get(worktreeID) as { readonly status: string } | undefined
+      if (row === undefined) return { status: 'not-found' }
+      if (row.status === 'merging') return { status: 'merging' }
+      const assets = deleteWorktreeAssets(this._database, worktreeID)
+      // Units, changesets, seeds, merge artifacts, and deletion records cascade from the Worktree.
+      this._database
+        .prepare('DELETE FROM collaboration_worktrees WHERE worktree_id = ?')
+        .run(worktreeID)
+      return { status: 'deleted', assets }
     })
   }
 

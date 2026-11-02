@@ -1,5 +1,5 @@
-import { DatabaseSync } from 'node:sqlite'
-import { DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS } from '../driver/connection.ts'
+import type { DatabaseSync } from 'node:sqlite'
+import { openReadOnlyDatabase } from '../driver/connection.ts'
 import { UniverfileError } from '../errors.ts'
 import {
   ASSET_V1_TABLES,
@@ -29,11 +29,8 @@ interface ColumnRow {
 export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLiteFormat {
   let database: DatabaseSync | undefined
   try {
-    // Another process may be initializing the file it just upgraded; wait like any other reader.
-    database = new DatabaseSync(filename, {
-      readOnly: true,
-      timeout: DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS
-    })
+    // Another process may be initializing the file it just upgraded; the read waits for it.
+    database = openReadOnlyDatabase(filename)
     const tables = new Set(
       (
         database

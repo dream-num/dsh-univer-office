@@ -26,8 +26,8 @@ try {
 
 | Store      | Interface                                                                                     |
 | ---------- | --------------------------------------------------------------------------------------------- |
-| `trunk`    | `IDatabaseAdapter`，外加 `listUnits()` 与 `listUnitRecords()`                                  |
-| `worktree` | `IWorktreeDatabaseAdapter`，外加 `listWorktrees()`、`listWorktreeUnits()`、`listDeletedUnits()` 与 `deleteUnit()` |
+| `trunk`    | `IDatabaseAdapter`，外加 `listUnits()`、`listUnitRecords()`、`listSnapshotRevisions()` 与 `deleteSnapshots()` |
+| `worktree` | `IWorktreeDatabaseAdapter`，外加 `listWorktrees()`、`listWorktreeUnits()`、`listDeletedUnits()`、`deleteUnit()` 与 `deleteWorktree()` |
 | `history`  | `IHistoryDatabaseAdapter`                                                                     |
 | `assets`   | 内容寻址的嵌入资产：`store()`、`open()` 与 `publishWorktreeAssets()`                              |
 
@@ -35,6 +35,19 @@ SDK Service 调用契约方法，应用直接调用扩展方法。本地文件�
 `INVALID_REQUEST`；从 Worktree 移除 Unit 使用 `worktree.deleteUnit()`。应用 metadata 通过 SDK 调用的
 `customData` 传给 store，键为 `UNIVERFILE_UNIT_METADATA_KEY`、`UNIVERFILE_WORKTREE_METADATA_KEY` 与
 `UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY`。
+
+## 维护操作
+
+每个操作单独执行后文件仍然有效；组合哪些操作、按什么顺序执行由应用决定。
+
+| 操作                                        | 效果                                                                                   |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `copyUniverfile(source, target)`            | 通过只读连接写出一致的副本；不升级源文件，`target` 必须不存在                              |
+| `worktree.deleteWorktree(id)`               | 删除 Worktree 及其 Unit、changeset、seed、merge artifact、作用域内资产，以及不再被引用的 blob；拒绝合并中的 Worktree |
+| `trunk.listSnapshotRevisions()`             | 列出每个 Unit（含已软删的）已存快照的 revision                                            |
+| `trunk.deleteSnapshots(unitId, revisions)`  | 删除快照及只被它们引用的 Sheet block；changeset 保留，所有 revision 仍可读取；最早的快照不能删 |
+| `file.verify()`                             | 检查完整性与外键，读回所有 Unit 和 Worktree，并校验每个资产的摘要                          |
+| `file.vacuum()`                             | 重建文件以回收已删除行占用的空间                                                          |
 
 ## 行为约定
 

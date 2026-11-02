@@ -2,13 +2,16 @@
 export { openUniverfile } from './open.ts'
 export type { OpenUniverfileOptions, Univerfile } from './open.ts'
 export { UniverfileError } from './errors.ts'
+export { copyUniverfile } from './copy.ts'
 export type { UniverfileUpgradeOutcome, UniverfileUpgradeSourceFormat } from './upgrade/upgrade.ts'
 export type { UniverfileVerification } from './upgrade/verify.ts'
 
 export { UNIVERFILE_UNIT_METADATA_KEY } from './stores/trunk.ts'
 export type {
+  UniverfileDeletedSnapshots,
   UniverfileTrunkStore,
   UniverfileUnitMetadata,
+  UniverfileUnitSnapshots,
   UniverfileUnitSummary
 } from './stores/trunk.ts'
 
@@ -17,6 +20,7 @@ export {
   UNIVERFILE_WORKTREE_METADATA_KEY
 } from './stores/worktree.ts'
 export type {
+  DeleteWorktreeResult,
   DeleteWorktreeUnitResult,
   UniverfileDeletedWorktreeUnit,
   UniverfileWorktreeChangeMetadata,
