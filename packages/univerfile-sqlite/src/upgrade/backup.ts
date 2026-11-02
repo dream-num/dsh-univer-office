@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { copyFileSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import { UniverfileSQLiteError } from '../errors.ts'
+import { UniverfileError } from '../errors.ts'
 
 export interface UniverfileBackup {
   readonly path: string
@@ -27,7 +27,7 @@ export function createUniverfileBackup(
     }
     return { path: backupPath, sha256: backupHash }
   } catch (error) {
-    throw new UniverfileSQLiteError('BACKUP_FAILED', `failed to back up ${filename}`, {
+    throw new UniverfileError('BACKUP_FAILED', `failed to back up ${filename}`, {
       cause: error
     })
   }

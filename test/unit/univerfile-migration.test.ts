@@ -35,6 +35,7 @@ beforeAll(async () => {
   await build({
     stdin: {
       contents: `export * from './packages/univerfile-sqlite/src/index.ts';
+        export { detectUniverfileSQLiteFormat } from './packages/univerfile-sqlite/src/upgrade/detect.ts';
         export { CollabService } from './src/gateway-app/collab-service.ts';
         export * from './packages/univerfile-sqlite/src/codec/stored-json.ts';`,
       resolveDir: repoPath()
@@ -64,6 +65,9 @@ afterAll(async () => {
   await rm(bundleDirectory, { recursive: true, force: true })
 })
 
+const changesetAt = async (trunk: any, revision: number) =>
+  (await trunk.getChangesets(context, 'unit', { from: revision - 1, to: revision }))[0]
+
 const backupsOf = async (name: string) =>
   (await readdir(workspace)).filter((entry) => entry.startsWith(`${name}.backup-`))
 
@@ -77,7 +81,7 @@ describe('V2 upgrade', () => {
     createLegacy(legacy, { active: true })
     const original = await readFile(legacy)
     expect(api.detectUniverfileSQLiteFormat(legacy)).toBe('v2')
-    const opened = api.openUniverfileSQLite(legacy)
+    const opened = api.openUniverfile(legacy)
     try {
       expect(opened.upgrade).toMatchObject({
         status: 'upgraded',
@@ -88,21 +92,24 @@ describe('V2 upgrade', () => {
       expect(await readFile(opened.upgrade.backupPath)).toEqual(original)
       expect(api.detectUniverfileSQLiteFormat(legacy)).toBe('v3')
 
-      expect(await opened.databaseAdapter.getUnit(context, 'unit')).toMatchObject({
+      expect(await opened.trunk.getUnit(context, 'unit')).toMatchObject({
         creatorID: 'author',
         createdAt,
         headRevision: 3
       })
-      expect(await opened.databaseAdapter.getSnapshot(context, 'unit')).toEqual({
+      expect(await opened.trunk.getSnapshot(context, 'unit')).toEqual({
         ...snapshot,
         rev: 3
       })
-      const db = opened.connection.database
+      const db = new DatabaseSync(legacy, { readOnly: true })
       expect(
         db.prepare('SELECT creator_id, created_at_ms FROM collaboration_worktree_units').get()
       ).toMatchObject({ creator_id: 'author', created_at_ms: createdAt })
       for (const table of ['collaboration_changesets', 'collaboration_worktree_changesets']) {
-        const rows = db.prepare(`SELECT payload_json, created_at_ms FROM ${table}`).all()
+        const rows = db.prepare(`SELECT payload_json, created_at_ms FROM ${table}`).all() as {
+          payload_json: string
+          created_at_ms: number
+        }[]
         expect(rows.length, table).toBeGreaterThan(0)
         for (const row of rows) {
           const payload = JSON.parse(row.payload_json)
@@ -113,8 +120,9 @@ describe('V2 upgrade', () => {
           })
         }
       }
-      expect(opened.assetStore.open('asset').bytes).toEqual(new Uint8Array([1, 2, 3]))
-      const history = await opened.historyDatabaseAdapter.listRecords(context, 'unit', {
+      db.close()
+      expect(opened.assets.open('asset').bytes).toEqual(new Uint8Array([1, 2, 3]))
+      const history = await opened.history.listRecords(context, 'unit', {
         throughRevision: 3,
         length: 20
       })
@@ -125,15 +133,15 @@ describe('V2 upgrade', () => {
         [1, 1]
       ])
     } finally {
-      await opened.dispose()
+      await opened.close()
     }
     afterUpgrade = await readFile(legacy)
   })
 
   it('leaves an already upgraded file unchanged on reopen', async () => {
-    const reopened = api.openUniverfileSQLite(legacy)
+    const reopened = api.openUniverfile(legacy)
     expect(reopened.upgrade).toEqual({ status: 'unchanged', format: 'v3' })
-    await reopened.dispose()
+    await reopened.close()
     expect(await readFile(legacy)).toEqual(afterUpgrade)
   })
 
@@ -168,12 +176,12 @@ it('drops an inconsistent History index for the affected Unit only', async () =>
   // Revision 3 points at a segment start that revision 2 does not declare.
   db.exec('UPDATE collaboration_history_revisions SET history_revision = 1 WHERE revision = 2;')
   db.close()
-  const opened = api.openUniverfileSQLite(file)
+  const opened = api.openUniverfile(file)
   try {
     expect(opened.upgrade.status).toBe('upgraded')
-    expect(await opened.historyDatabaseAdapter.getLatestRecord(context, 'unit')).toBeNull()
+    expect(await opened.history.getLatestRecord(context, 'unit')).toBeNull()
   } finally {
-    await opened.dispose()
+    await opened.close()
   }
 })
 
@@ -196,14 +204,14 @@ it.each([
   }
   db.close()
   const before = await readFile(file)
-  expect(() => api.openUniverfileSQLite(file)).toThrow(message)
+  expect(() => api.openUniverfile(file)).toThrow(message)
   expect(await readFile(file)).toEqual(before)
   expect(api.detectUniverfileSQLiteFormat(file)).toBe('v2')
   const backups = await backupsOf(name)
   expect(backups).toHaveLength(1)
   expect(await readFile(join(workspace, backups[0]!))).toEqual(before)
 
-  expect(thrown(() => api.openUniverfileSQLite(file))).toMatchObject({ code })
+  expect(thrown(() => api.openUniverfile(file))).toMatchObject({ code })
   expect(await backupsOf(name)).toEqual(backups)
   expect(
     (await readdir(workspace)).filter(
@@ -217,7 +225,7 @@ it('rejects an occupied upgrade lock without touching the source', async () => {
   createLegacy(locked)
   const bytes = await readFile(locked)
   await mkdir(`${locked}.upgrade.lock`)
-  expect(thrown(() => api.openUniverfileSQLite(locked, { lockTimeoutMs: 0 }))).toMatchObject({
+  expect(thrown(() => api.openUniverfile(locked))).toMatchObject({
     code: 'UPGRADE_LOCK_TIMEOUT'
   })
   expect(await readFile(locked)).toEqual(bytes)
@@ -236,9 +244,9 @@ describe('older formats', () => {
     db.exec(V1_ALTER)
     db.close()
     expect(api.detectUniverfileSQLiteFormat(file)).toBe('v1')
-    const opened = api.openUniverfileSQLite(file)
+    const opened = api.openUniverfile(file)
     expect(opened.upgrade.targetFormat).toBe('v3')
-    await opened.dispose()
+    await opened.close()
   })
 
   // History and assets were optional in V1; initialize them only on the upgrade candidate.
@@ -252,13 +260,13 @@ describe('older formats', () => {
       DROP TABLE collaboration_asset_blobs;
       DELETE FROM collaboration_schema_versions WHERE component IN ('history', 'assets');`)
     db.close()
-    const opened = api.openUniverfileSQLite(file)
+    const opened = api.openUniverfile(file)
     try {
       expect(api.detectUniverfileSQLiteFormat(file)).toBe('v3')
-      expect((await opened.databaseAdapter.getUnit(context, 'unit')).creatorID).toBe('anonymous')
-      expect(await opened.historyDatabaseAdapter.getLatestRecord(context, 'unit')).toBeNull()
+      expect((await opened.trunk.getUnit(context, 'unit')).creatorID).toBe('anonymous')
+      expect(await opened.history.getLatestRecord(context, 'unit')).toBeNull()
     } finally {
-      await opened.dispose()
+      await opened.close()
     }
   })
 
@@ -298,16 +306,16 @@ describe('older formats', () => {
     )
     db.close()
     expect(api.detectUniverfileSQLiteFormat(file)).toBe('v0')
-    const opened = api.openUniverfileSQLite(file)
+    const opened = api.openUniverfile(file)
     try {
       expect(opened.upgrade.targetFormat).toBe('v3')
-      expect(await opened.databaseAdapter.getSnapshot(context, 'unit')).toEqual({
+      expect(await opened.trunk.getSnapshot(context, 'unit')).toEqual({
         ...snapshot,
         rev: 2
       })
-      expect(opened.databaseAdapter.getChangeset('unit', 2).createTime).toBe(createdAt / 1000 + 1)
+      expect((await changesetAt(opened.trunk, 2)).createTime).toBe(createdAt / 1000 + 1)
     } finally {
-      await opened.dispose()
+      await opened.close()
     }
   })
 })
@@ -341,13 +349,13 @@ describe('stored JSON', () => {
     } finally {
       await writer.dispose()
     }
-    const reader = api.openUniverfileSQLite(file)
+    const reader = api.openUniverfile(file)
     try {
-      const block = await reader.databaseAdapter.getSheetBlock(context, 'sheet', 'buffer-block')
+      const block = await reader.trunk.getSheetBlock(context, 'sheet', 'buffer-block')
       expect(block.data).toEqual(new Uint8Array([0, 128, 255]))
       expect(Object.getPrototypeOf(block.data)).toBe(Uint8Array.prototype)
     } finally {
-      await reader.dispose()
+      await reader.close()
     }
   })
 })
@@ -358,9 +366,9 @@ describe('concurrent upgrades', () => {
     const file = join(workspace, 'concurrent.univer')
     createLegacy(file)
     const script = `const api = await import(process.argv[1]);
-      const opened = api.openUniverfileSQLite(process.argv[2]);
+      const opened = api.openUniverfile(process.argv[2]);
       console.log(opened.upgrade.status);
-      await opened.dispose();`
+      await opened.close();`
     const run = promisify(execFile)
     const attempts = await Promise.all(
       [0, 1].map(() =>
@@ -413,7 +421,7 @@ it.each([
   )
   db.close()
   const before = await readFile(file)
-  expect(thrown(() => api.openUniverfileSQLite(file))).toMatchObject({
+  expect(thrown(() => api.openUniverfile(file))).toMatchObject({
     code: 'UNSUPPORTED_SCHEMA'
   })
   expect(await readFile(file)).toEqual(before)
@@ -426,10 +434,10 @@ it('stores trunk submit time in seconds and keeps it across retries', async () =
   try {
     await service.createUnit(2, { unitId: 'unit', name: 'Document' })
     expect((await service.submit('unit', 2, changeset(2, Date.now()))).success).toBe(true)
-    const saved = service.runtime.trunkAdapter.getChangeset('unit', 2)
+    const saved = await changesetAt(service.runtime.trunkAdapter, 2)
     expect(saved.createTime).toBeLessThan(1e11)
     expect((await service.submit('unit', 2, changeset(2, 0))).isCsDeduplicate).toBe(true)
-    expect(service.runtime.trunkAdapter.getChangeset('unit', 2).createTime).toBe(saved.createTime)
+    expect((await changesetAt(service.runtime.trunkAdapter, 2)).createTime).toBe(saved.createTime)
   } finally {
     await service.dispose()
   }

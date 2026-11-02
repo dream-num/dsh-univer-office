@@ -3,8 +3,8 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { IChangeset, IMutation, ISheetBlock, ISnapshot } from '@univerjs/protocol'
 import type { UniverfileSQLiteConnection } from '../../driver/connection.ts'
 import { runUniverfileSQLiteTransaction } from '../../driver/transaction.ts'
-import { UniverfileSQLiteDatabaseAdapter } from '../../stores/trunk.ts'
-import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../../stores/worktree.ts'
+import { TrunkStore } from '../../stores/trunk.ts'
+import { WorktreeStore } from '../../stores/worktree.ts'
 import { installSchema } from '../../schema/install.ts'
 import { ANONYMOUS_CREATOR_ID } from './v2.ts'
 import { encodeStoredJson } from '../../codec/stored-json.ts'
@@ -971,11 +971,11 @@ function countMergingWorktrees(database: DatabaseSync, table: string): number {
 }
 
 function validateCurrentDatabase(filename: string, connection: UniverfileSQLiteConnection): void {
-  let trunk: UniverfileSQLiteDatabaseAdapter | undefined
-  let worktree: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
+  let trunk: TrunkStore | undefined
+  let worktree: WorktreeStore | undefined
   try {
-    trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection })
-    worktree = new UniverfileSQLiteWorktreeDatabaseAdapter({ filename, connection })
+    trunk = new TrunkStore({ filename, connection })
+    worktree = new WorktreeStore({ filename, connection })
     trunk.listUnits()
     for (const record of worktree.listWorktrees()) {
       worktree.listWorktreeUnits(record.worktreeId)

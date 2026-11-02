@@ -21,7 +21,10 @@ interface HistoryRow {
   readonly additional_fields: string | null
 }
 
-export interface UniverfileSQLiteHistoryDatabaseAdapterOptions {
+/** History has no application extension; the SDK contract is the whole interface. */
+export type UniverfileHistoryStore = IHistoryDatabaseAdapter
+
+export interface HistoryStoreOptions {
   /** Borrow the `.univer` connection owned by the application. */
   readonly connection: UniverfileSQLiteConnection
 }
@@ -32,11 +35,11 @@ export interface UniverfileSQLiteHistoryDatabaseAdapterOptions {
  * This adapter never owns or closes the shared `.univer` connection. History Service owns the
  * grouping policy; this class only provides its CAS persistence contract and Gateway repair seam.
  */
-export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseAdapter {
+export class HistoryStore implements IHistoryDatabaseAdapter {
   private readonly _database: DatabaseSync
   private _disposed = false
 
-  public constructor(options: UniverfileSQLiteHistoryDatabaseAdapterOptions) {
+  public constructor(options: HistoryStoreOptions) {
     if (!(options?.connection instanceof UniverfileSQLiteConnection)) {
       throw new TypeError('History Database Adapter requires a .univer connection')
     }
@@ -176,12 +179,6 @@ export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseA
       creators.set(row.user_id, origins)
     }
     return [...creators].map(([userID, origins]) => ({ userID, origins }))
-  }
-
-  /** Latest persisted boundary, or `null` when History Service has not initialized the Unit. */
-  public latestStartRevision(unitID: string): number | null {
-    this._assertOpen()
-    return this._latest(unitID)?.start_revision ?? null
   }
 
   public async dispose(): Promise<void> {

@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS } from '../driver/connection.ts'
-import { UniverfileSQLiteError } from '../errors.ts'
+import { UniverfileError } from '../errors.ts'
 import {
   ASSET_V1_TABLES,
   CORE_V1_TABLES,
@@ -104,8 +104,8 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
     }
     return worktreeVersion === 1 ? 'v1' : 'v2'
   } catch (error) {
-    if (error instanceof UniverfileSQLiteError) throw error
-    throw new UniverfileSQLiteError(
+    if (error instanceof UniverfileError) throw error
+    throw new UniverfileError(
       'UNSUPPORTED_SCHEMA',
       `cannot identify .univer schema: ${message(error)}`,
       { cause: error }
@@ -136,8 +136,8 @@ function columns(database: DatabaseSync, table: string): ReadonlySet<string> {
   )
 }
 
-function unsupported(message: string): UniverfileSQLiteError {
-  return new UniverfileSQLiteError('UNSUPPORTED_SCHEMA', message)
+function unsupported(message: string): UniverfileError {
+  return new UniverfileError('UNSUPPORTED_SCHEMA', message)
 }
 
 function message(error: unknown): string {

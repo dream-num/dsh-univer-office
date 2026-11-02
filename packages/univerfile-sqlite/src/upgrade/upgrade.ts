@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { copyFileSync, existsSync, renameSync, unlinkSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { UniverfileSQLiteConnection } from '../driver/connection.ts'
-import { UniverfileSQLiteError } from '../errors.ts'
+import { UniverfileError } from '../errors.ts'
 import { detectUniverfileSQLiteFormat } from './detect.ts'
 import { installSchema } from '../schema/install.ts'
 import { createUniverfileBackup, sha256 } from './backup.ts'
@@ -16,7 +16,7 @@ import { verifyV3Candidate, type UniverfileVerification } from './verify.ts'
 
 export type UniverfileUpgradeSourceFormat = 'v0' | 'v1' | 'v2'
 
-export type UniverfileUpgradeResult =
+export type UniverfileUpgradeOutcome =
   | { readonly status: 'unchanged'; readonly format: 'v3' }
   | {
       readonly status: 'upgraded'
@@ -31,28 +31,21 @@ export type UniverfileUpgradeResult =
       readonly verification: UniverfileVerification
     }
 
-export interface UpgradeUniverfileSQLiteOptions {
-  readonly lockTimeoutMs?: number
-}
-
+/** How long an opener waits for another process to finish upgrading the same file. */
+const UPGRADE_LOCK_TIMEOUT_MS = 5_000
 const REPLACE_RETRY_MS = [0, 50, 100, 200, 400] as const
 const WAIT_BUFFER = new Int32Array(new SharedArrayBuffer(4))
 
-export function upgradeUniverfileSQLite(
-  filename: string,
-  options: UpgradeUniverfileSQLiteOptions = {}
-): UniverfileUpgradeResult {
+export function upgradeUniverfileSQLite(filename: string): UniverfileUpgradeOutcome {
   if (detectUniverfileSQLiteFormat(filename) === 'v3') return { status: 'unchanged', format: 'v3' }
-  return withUniverfileUpgradeLock(filename, options.lockTimeoutMs ?? 5_000, () =>
-    upgradeLocked(filename)
-  )
+  return withUniverfileUpgradeLock(filename, UPGRADE_LOCK_TIMEOUT_MS, () => upgradeLocked(filename))
 }
 
 /**
  * Upgrades while holding the upgrade lock. Another opener may have finished the upgrade while
  * this one waited for the lock, so the format is identified again first.
  */
-function upgradeLocked(filename: string): UniverfileUpgradeResult {
+function upgradeLocked(filename: string): UniverfileUpgradeOutcome {
   const sourceFormat = detectUniverfileSQLiteFormat(filename)
   if (sourceFormat === 'v3') return { status: 'unchanged', format: 'v3' }
   const backup = createUniverfileBackup(filename, sourceFormat)
@@ -81,8 +74,8 @@ function upgradeLocked(filename: string): UniverfileUpgradeResult {
     }
   } catch (error) {
     if (existsSync(candidatePath)) unlinkSync(candidatePath)
-    if (error instanceof UniverfileSQLiteError) throw error
-    throw new UniverfileSQLiteError(
+    if (error instanceof UniverfileError) throw error
+    throw new UniverfileError(
       'UPGRADE_FAILED',
       `failed to upgrade ${filename} from ${sourceFormat} to v3: ${error instanceof Error ? error.message : String(error)}`,
       { cause: error }

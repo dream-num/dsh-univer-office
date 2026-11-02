@@ -17,14 +17,13 @@ import {
 import { UniverCollabWorktreeEndpoint } from '@univerjs-pro/collaboration-worktree-endpoint'
 import { UniverCollabWorktreeService } from '@univerjs-pro/collaboration-worktree-service'
 import {
-  createUniverfileSQLite,
-  openUniverfileSQLite,
-  type UniverfileSQLite,
-  type UniverfileSQLiteAssetStore,
-  type UniverfileSQLiteDatabaseAdapter,
-  type UniverfileSQLiteHistoryDatabaseAdapter,
-  type UniverfileUpgradeResult,
-  type UniverfileSQLiteWorktreeDatabaseAdapter
+  openUniverfile,
+  type Univerfile,
+  type UniverfileAssetStore,
+  type UniverfileHistoryStore,
+  type UniverfileTrunkStore,
+  type UniverfileUpgradeOutcome,
+  type UniverfileWorktreeStore
 } from '@univer/univerfile-sqlite'
 import { createSdkCollabLogger } from './sdk-logger.js'
 import { GATEWAY_UNIT_RUNTIME } from './sdk-runtime.js'
@@ -41,16 +40,16 @@ export interface GatewayFileRuntimeOptions {
  * protocol endpoints and Comb connections.
  */
 export class GatewayFileRuntime {
-  public readonly trunkAdapter: UniverfileSQLiteDatabaseAdapter
-  public readonly worktreeAdapter: UniverfileSQLiteWorktreeDatabaseAdapter
-  public readonly historyAdapter: UniverfileSQLiteHistoryDatabaseAdapter
-  public readonly assetStore: UniverfileSQLiteAssetStore
-  public readonly upgrade: UniverfileUpgradeResult
+  public readonly trunkAdapter: UniverfileTrunkStore
+  public readonly worktreeAdapter: UniverfileWorktreeStore
+  public readonly historyAdapter: UniverfileHistoryStore
+  public readonly assetStore: UniverfileAssetStore
+  public readonly upgrade: UniverfileUpgradeOutcome
   public readonly trunkService: UniverCollabService
   public readonly worktreeService: UniverCollabWorktreeService
   public readonly historyService: UniverHistoryService
 
-  private readonly _univerfile: UniverfileSQLite
+  private readonly _univerfile: Univerfile
   private readonly _ticketStore: MemorySessionTicketStore
   private readonly _trunkEndpoint: UniverCollabEndpoint
   private readonly _worktreeEndpoint: UniverCollabWorktreeEndpoint
@@ -61,16 +60,13 @@ export class GatewayFileRuntime {
 
   public constructor(options: GatewayFileRuntimeOptions = {}) {
     const filename = options.dbPath ?? ':memory:'
-    this._univerfile =
-      filename === ':memory:' || options.create === true
-        ? createUniverfileSQLite(filename)
-        : openUniverfileSQLite(filename)
+    this._univerfile = openUniverfile(filename, { create: options.create === true })
     try {
       this.upgrade = this._univerfile.upgrade
-      this.trunkAdapter = this._univerfile.databaseAdapter
-      this.worktreeAdapter = this._univerfile.worktreeDatabaseAdapter
-      this.historyAdapter = this._univerfile.historyDatabaseAdapter
-      this.assetStore = this._univerfile.assetStore
+      this.trunkAdapter = this._univerfile.trunk
+      this.worktreeAdapter = this._univerfile.worktree
+      this.historyAdapter = this._univerfile.history
+      this.assetStore = this._univerfile.assets
 
       this.trunkService = new UniverCollabService({
         dbAdapter: this.trunkAdapter,
@@ -134,7 +130,7 @@ export class GatewayFileRuntime {
         context.reject(404, 'Unknown collaboration endpoint')
       })
     } catch (error) {
-      void this._univerfile.dispose()
+      void this._univerfile.close()
       throw error
     }
   }
@@ -169,7 +165,7 @@ export class GatewayFileRuntime {
     await this.worktreeService.dispose()
     await this.trunkService.dispose()
     await this._ticketStore.dispose()
-    await this._univerfile.dispose()
+    await this._univerfile.close()
     this._connectionIds.clear()
   }
 

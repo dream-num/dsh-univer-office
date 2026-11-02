@@ -1,4 +1,4 @@
-export class UniverfileSQLiteError extends Error {
+export class UniverfileError extends Error {
   public constructor(
     public readonly code:
       | 'FILE_NOT_FOUND'
@@ -12,6 +12,6 @@ export class UniverfileSQLiteError extends Error {
     options?: ErrorOptions
   ) {
     super(message, options)
-    this.name = 'UniverfileSQLiteError'
+    this.name = 'UniverfileError'
   }
 }

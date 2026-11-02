@@ -34,7 +34,7 @@ interface PayloadRow {
   readonly payload_json: string
 }
 
-export interface UniverfileSQLiteDatabaseAdapterOptions {
+export interface TrunkStoreOptions {
   /** SQLite filename or `:memory:`; must match the connection. */
   readonly filename: string
   /** Shared connection to a file whose current schema is installed. The adapter never closes it. */
@@ -67,11 +67,17 @@ export interface UniverfileUnitSummary {
  */
 export const UNIVERFILE_UNIT_METADATA_KEY = '@univer/univerfile-sqlite/unit-metadata'
 
-export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
+/** Trunk persistence: the SDK contract plus the Unit listings the application needs. */
+export interface UniverfileTrunkStore extends IDatabaseAdapter {
+  listUnits(): readonly UniverfileUnitSummary[]
+  listUnitRecords(): readonly UnitRecord[]
+}
+
+export class TrunkStore implements UniverfileTrunkStore {
   private readonly _database: DatabaseSync
   private _disposed = false
 
-  constructor(options: UniverfileSQLiteDatabaseAdapterOptions) {
+  constructor(options: TrunkStoreOptions) {
     validateOptions(options)
     this._database = options.connection.database
   }
@@ -113,30 +119,6 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
       )
       .all() as unknown as UnitRow[]
     return rows.map(rowToUnitRecord)
-  }
-
-  public getChangeset(unitID: string, revision: number): IChangeset | undefined {
-    this._assertOpen()
-    const row = this._database
-      .prepare(
-        `SELECT payload_json
-         FROM collaboration_changesets
-         WHERE unit_id = ? AND revision = ?`
-      )
-      .get(unitID, revision) as PayloadRow | undefined
-    return row ? decodeStoredJson<IChangeset>(row.payload_json) : undefined
-  }
-
-  public getChangesetBySid(unitID: string, sid: string, reqId: number): IChangeset | undefined {
-    this._assertOpen()
-    const row = this._database
-      .prepare(
-        `SELECT payload_json
-         FROM collaboration_changesets
-         WHERE unit_id = ? AND sid = ? AND req_id = ?`
-      )
-      .get(unitID, sid, reqId) as PayloadRow | undefined
-    return row ? decodeStoredJson<IChangeset>(row.payload_json) : undefined
   }
 
   async getSnapshot(
@@ -246,28 +228,6 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
       return null
     }
     return { unitID, type: unit.type as UniverType, rev: row.revision }
-  }
-
-  async getSubmission(
-    _context: DatabaseContext,
-    unitID: string,
-    sid: string,
-    reqId: number
-  ): Promise<IChangeset | null> {
-    this._assertOpen()
-    const row = this._database
-      .prepare(
-        `SELECT collaboration_changesets.payload_json
-         FROM collaboration_changesets
-         JOIN collaboration_units
-           ON collaboration_units.unit_id = collaboration_changesets.unit_id
-         WHERE collaboration_changesets.unit_id = ?
-           AND collaboration_changesets.sid = ?
-           AND collaboration_changesets.req_id = ?
-           AND collaboration_units.soft_deleted_at_ms IS NULL`
-      )
-      .get(unitID, sid, reqId) as PayloadRow | undefined
-    return row ? decodeStoredJson<IChangeset>(row.payload_json) : null
   }
 
   async createUnit(
@@ -599,7 +559,7 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   }
 }
 
-function validateOptions(options: UniverfileSQLiteDatabaseAdapterOptions): void {
+function validateOptions(options: TrunkStoreOptions): void {
   if (!options.filename) {
     throw invalidRequest('SQLite filename is required')
   }

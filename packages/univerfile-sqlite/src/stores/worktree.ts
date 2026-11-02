@@ -85,7 +85,7 @@ interface DeletedUnitRow {
   readonly deleted_at_ms: number
 }
 
-export interface UniverfileSQLiteWorktreeDatabaseAdapterOptions {
+export interface WorktreeStoreOptions {
   /** SQLite filename or `:memory:`; must match the connection. */
   readonly filename: string
   /** Shared connection to a file whose current schema is installed. The adapter never closes it. */
@@ -139,11 +139,23 @@ export const UNIVERFILE_WORKTREE_METADATA_KEY = '@univer/univerfile-sqlite/workt
 export const UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY =
   '@univer/univerfile-sqlite/worktree-change-metadata'
 
-export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabaseAdapter {
+/** Worktree persistence: the SDK contract plus the queries and deletion the application needs. */
+export interface UniverfileWorktreeStore extends IWorktreeDatabaseAdapter {
+  listWorktrees(status?: string): readonly UniverfileWorktreeSummary[]
+  listWorktreeUnits(worktreeID: string): readonly UniverfileWorktreeUnitSummary[]
+  listDeletedUnits(worktreeID: string): readonly UniverfileDeletedWorktreeUnit[]
+  /**
+   * Removes a Unit from a Worktree and records the deletion. A local file does not support the
+   * SDK's revocable `setUnitRemoved`, which always returns `INVALID_REQUEST` here.
+   */
+  deleteUnit(context: DatabaseContext, worktreeID: string, unitID: string): DeleteWorktreeUnitResult
+}
+
+export class WorktreeStore implements UniverfileWorktreeStore {
   private readonly _database: DatabaseSync
   private _disposed = false
 
-  constructor(options: UniverfileSQLiteWorktreeDatabaseAdapterOptions) {
+  constructor(options: WorktreeStoreOptions) {
     validateOptions(options)
     this._database = options.connection.database
   }
@@ -235,24 +247,6 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
     return rows.map(({ payload_json }) => decodeStoredJson<IChangeset>(payload_json))
   }
 
-  async getDraftSubmission(
-    _context: DatabaseContext,
-    worktreeID: string,
-    unitID: string,
-    sid: string,
-    reqId: number
-  ): Promise<IChangeset | null> {
-    this._assertOpen()
-    const row = this._database
-      .prepare(
-        `SELECT payload_json
-         FROM collaboration_worktree_changesets
-         WHERE worktree_id = ? AND unit_id = ? AND sid = ? AND req_id = ?`
-      )
-      .get(worktreeID, unitID, sid, reqId) as PayloadRow | undefined
-    return row ? decodeStoredJson<IChangeset>(row.payload_json) : null
-  }
-
   async getUnitSeed(
     _context: DatabaseContext,
     worktreeID: string,
@@ -275,18 +269,6 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
     context: DatabaseContext,
     input: CreateWorktreeDatabaseInput
   ): Promise<CreateWorktreeDatabaseResult> {
-    return this.createWorktreeForGateway(context, input)
-  }
-
-  /**
-   * Synchronous compatibility entry used by the existing Gateway control facade. The SQLite driver
-   * is synchronous and completes the transaction before returning, so initialization errors propagate to the caller instead of
-   * becoming an ignored rejected Promise.
-   */
-  public createWorktreeForGateway(
-    context: DatabaseContext,
-    input: CreateWorktreeDatabaseInput
-  ): CreateWorktreeDatabaseResult {
     this._assertOpen()
     validateCreateInput(input)
     return this._transaction(() => {
@@ -1071,7 +1053,7 @@ function rowToUnitRecord(row: WorktreeUnitRow): WorktreeUnitRecord {
   }
 }
 
-function validateOptions(options: UniverfileSQLiteWorktreeDatabaseAdapterOptions): void {
+function validateOptions(options: WorktreeStoreOptions): void {
   if (!options.filename) throw invalidRequest('SQLite filename is required')
   if (options.connection.filename !== options.filename) {
     throw invalidRequest('Shared SQLite connection filename does not match adapter filename')

@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto'
 import { UniverfileSQLiteConnection } from '../driver/connection.ts'
-import { UniverfileSQLiteAssetStore } from '../stores/assets.ts'
-import { UniverfileSQLiteDatabaseAdapter } from '../stores/trunk.ts'
-import { UniverfileSQLiteHistoryDatabaseAdapter } from '../stores/history.ts'
-import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../stores/worktree.ts'
-import { UniverfileSQLiteError } from '../errors.ts'
+import { AssetStore } from '../stores/assets.ts'
+import { TrunkStore } from '../stores/trunk.ts'
+import { HistoryStore } from '../stores/history.ts'
+import { WorktreeStore } from '../stores/worktree.ts'
+import { UniverfileError } from '../errors.ts'
 import { detectUniverfileSQLiteFormat } from './detect.ts'
 
 interface AssetRow {
@@ -22,9 +22,9 @@ export interface UniverfileVerification {
 
 export function verifyV3Candidate(filename: string): UniverfileVerification {
   let connection: UniverfileSQLiteConnection | undefined
-  let trunk: UniverfileSQLiteDatabaseAdapter | undefined
-  let worktrees: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
-  let history: UniverfileSQLiteHistoryDatabaseAdapter | undefined
+  let trunk: TrunkStore | undefined
+  let worktrees: WorktreeStore | undefined
+  let history: HistoryStore | undefined
   try {
     if (detectUniverfileSQLiteFormat(filename) !== 'v3') {
       throw new Error('candidate did not identify as v3')
@@ -38,10 +38,10 @@ export function verifyV3Candidate(filename: string): UniverfileVerification {
     if (connection.database.prepare('PRAGMA foreign_key_check').get() !== undefined) {
       throw new Error('SQLite foreign-key check failed')
     }
-    trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection })
-    worktrees = new UniverfileSQLiteWorktreeDatabaseAdapter({ filename, connection })
-    history = new UniverfileSQLiteHistoryDatabaseAdapter({ connection })
-    const assetStore = new UniverfileSQLiteAssetStore({ connection })
+    trunk = new TrunkStore({ filename, connection })
+    worktrees = new WorktreeStore({ filename, connection })
+    history = new HistoryStore({ connection })
+    const assetStore = new AssetStore({ connection })
     const units = trunk.listUnits()
     const worktreeRows = worktrees.listWorktrees()
     for (const worktree of worktreeRows) {
@@ -72,7 +72,7 @@ export function verifyV3Candidate(filename: string): UniverfileVerification {
     }
     return { units: units.length, worktrees: worktreeRows.length, assets: assets.length }
   } catch (error) {
-    throw new UniverfileSQLiteError(
+    throw new UniverfileError(
       'VERIFICATION_FAILED',
       `v3 candidate verification failed: ${error instanceof Error ? error.message : String(error)}`,
       { cause: error }

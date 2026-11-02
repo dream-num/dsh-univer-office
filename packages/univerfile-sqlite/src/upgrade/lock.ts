@@ -1,5 +1,5 @@
 import { mkdirSync, rmdirSync } from 'node:fs'
-import { UniverfileSQLiteError } from '../errors.ts'
+import { UniverfileError } from '../errors.ts'
 
 const WAIT_BUFFER = new Int32Array(new SharedArrayBuffer(4))
 
@@ -17,7 +17,7 @@ export function withUniverfileUpgradeLock<T>(
     } catch (error) {
       if (!isExists(error)) throw error
       if (Date.now() >= deadline) {
-        throw new UniverfileSQLiteError(
+        throw new UniverfileError(
           'UPGRADE_LOCK_TIMEOUT',
           `timed out waiting for .univer upgrade lock: ${filename}`,
           { cause: error }

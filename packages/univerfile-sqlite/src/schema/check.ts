@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { UniverfileSQLiteError } from '../errors.ts'
+import { UniverfileError } from '../errors.ts'
 import { V3_COMPONENTS } from './v3.ts'
 
 interface ColumnRow {
@@ -51,6 +51,6 @@ function columns(database: DatabaseSync, table: string): ReadonlySet<string> {
   )
 }
 
-function unsupported(message: string): UniverfileSQLiteError {
-  return new UniverfileSQLiteError('UNSUPPORTED_SCHEMA', message)
+function unsupported(message: string): UniverfileError {
+  return new UniverfileError('UNSUPPORTED_SCHEMA', message)
 }

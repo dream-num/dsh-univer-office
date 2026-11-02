@@ -1,41 +1,37 @@
-export {
-  DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS,
-  UniverfileSQLiteConnection
-} from './driver/connection.ts'
-export { runUniverfileSQLiteTransaction } from './driver/transaction.ts'
-export type { UniverfileSQLiteConnectionOptions } from './driver/connection.ts'
-export { UniverfileSQLiteError } from './errors.ts'
-export { createUniverfileSQLite, openUniverfileSQLite } from './open.ts'
-export type { OpenUniverfileSQLiteOptions, UniverfileSQLite } from './open.ts'
-export { detectUniverfileSQLiteFormat } from './upgrade/detect.ts'
-export type { UniverfileSQLiteFormat } from './upgrade/detect.ts'
-export { upgradeUniverfileSQLite } from './upgrade/upgrade.ts'
-export type { UniverfileUpgradeResult, UpgradeUniverfileSQLiteOptions } from './upgrade/upgrade.ts'
-export { UNIVERFILE_UNIT_METADATA_KEY, UniverfileSQLiteDatabaseAdapter } from './stores/trunk.ts'
-export { UniverfileSQLiteHistoryDatabaseAdapter } from './stores/history.ts'
-export type { UniverfileSQLiteHistoryDatabaseAdapterOptions } from './stores/history.ts'
+// Public interface of @univer/univerfile-sqlite. Anything not exported here is internal.
+export { openUniverfile } from './open.ts'
+export type { OpenUniverfileOptions, Univerfile } from './open.ts'
+export { UniverfileError } from './errors.ts'
+export type { UniverfileUpgradeOutcome, UniverfileUpgradeSourceFormat } from './upgrade/upgrade.ts'
+export type { UniverfileVerification } from './upgrade/verify.ts'
+
+export { UNIVERFILE_UNIT_METADATA_KEY } from './stores/trunk.ts'
 export type {
-  UniverfileSQLiteDatabaseAdapterOptions,
+  UniverfileTrunkStore,
   UniverfileUnitMetadata,
   UniverfileUnitSummary
 } from './stores/trunk.ts'
-export { MAX_UNIVERFILE_ASSET_BYTES, UniverfileSQLiteAssetStore } from './stores/assets.ts'
-export type {
-  UniverfileAssetRecord,
-  UniverfileOpenedAsset,
-  UniverfileSQLiteAssetStoreOptions
-} from './stores/assets.ts'
+
 export {
   UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY,
-  UNIVERFILE_WORKTREE_METADATA_KEY,
-  UniverfileSQLiteWorktreeDatabaseAdapter
+  UNIVERFILE_WORKTREE_METADATA_KEY
 } from './stores/worktree.ts'
 export type {
   DeleteWorktreeUnitResult,
   UniverfileDeletedWorktreeUnit,
   UniverfileWorktreeChangeMetadata,
-  UniverfileSQLiteWorktreeDatabaseAdapterOptions,
   UniverfileWorktreeMetadata,
+  UniverfileWorktreeStore,
   UniverfileWorktreeSummary,
   UniverfileWorktreeUnitSummary
 } from './stores/worktree.ts'
+
+export type { UniverfileHistoryStore } from './stores/history.ts'
+
+export { MAX_UNIVERFILE_ASSET_BYTES } from './stores/assets.ts'
+export type {
+  UniverfileAssetRecord,
+  UniverfileAssetStore,
+  UniverfileOpenedAsset,
+  UniverfileStoreAssetInput
+} from './stores/assets.ts'

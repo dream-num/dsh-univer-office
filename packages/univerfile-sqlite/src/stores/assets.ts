@@ -36,7 +36,26 @@ interface OpenedAssetRow extends AssetRow {
   readonly bytes: Uint8Array | ArrayBuffer
 }
 
-export interface UniverfileSQLiteAssetStoreOptions {
+export interface UniverfileStoreAssetInput {
+  readonly unitId: string
+  /** Omitted for a trunk asset. */
+  readonly worktreeId?: string
+  readonly originalFilename: string
+  readonly mediaType: string
+  readonly bytes: Uint8Array
+  /** Return an existing asset with the same bytes in the same Unit and Worktree scope. */
+  readonly reuseInScope?: boolean
+}
+
+/** Content-addressed embedded assets of one `.univer` file. */
+export interface UniverfileAssetStore {
+  store(input: UniverfileStoreAssetInput): UniverfileAssetRecord
+  open(assetId: string): UniverfileOpenedAsset | null
+  /** Moves the assets of the given Units from the Worktree scope to trunk; returns how many moved. */
+  publishWorktreeAssets(worktreeId: string, unitIds: readonly string[]): number
+}
+
+export interface AssetStoreOptions {
   readonly connection: UniverfileSQLiteConnection
 }
 
@@ -45,21 +64,14 @@ export interface UniverfileSQLiteAssetStoreOptions {
  * Snapshot and changeset payloads only carry the opaque `assetId`; repeated uploads may create
  * distinct scoped identities, while the digest table stores identical bytes once.
  */
-export class UniverfileSQLiteAssetStore {
+export class AssetStore implements UniverfileAssetStore {
   private readonly _database: DatabaseSync
 
-  public constructor(options: UniverfileSQLiteAssetStoreOptions) {
+  public constructor(options: AssetStoreOptions) {
     this._database = options.connection.database
   }
 
-  public store(input: {
-    readonly unitId: string
-    readonly worktreeId?: string
-    readonly originalFilename: string
-    readonly mediaType: string
-    readonly bytes: Uint8Array
-    readonly reuseInScope?: boolean
-  }): UniverfileAssetRecord {
+  public store(input: UniverfileStoreAssetInput): UniverfileAssetRecord {
     validateStoredAsset(input)
     const bytes = Uint8Array.from(input.bytes)
     const digest = createHash('sha256').update(bytes).digest('hex')
@@ -135,20 +147,6 @@ export class UniverfileSQLiteAssetStore {
       }
       return count
     })
-  }
-
-  public countBlobs(): number {
-    const row = this._database
-      .prepare('SELECT COUNT(*) AS count FROM collaboration_asset_blobs')
-      .get() as { readonly count: number }
-    return row.count
-  }
-
-  public countAssets(): number {
-    const row = this._database
-      .prepare('SELECT COUNT(*) AS count FROM collaboration_assets')
-      .get() as { readonly count: number }
-    return row.count
   }
 
   private _findByDigest(
