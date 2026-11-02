@@ -29,6 +29,21 @@ const transitiveBindings = [
 
 const exactVersionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
 
+// Wrappers declare their binding either exactly or, since the 1.3 SDK, as a tilde range
+// (`~1.0.4`). The published manifest always pins the resolved exact version.
+function satisfiesDeclaration(version, declaration) {
+  if (exactVersionPattern.test(declaration)) return version === declaration
+  const tilde = /^~(\d+)\.(\d+)\.(\d+)$/.exec(declaration)
+  if (tilde === null) throw new Error(`unsupported binding declaration ${declaration}`)
+  const installed = /^(\d+)\.(\d+)\.(\d+)$/.exec(version)
+  if (installed === null) return false
+  return (
+    installed[1] === tilde[1] &&
+    installed[2] === tilde[2] &&
+    Number(installed[3]) >= Number(tilde[3])
+  )
+}
+
 function manifestRootOf(name) {
   let cursor = dirname(requireFromPlugin.resolve(name))
   for (;;) {
@@ -46,8 +61,8 @@ function manifestRootOf(name) {
 }
 
 // Every package in the pnpm store whose dependency tree links the binding must
-// declare the same exact version the resolver picked — a mismatch means the
-// installed tree does not match the wrapper declarations.
+// make the same declaration, and the version the resolver picked must satisfy it —
+// otherwise the installed tree does not match the wrapper declarations.
 function storeDeclaredVersions(binding, installedRoot) {
   const store = join(packageRoot, 'node_modules', '.pnpm')
   if (!existsSync(store)) return null
@@ -96,7 +111,10 @@ function injectRuntimeBindings(manifestPath) {
       binding,
       realpathSync(dirname(requireFromPlugin.resolve(binding)))
     )
-    if (declared !== null && (declared.size !== 1 || !declared.has(installed.version))) {
+    if (
+      declared !== null &&
+      (declared.size !== 1 || !satisfiesDeclaration(installed.version, [...declared][0]))
+    ) {
       throw new Error(
         `installed ${binding}@${installed.version} does not match the wrapper declarations ${[...declared].join(', ')}; rerun pnpm install`
       )
