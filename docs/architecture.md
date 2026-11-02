@@ -162,7 +162,6 @@ src/
   workers/
     unit-content/
       entry.ts                       # 一次性无头 Univer 子进程入口
-      license.ts                     # Worker 使用的 Univer license
       runtime/content-runtime.ts     # 两类 Worker 共用的 runtime 初始化校验与加载
     collaboration-runtime/
       entry.ts                       # runtime pool 的 worker definition
@@ -205,6 +204,7 @@ src/
       worktree.ts
   shared/
     settings.ts                      # Host/Client 共用的纯设置契约与默认值
+    univer-license.ts                # Host、Gateway、Worker 共用的 Univer License 与 licenseKey
     wire/
       status.ts
       state.ts
@@ -450,6 +450,8 @@ Client 必须满足：
 `src` 包含插件发布的所有 application 源码；Viewer application、machine render page、render preset 和 IMPORTRANGE plugin 源码从 `univer-cli` 复制到本仓库后直接维护；`render-preset/import-export` 从 univer-pro `examples/src/*/custom-plugin/custom-import-export`（`v1.2.0`）复制，去掉移动端入口，依赖注入按本仓库约定改为 `setDependencies`/`DependentOn` 调用而非装饰器。`packages/unit-comparison-viewer` 与 `univer-workspace`、`univer-cli` 中的同名可复制组件保持行为同步，并针对本仓库的 React 18 Host 做兼容。`pnpm run build` 生成 Host/Client bundle、Unit Content Worker、Gateway、machine render page 和 Viewer；`lib` 与 `artifacts` 都被 gitignore，并在打包前重新生成。Host 构建为 Node ESM，Client 构建为 DSH ModuleLoader 可加载的浏览器 bundle，Gateway 构建为 Node CJS 子进程，Worker 构建为 Node ESM 子进程，machine render page 与 Viewer 构建为 Vite 静态资产。lib 构建同时生成 `lib/telemetry-entry.js`（卸载 hook 发送入口）与 `lib/build-info.json`（包版本、构建 commit 与遥测 endpoint）。
 
 发布包包含运行所需的 Gateway、Viewer、Unit Content Worker、Collaboration Runtime Worker、Office 转换器、平台依赖、Univer license 与 bundled Skills。Gateway、Worker、Viewer 和 Host 直接使用 manifest 中精确版本的 Univer SDK/API Reference packages；JavaScript SDK 被 bundle，平台原生 package 由包管理器为目标机器安装。发布时只打包从当前源码生成的运行产物。
+
+Univer 凭据分两处：浏览器侧（Viewer、machine render page）只需 License，放在 `render-preset/license.ts`；Node 侧放在 `src/shared/univer-license.ts`，Web SDK 渲染只取 License，Collaboration SDK（`UniverCollabService`）与 Exchange（`configureExchange`）同时需要 License 与 licenseKey。Gateway 与 Worker 子进程只继承固定的环境变量白名单，因此凭据显式传入 SDK，不依赖 SDK 自己读取 `UNIVER_LICENSE`/`UNIVER_LICENSE_KEY`；独立运行时可用这两个环境变量成对替换内置凭据。Gateway 在 `startServer` 时配置一次 Exchange，Worker 每个进程配置一次。轮换 License 时两个文件必须同步更新。
 
 原生公式引擎与 Office 转换器仍具有平台属性；`.univer` 使用 Node 内置的 `node:sqlite`，不再随包携带 SQLite 原生依赖。release workflow 必须在目标平台安装 lockfile 所指定的依赖后构建和测试，不能把一个平台的 `node_modules` 复制为通用发布物。
 

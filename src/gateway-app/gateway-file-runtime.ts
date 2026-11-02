@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import process from 'node:process'
 import type { Duplex } from 'node:stream'
 import {
   MemorySessionTicketStore,
@@ -25,6 +26,7 @@ import {
   type UniverfileUpgradeOutcome,
   type UniverfileWorktreeStore
 } from '@univer/univerfile-sqlite'
+import { univerServerCredentials } from '../shared/univer-license.js'
 import { createSdkCollabLogger } from './sdk-logger.js'
 import { GATEWAY_UNIT_RUNTIME } from './sdk-runtime.js'
 export interface GatewayFileRuntimeOptions {
@@ -71,7 +73,8 @@ export class GatewayFileRuntime {
       this.trunkService = new UniverCollabService({
         dbAdapter: this.trunkAdapter,
         runtime: GATEWAY_UNIT_RUNTIME,
-        logger: createSdkCollabLogger()
+        logger: createSdkCollabLogger(),
+        ...univerServerCredentials(process.env)
       })
       this.worktreeService = new UniverCollabWorktreeService({
         trunk: {

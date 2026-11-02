@@ -5,12 +5,14 @@ import {
   DocxCompatibilityMode,
   ExchangeFormat,
   FormulaCalculationMode,
+  configureExchange,
   exportToFile,
   importFile,
   type ExportOptions,
   type ImportOptions
 } from '@univerjs-pro/exchange-node'
 import { UniverInstanceType } from '@univerjs/core'
+import { univerServerCredentials } from '../../shared/univer-license.ts'
 import {
   executeUnitContent,
   inspectUnitContent,
@@ -106,6 +108,7 @@ if (!envelope.ok) process.exitCode = 1
 
 async function main(): Promise<JsonValue> {
   const request = parseRequest(JSON.parse(await readStdin()) as unknown)
+  await configureExchange(univerServerCredentials(process.env))
   if (request.operation === 'import') {
     return (await importOfficeFile(
       request.sourcePath,

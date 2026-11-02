@@ -2,7 +2,10 @@ import type { AddressInfo } from 'node:net'
 import { stat } from 'node:fs/promises'
 import http from 'node:http'
 import { resolve } from 'node:path'
+import process from 'node:process'
+import { configureExchange } from '@univerjs-pro/exchange-node'
 import sirv from 'sirv'
+import { univerServerCredentials } from '../shared/univer-license.js'
 import { VIEWER_BASE } from '../shared/wire/viewer.js'
 import { createRequestListener } from './transport/http.js'
 import { attachGatewayWebSockets } from './transport/ws.js'
@@ -37,6 +40,8 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
     ...(options.allowedRoot === undefined ? {} : { allowedRoot: options.allowedRoot }),
     ...(options.idleTtlMs === undefined ? {} : { idleTtlMs: options.idleTtlMs })
   }
+  // Exchange keeps one credential default per process; set it before any export can run.
+  await configureExchange(univerServerCredentials(process.env))
   const manager = new UniverfileManager(managerOptions)
   const apiRequestListener = createRequestListener(manager)
   const httpServer = http.createServer(

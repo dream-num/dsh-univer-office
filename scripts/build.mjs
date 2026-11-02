@@ -213,6 +213,17 @@ if (target === 'all' || target === 'worker') {
     platform: 'node',
     target: 'node22.19',
     format: 'esm',
+    // @univerjs-pro/exchange-node's ESM entry re-exports its CJS build, which calls require()
+    // for Node built-ins and resolves its native binding from __filename. Neither exists in
+    // ESM output, so every worker file defines them from its own module URL.
+    banner: {
+      js: [
+        "import { createRequire as __workerCreateRequire } from 'node:module'",
+        "import { fileURLToPath as __workerFileURLToPath } from 'node:url'",
+        'const require = __workerCreateRequire(import.meta.url)',
+        'const __filename = __workerFileURLToPath(import.meta.url)'
+      ].join('\n')
+    },
     legalComments: 'none',
     sourcemap: false
   })

@@ -7,7 +7,7 @@ import {
 } from '@univer-cli/univer-collaboration-runtime'
 import type { UniverInstanceType } from '@univerjs/core'
 import { unitContentError, unitContentKind } from '../../../shared/unit-content-session.ts'
-import { UNIVER_LICENSE } from '../license.ts'
+import { univerLicense } from '../../../shared/univer-license.ts'
 import { createLocalReferencedUnitProviderRegistration } from './local-referenced-unit-provider.ts'
 import { LocalSnapshotServerAdapter } from './local-snapshot-server-adapter.ts'
 
@@ -51,7 +51,7 @@ export async function loadUnitContentRuntime(
       )
     }
     return await createStandardHeadlessUniverFactory({
-      license: process.env['UNIVER_LICENSE']?.trim() || UNIVER_LICENSE,
+      license: univerLicense(process.env),
       embedPluginConfig: {
         resourceRefUnitProviderRegistrations: [
           createLocalReferencedUnitProviderRegistration({
