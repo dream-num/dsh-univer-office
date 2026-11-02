@@ -86,5 +86,6 @@ pnpm --filter @univer/univerfile-sqlite test
 pnpm --filter @univer/univerfile-sqlite typecheck
 ```
 
-Tests open files only through `openUniverfile`. `test/support/legacy.ts` builds older formats from
-the frozen schemas in `test/fixtures/`.
+Tests open files only through `openUniverfile`. `test/fixtures/` holds files written by released
+CLIs for every older format, and `test/support/legacy.ts` builds files with precise or broken
+content from frozen schemas; `test/fixtures/README.md` records how each fixture was produced.

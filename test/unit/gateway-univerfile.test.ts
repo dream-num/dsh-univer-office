@@ -1,7 +1,7 @@
 // The Gateway's collaboration service over `.univer` files: an upgraded file serves History and
 // Worktree submits, and submits record protocol-second times. File format and upgrade behaviour
 // are covered by the @univer/univerfile-sqlite package tests.
-import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -79,6 +79,31 @@ it('serves upgraded History and Worktree submits with protocol-second timestamps
     const draft = await live.submitWorktreeMutations('draft', 'unit', [])
     expect(draft.revision).toBe(5)
     expect(draft.createTime).toBeLessThan(1e11)
+  } finally {
+    await live.dispose()
+  }
+})
+
+// Files written by released CLIs (see the package's test/fixtures/README.md) stay usable after the
+// upgrade: the current SDK materializes their Units, and their draft Worktree accepts submits.
+it.each([
+  'v0-univer-cli-0.3.8.univer',
+  'v1-univer-cli-0.3.12.univer',
+  'v1-univer-cli-0.4.4.univer',
+  'v2-univer-cli-0.5.0.univer'
+])('serves %s after upgrading it', async (fixture) => {
+  const file = join(workspace, fixture)
+  await copyFile(repoPath('packages', 'univerfile-sqlite', 'test', 'fixtures', fixture), file)
+  const live = new api.CollabService({ dbPath: file })
+  try {
+    expect(live.runtime.upgrade.status).toBe('upgraded')
+    const [unit] = live.listUnits()
+    expect(await live.materializeUnit(unit.unitId, unit.type)).toBeTruthy()
+    const draft = live.listWorktrees().find((worktree: any) => worktree.status === 'draft')
+    const [draftUnit] = live.worktreeUnits(draft.worktreeId)
+    const submitted = await live.submitWorktreeMutations(draft.worktreeId, draftUnit.unitId, [])
+    expect(submitted.revision).toBe(4)
+    expect(submitted.createTime).toBeLessThan(1e11)
   } finally {
     await live.dispose()
   }

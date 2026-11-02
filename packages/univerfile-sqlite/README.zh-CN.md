@@ -78,5 +78,5 @@ pnpm --filter @univer/univerfile-sqlite test
 pnpm --filter @univer/univerfile-sqlite typecheck
 ```
 
-测试只通过 `openUniverfile` 打开文件。`test/support/legacy.ts` 基于 `test/fixtures/` 中冻结的 schema
-构造旧格式文件。
+测试只通过 `openUniverfile` 打开文件。`test/fixtures/` 存放已发布 CLI 写出的各旧格式文件；需要精确或损坏内容的
+用例由 `test/support/legacy.ts` 基于冻结的 schema 构造。每个 fixture 的来源记录在 `test/fixtures/README.md`。
