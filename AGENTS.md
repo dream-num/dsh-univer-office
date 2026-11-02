@@ -64,7 +64,7 @@ Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before ev
 - Validate deployable configuration before use. Resolve behavioral defaults explicitly in the Provider that owns them; do not hide deployment defaults deep inside execution code.
 - Model-visible facts must come from replayable structured session events. `univer_*` tools return the file, worktree, and Unit identities required to recover a target; Client code must not parse free text or shell output.
 - Tool presentation depends only on arguments and persisted results. Before adding a tool, define execution, cancellation, timeout, structured output, presentation, approval, and skill guidance, then validate the real Consumer path.
-- Two packages have copies in other Univer repositories, as a deliberate exception to the rule against copying implementation snapshots between repositories. Change every copy together:
+- Two packages also have copies in other Univer repositories. Every repository holds a complete copy, so each still builds and publishes on its own; to keep the copies from drifting, change every copy together:
   - `packages/univerfile-sqlite` also lives in `dream-num/univer-cli`. Keep `src/` and `test/` byte-identical in the two copies.
   - `packages/unit-comparison-viewer` also lives in `dream-num/univer-cli` and `dream-num/univer-workspace`. Keep behaviour identical across the copies; each may adapt to its host, as this one does for the React 18 Host.
 
