@@ -5,11 +5,11 @@ import {
   ASSET_V1_TABLES,
   CORE_V1_TABLES,
   HISTORY_V1_TABLES,
-  HISTORY_V2_TABLES,
   V0_TABLES,
   WORKTREE_COMMON_TABLES,
   WORKTREE_V1_ONLY_TABLES
 } from './objects.ts'
+import { assertCurrentSchema } from './check.ts'
 
 export type UniverfileSQLiteFormat = 'v0' | 'v1' | 'v2' | 'v3'
 
@@ -115,49 +115,16 @@ export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLite
   }
 }
 
-const V3_REQUIRED_COLUMNS: readonly (readonly [string, readonly string[]])[] = [
-  ['collaboration_units', ['creator_id', 'created_at_ms']],
-  ['collaboration_changesets', ['created_at_ms']],
-  ['collaboration_worktree_units', ['creator_id', 'created_at_ms']],
-  ['collaboration_worktree_changesets', ['created_at_ms']],
-  [
-    'collaboration_history_records',
-    ['unit_id', 'start_revision', 'user_id', 'created_at_ms', 'origin', 'additional_fields']
-  ]
-]
-
 /** Core v2, worktree v3, assets v1, and history v2. */
 function detectV3(
   database: DatabaseSync,
   tables: ReadonlySet<string>,
   versions: ReadonlyMap<string, number>
 ): 'v3' {
-  const worktreeVersion = versions.get('worktree')
-  if (worktreeVersion !== 3) {
-    throw unsupported(`worktree schema version ${String(worktreeVersion)} requires core v1`)
-  }
-  if (versions.get('assets') !== 1) throw unsupported('assets schema version must be v1')
-  if (versions.get('history') !== 2) throw unsupported('history schema version must be v2')
   if (HISTORY_V1_TABLES.some((table) => tables.has(table))) {
     throw unsupported('v3 contains retired History tables')
   }
-  const required = [
-    ...CORE_V1_TABLES,
-    ...WORKTREE_COMMON_TABLES,
-    ...ASSET_V1_TABLES,
-    ...HISTORY_V2_TABLES
-  ]
-  const missing = required.filter((table) => !tables.has(table))
-  if (missing.length > 0) {
-    throw unsupported(`schema is incomplete: missing ${missing.join(', ')}`)
-  }
-  for (const [table, requiredColumns] of V3_REQUIRED_COLUMNS) {
-    const present = columns(database, table)
-    const absent = requiredColumns.filter((column) => !present.has(column))
-    if (absent.length > 0) {
-      throw unsupported(`${table} is missing ${absent.join(', ')}`)
-    }
-  }
+  assertCurrentSchema(database, tables, versions)
   return 'v3'
 }
 

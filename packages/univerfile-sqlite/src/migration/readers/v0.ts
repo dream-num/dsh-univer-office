@@ -7,6 +7,7 @@ import {
 } from '../../connection.ts'
 import { UniverfileSQLiteDatabaseAdapter } from '../../database-adapters/collaboration-database-adapter.ts'
 import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../../database-adapters/worktree-database-adapter.ts'
+import { installSchema } from '../../schema/install.ts'
 import { ANONYMOUS_CREATOR_ID } from './v2.ts'
 import { encodeStoredJson } from '../../stored-json.ts'
 
@@ -188,7 +189,7 @@ export function migrateV0CandidateToV3(
 
     runUniverfileSQLiteTransaction(database, () => {
       renameLegacyTables(database)
-      initializeCurrentDatabase(filename, connection)
+      installSchema(database)
       migrateTrunk(database)
       migrateWorktrees(database)
       validateCurrentDatabase(filename, connection)
@@ -241,19 +242,6 @@ function inspectLegacySchema(database: DatabaseSync): boolean {
 function renameLegacyTables(database: DatabaseSync): void {
   for (const tableName of legacyTableNames()) {
     database.exec(`ALTER TABLE ${tableName} RENAME TO ${legacyTable(tableName)};`)
-  }
-}
-
-function initializeCurrentDatabase(filename: string, connection: UniverfileSQLiteConnection): void {
-  const trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection })
-  let worktree: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
-  try {
-    worktree = new UniverfileSQLiteWorktreeDatabaseAdapter({ filename, connection })
-  } finally {
-    if (worktree !== undefined) {
-      void worktree.dispose()
-    }
-    void trunk.dispose()
   }
 }
 

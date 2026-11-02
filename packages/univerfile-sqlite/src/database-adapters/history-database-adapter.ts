@@ -11,28 +11,6 @@ import type {
 } from '@univerjs-pro/collaboration-history-service'
 import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
 
-const HISTORY_SCHEMA_COMPONENT = 'history'
-export const HISTORY_SCHEMA_VERSION = 2
-export const HISTORY_RECORDS_TABLE = 'collaboration_history_records'
-
-/** DDL shared by schema creation and the v2-to-v3 `.univer` upgrade. */
-export const HISTORY_RECORDS_SCHEMA_SQL = `
-  CREATE TABLE collaboration_history_records (
-    unit_id TEXT NOT NULL,
-    start_revision INTEGER NOT NULL CHECK (start_revision >= 1),
-    user_id TEXT NOT NULL,
-    created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
-    origin INTEGER NOT NULL,
-    additional_fields TEXT,
-    PRIMARY KEY (unit_id, start_revision)
-  );
-
-  CREATE INDEX collaboration_history_origin_lookup
-    ON collaboration_history_records(unit_id, origin, start_revision);
-  CREATE INDEX collaboration_history_creator_lookup
-    ON collaboration_history_records(unit_id, user_id, start_revision);
-`
-
 interface HistoryRow {
   readonly unit_id: string
   readonly start_revision: number
@@ -40,10 +18,6 @@ interface HistoryRow {
   readonly created_at_ms: number
   readonly origin: number
   readonly additional_fields: string | null
-}
-
-interface SchemaVersionRow {
-  readonly version: number
 }
 
 export interface UniverfileSQLiteHistoryDatabaseAdapterOptions {
@@ -66,7 +40,6 @@ export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseA
       throw new TypeError('History Database Adapter requires a .univer connection')
     }
     this._database = options.connection.database
-    this._initializeSchema()
   }
 
   public async getLatestRecord(
@@ -224,48 +197,6 @@ export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseA
          LIMIT 1`
       )
       .get(unitID) as HistoryRow | undefined
-  }
-
-  private _initializeSchema(): void {
-    runUniverfileSQLiteTransaction(this._database, () => {
-      const row = this._database
-        .prepare(
-          `SELECT version
-           FROM collaboration_schema_versions
-           WHERE component = ?`
-        )
-        .get(HISTORY_SCHEMA_COMPONENT) as SchemaVersionRow | undefined
-      if (row !== undefined) {
-        if (row.version !== HISTORY_SCHEMA_VERSION) {
-          throw new Error(`Unsupported .univer History schema version ${row.version}`)
-        }
-        if (!this._hasTable(HISTORY_RECORDS_TABLE)) {
-          throw new Error(
-            `.univer History schema v${HISTORY_SCHEMA_VERSION} is missing its records table`
-          )
-        }
-        return
-      }
-      if (
-        this._hasTable(HISTORY_RECORDS_TABLE) ||
-        this._hasTable('collaboration_history_revisions')
-      ) {
-        throw new Error('.univer History table exists without a schema version')
-      }
-      this._database.exec(`
-        ${HISTORY_RECORDS_SCHEMA_SQL}
-        INSERT INTO collaboration_schema_versions (component, version)
-        VALUES ('${HISTORY_SCHEMA_COMPONENT}', ${HISTORY_SCHEMA_VERSION});
-      `)
-    })
-  }
-
-  private _hasTable(tableName: string): boolean {
-    return (
-      this._database
-        .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?")
-        .get(tableName) !== undefined
-    )
   }
 
   private _assertOpen(): void {

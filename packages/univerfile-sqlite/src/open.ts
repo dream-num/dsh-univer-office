@@ -10,6 +10,7 @@ import {
   type UniverfileUpgradeResult,
   type UpgradeUniverfileSQLiteOptions
 } from './migration/upgrade.ts'
+import { installSchema } from './schema/install.ts'
 
 export interface OpenUniverfileSQLiteOptions extends UpgradeUniverfileSQLiteOptions {
   readonly busyTimeoutMs?: number
@@ -34,7 +35,7 @@ export function openUniverfileSQLite(
     throw new UniverfileSQLiteError('FILE_NOT_FOUND', `.univer file not found: ${filename}`)
   }
   const upgrade = upgradeUniverfileSQLite(filename, options)
-  return openCurrent(filename, upgrade, options.busyTimeoutMs)
+  return openCurrent(filename, upgrade, options.busyTimeoutMs, false)
 }
 
 export function createUniverfileSQLite(
@@ -45,7 +46,7 @@ export function createUniverfileSQLite(
     throw new UniverfileSQLiteError('FILE_EXISTS', `.univer file already exists: ${filename}`)
   }
   try {
-    return openCurrent(filename, { status: 'unchanged', format: 'v3' }, options.busyTimeoutMs)
+    return openCurrent(filename, { status: 'unchanged', format: 'v3' }, options.busyTimeoutMs, true)
   } catch (error) {
     if (filename !== ':memory:' && existsSync(filename)) unlinkSync(filename)
     throw error
@@ -55,7 +56,8 @@ export function createUniverfileSQLite(
 function openCurrent(
   filename: string,
   upgrade: UniverfileUpgradeResult,
-  busyTimeoutMs: number | undefined
+  busyTimeoutMs: number | undefined,
+  install: boolean
 ): UniverfileSQLite {
   const connection = new UniverfileSQLiteConnection({
     filename,
@@ -65,6 +67,7 @@ function openCurrent(
   let worktreeDatabaseAdapter: UniverfileSQLiteWorktreeDatabaseAdapter | undefined
   let historyDatabaseAdapter: UniverfileSQLiteHistoryDatabaseAdapter | undefined
   try {
+    if (install) installSchema(connection.database)
     const trunk = new UniverfileSQLiteDatabaseAdapter({ filename, connection })
     databaseAdapter = trunk
     const worktree = new UniverfileSQLiteWorktreeDatabaseAdapter({ filename, connection })

@@ -16,29 +16,8 @@ import {
   type UnitRecord
 } from '@univerjs-pro/collaboration-service'
 import type { IChangeset, ISheetBlock, ISnapshot, UniverType } from '@univerjs/protocol'
-import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
+import { type UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
 import { decodeStoredJson, encodeStoredJson } from '../stored-json.ts'
-
-const CORE_SCHEMA_COMPONENT = 'core'
-const CORE_SCHEMA_VERSION = 2
-const CORE_TABLE_NAMES = [
-  'collaboration_units',
-  'collaboration_unit_tombstones',
-  'collaboration_snapshots',
-  'collaboration_changesets',
-  'collaboration_sheet_blocks',
-  'collaboration_resources'
-] as const
-const PRE_DATABASE_V1_TABLE_NAMES = [
-  'units',
-  'changesets',
-  'snapshots',
-  'sheet_blocks',
-  'worktrees',
-  'worktree_commits',
-  'worktree_changesets',
-  'worktree_snapshots'
-] as const
 
 interface UnitRow {
   readonly unit_id: string
@@ -54,21 +33,11 @@ interface PayloadRow {
   readonly payload_json: string
 }
 
-interface SchemaVersionRow {
-  readonly version: number
-}
-
-interface ColumnRow {
-  readonly name: string
-}
-
 export interface UniverfileSQLiteDatabaseAdapterOptions {
-  /** SQLite filename or `:memory:`. The parent directory must already exist. */
+  /** SQLite filename or `:memory:`; must match the connection. */
   readonly filename: string
-  /** How long SQLite waits for another writer when this adapter opens its own connection. */
-  readonly busyTimeoutMs?: number
-  /** Borrow a connection owned by the gateway instead of opening and closing another one. */
-  readonly connection?: UniverfileSQLiteConnection
+  /** Shared connection to a file whose current schema is installed. The adapter never closes it. */
+  readonly connection: UniverfileSQLiteConnection
 }
 
 /**
@@ -98,30 +67,12 @@ export interface UniverfileUnitSummary {
 export const UNIVERFILE_UNIT_METADATA_KEY = '@univer/univerfile-sqlite/unit-metadata'
 
 export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
-  private readonly _connection: UniverfileSQLiteConnection
   private readonly _database: DatabaseSync
-  private readonly _ownsConnection: boolean
   private _disposed = false
 
   constructor(options: UniverfileSQLiteDatabaseAdapterOptions) {
     validateOptions(options)
-    this._ownsConnection = options.connection === undefined
-    this._connection =
-      options.connection ??
-      new UniverfileSQLiteConnection({
-        filename: options.filename,
-        ...(options.busyTimeoutMs === undefined ? {} : { busyTimeoutMs: options.busyTimeoutMs })
-      })
-    this._database = this._connection.database
-
-    try {
-      this._initializeSchema()
-    } catch (error) {
-      if (this._ownsConnection) {
-        this._connection.dispose()
-      }
-      throw error
-    }
+    this._database = options.connection.database
   }
 
   async getUnit(_context: DatabaseContext, unitID: string): Promise<UnitRecord | null> {
@@ -588,104 +539,6 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
       return
     }
     this._disposed = true
-    if (this._ownsConnection) {
-      this._connection.dispose()
-    }
-  }
-
-  private _initializeSchema(): void {
-    this._transaction(() => {
-      const hasVersionTable = this._hasTable('collaboration_schema_versions')
-      if (!hasVersionTable) {
-        this._assertNoPreDatabaseV1Tables()
-        if (this._hasAnyCoreTable()) {
-          throw incompatibleSchema(
-            'SQLite collaboration core tables exist without a schema version'
-          )
-        }
-        this._database.exec(`
-          CREATE TABLE collaboration_schema_versions (
-            component TEXT PRIMARY KEY,
-            version INTEGER NOT NULL CHECK (version >= 1)
-          );
-        `)
-      }
-
-      const row = this._database
-        .prepare(
-          `SELECT version
-           FROM collaboration_schema_versions
-           WHERE component = ?`
-        )
-        .get(CORE_SCHEMA_COMPONENT) as SchemaVersionRow | undefined
-      if (row) {
-        if (row.version !== CORE_SCHEMA_VERSION) {
-          throw incompatibleSchema(
-            `SQLite collaboration core schema version ${row.version} is not supported`
-          )
-        }
-        const missingTables = CORE_TABLE_NAMES.filter((tableName) => !this._hasTable(tableName))
-        if (missingTables.length > 0) {
-          throw incompatibleSchema(
-            `SQLite collaboration core schema v${CORE_SCHEMA_VERSION} is incomplete: missing ${missingTables.join(', ')}`
-          )
-        }
-        this._assertGatewayColumns()
-        return
-      }
-
-      this._assertNoPreDatabaseV1Tables()
-      if (this._hasAnyCoreTable()) {
-        throw incompatibleSchema('SQLite collaboration core tables exist without a schema version')
-      }
-
-      this._database.exec(`
-        ${coreUnitsTableSql('collaboration_units')}
-
-        CREATE TABLE collaboration_unit_tombstones (
-          unit_id TEXT PRIMARY KEY,
-          purged_at INTEGER NOT NULL
-        );
-
-        CREATE TABLE collaboration_snapshots (
-          unit_id TEXT NOT NULL,
-          revision INTEGER NOT NULL CHECK (revision >= 1),
-          type INTEGER NOT NULL,
-          payload_json TEXT NOT NULL,
-          PRIMARY KEY (unit_id, revision),
-          FOREIGN KEY (unit_id)
-            REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
-        );
-
-        ${coreChangesetsTableSql('collaboration_changesets')}
-
-        CREATE TABLE collaboration_sheet_blocks (
-          unit_id TEXT NOT NULL,
-          block_id TEXT NOT NULL,
-          payload_json TEXT NOT NULL,
-          PRIMARY KEY (unit_id, block_id),
-          FOREIGN KEY (unit_id)
-            REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
-        );
-
-        CREATE TABLE collaboration_resources (
-          unit_id TEXT NOT NULL,
-          resource_id TEXT NOT NULL,
-          payload_json TEXT NOT NULL,
-          PRIMARY KEY (unit_id, resource_id),
-          FOREIGN KEY (unit_id)
-            REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
-        );
-
-        CREATE INDEX collaboration_snapshots_nearest_revision
-          ON collaboration_snapshots(unit_id, revision DESC);
-        CREATE INDEX collaboration_changesets_revision_range
-          ON collaboration_changesets(unit_id, revision ASC);
-
-        INSERT INTO collaboration_schema_versions (component, version)
-        VALUES ('core', ${CORE_SCHEMA_VERSION});
-      `)
-    })
   }
 
   private _getActiveUnitRow(unitID: string): UnitRow | null {
@@ -716,61 +569,6 @@ export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
         .prepare('SELECT 1 FROM collaboration_unit_tombstones WHERE unit_id = ?')
         .get(unitID)
     )
-  }
-
-  private _hasTable(tableName: string): boolean {
-    return Boolean(
-      this._database
-        .prepare(
-          `SELECT 1
-           FROM sqlite_schema
-           WHERE type = 'table' AND name = ?`
-        )
-        .get(tableName)
-    )
-  }
-
-  private _hasAnyCoreTable(): boolean {
-    return CORE_TABLE_NAMES.some((tableName) => this._hasTable(tableName))
-  }
-
-  private _assertNoPreDatabaseV1Tables(): void {
-    const incompatibleTables = PRE_DATABASE_V1_TABLE_NAMES.filter((tableName) =>
-      this._hasTable(tableName)
-    )
-    if (incompatibleTables.length > 0) {
-      throw incompatibleSchema(
-        `Pre-database-v1 Gateway schema is not supported: ${incompatibleTables.join(', ')}`
-      )
-    }
-  }
-
-  private _assertGatewayColumns(): void {
-    const columns = new Set(
-      (
-        this._database
-          .prepare('PRAGMA table_info(collaboration_units)')
-          .all() as unknown as ColumnRow[]
-      ).map(({ name }) => name)
-    )
-    const changesetColumns = new Set(
-      (
-        this._database
-          .prepare('PRAGMA table_info(collaboration_changesets)')
-          .all() as unknown as ColumnRow[]
-      ).map(({ name }) => name)
-    )
-    const missing = [
-      ...['name', 'creator_id', 'created_at_ms']
-        .filter((column) => !columns.has(column))
-        .map((column) => `collaboration_units.${column}`),
-      ...(changesetColumns.has('created_at_ms') ? [] : ['collaboration_changesets.created_at_ms'])
-    ]
-    if (missing.length > 0) {
-      throw incompatibleSchema(
-        `SQLite collaboration core schema v${CORE_SCHEMA_VERSION} is missing CLI columns: ${missing.join(', ')}`
-      )
-    }
   }
 
   private _writeSheetBlocks(
@@ -804,17 +602,8 @@ function validateOptions(options: UniverfileSQLiteDatabaseAdapterOptions): void 
   if (!options.filename) {
     throw invalidRequest('SQLite filename is required')
   }
-  if (
-    options.busyTimeoutMs !== undefined &&
-    (!Number.isSafeInteger(options.busyTimeoutMs) || options.busyTimeoutMs < 0)
-  ) {
-    throw invalidRequest('SQLite busyTimeoutMs must be a non-negative integer')
-  }
-  if (options.connection !== undefined && options.connection.filename !== options.filename) {
+  if (options.connection.filename !== options.filename) {
     throw invalidRequest('Shared SQLite connection filename does not match adapter filename')
-  }
-  if (options.connection !== undefined && options.busyTimeoutMs !== undefined) {
-    throw invalidRequest('Shared SQLite connection owns busyTimeoutMs configuration')
   }
 }
 
@@ -870,36 +659,6 @@ function rowToUnitSummary(row: UnitRow): UniverfileUnitSummary {
   }
 }
 
-/** Column layout shared by schema creation and the v2-to-v3 `.univer` upgrade. */
-export function coreUnitsTableSql(tableName: string): string {
-  return `CREATE TABLE ${tableName} (
-          unit_id TEXT PRIMARY KEY,
-          type INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          head_revision INTEGER NOT NULL CHECK (head_revision >= 1),
-          creator_id TEXT NOT NULL,
-          created_at_ms INTEGER NOT NULL,
-          soft_deleted_at_ms INTEGER
-        );`
-}
-
-/** `created_at_ms` stores the commit time in Unix milliseconds; payload `createTime` is its whole seconds. */
-export function coreChangesetsTableSql(tableName: string): string {
-  return `CREATE TABLE ${tableName} (
-          unit_id TEXT NOT NULL,
-          revision INTEGER NOT NULL CHECK (revision >= 2),
-          base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
-          sid TEXT NOT NULL,
-          req_id INTEGER NOT NULL CHECK (req_id >= 1),
-          payload_json TEXT NOT NULL,
-          created_at_ms INTEGER NOT NULL,
-          PRIMARY KEY (unit_id, revision),
-          UNIQUE (unit_id, sid, req_id),
-          FOREIGN KEY (unit_id)
-            REFERENCES collaboration_units(unit_id) ON DELETE CASCADE
-        );`
-}
-
 function readUnitName(context: DatabaseContext, unitID: string): string {
   const value = context.customData[UNIVERFILE_UNIT_METADATA_KEY] as
     | UniverfileUnitMetadata
@@ -924,10 +683,6 @@ function readOptionalUnitName(context: DatabaseContext, unitID: string): string 
 
 function invalidRequest(message: string): CollabError {
   return new CollabError('INVALID_REQUEST', message)
-}
-
-function incompatibleSchema(message: string): CollabError {
-  return new CollabError('INTERNAL_ERROR', message)
 }
 
 function uniqueUnitIDs(unitIDs: readonly string[]): readonly string[] {

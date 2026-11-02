@@ -2,17 +2,14 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { UniverfileSQLiteConnection } from '../../connection.ts'
 import { runUniverfileSQLiteTransaction } from '../../connection.ts'
 import {
+  CORE_CHANGESETS_INDEX_SQL,
+  HISTORY_SQL,
+  WORKTREE_CHANGESETS_INDEX_SQL,
   coreChangesetsTableSql,
-  coreUnitsTableSql
-} from '../../database-adapters/collaboration-database-adapter.ts'
-import {
-  HISTORY_RECORDS_SCHEMA_SQL,
-  HISTORY_SCHEMA_VERSION
-} from '../../database-adapters/history-database-adapter.ts'
-import {
+  coreUnitsTableSql,
   worktreeChangesetsTableSql,
   worktreeUnitsTableSql
-} from '../../database-adapters/worktree-database-adapter.ts'
+} from '../../schema/v3.ts'
 
 const LEGACY_HISTORY_TABLE = 'collaboration_history_revisions'
 /** Values at or above this are Unix milliseconds; Unix seconds stay below it until year 5138. */
@@ -149,8 +146,7 @@ function rebuildChangesetTables(database: DatabaseSync): void {
 
     DROP TABLE collaboration_changesets;
     ALTER TABLE collaboration_changesets_v3 RENAME TO collaboration_changesets;
-    CREATE INDEX collaboration_changesets_revision_range
-      ON collaboration_changesets(unit_id, revision ASC);
+    ${CORE_CHANGESETS_INDEX_SQL}
 
     ${worktreeChangesetsTableSql('collaboration_worktree_changesets_v3')}
 
@@ -161,8 +157,7 @@ function rebuildChangesetTables(database: DatabaseSync): void {
 
     DROP TABLE collaboration_worktree_changesets;
     ALTER TABLE collaboration_worktree_changesets_v3 RENAME TO collaboration_worktree_changesets;
-    CREATE INDEX collaboration_worktree_changesets_revision
-      ON collaboration_worktree_changesets(worktree_id, unit_id, revision ASC);
+    ${WORKTREE_CHANGESETS_INDEX_SQL}
   `)
 }
 
@@ -268,8 +263,8 @@ function migrateHistory(database: DatabaseSync): void {
 
   database.exec(`
     DROP TABLE ${LEGACY_HISTORY_TABLE};
-    ${HISTORY_RECORDS_SCHEMA_SQL}
-    UPDATE collaboration_schema_versions SET version = ${HISTORY_SCHEMA_VERSION}
+    ${HISTORY_SQL}
+    UPDATE collaboration_schema_versions SET version = 2
     WHERE component = 'history';
   `)
   const insert = database.prepare(

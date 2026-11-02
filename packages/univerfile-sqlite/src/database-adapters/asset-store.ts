@@ -3,10 +3,6 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { UniverfileSQLiteConnection } from '../connection.ts'
 import { runUniverfileSQLiteTransaction } from '../connection.ts'
 
-const ASSET_SCHEMA_COMPONENT = 'assets'
-const ASSET_SCHEMA_VERSION = 1
-const ASSET_TABLES = ['collaboration_asset_blobs', 'collaboration_assets'] as const
-
 export const MAX_UNIVERFILE_ASSET_BYTES = 50 * 1024 * 1024
 
 export interface UniverfileAssetRecord {
@@ -40,14 +36,6 @@ interface OpenedAssetRow extends AssetRow {
   readonly bytes: Uint8Array | ArrayBuffer
 }
 
-interface SchemaVersionRow {
-  readonly version: number
-}
-
-interface TableNameRow {
-  readonly name: string
-}
-
 export interface UniverfileSQLiteAssetStoreOptions {
   readonly connection: UniverfileSQLiteConnection
 }
@@ -62,7 +50,6 @@ export class UniverfileSQLiteAssetStore {
 
   public constructor(options: UniverfileSQLiteAssetStoreOptions) {
     this._database = options.connection.database
-    this._initializeSchema()
   }
 
   public store(input: {
@@ -193,59 +180,6 @@ export class UniverfileSQLiteAssetStore {
       .get(assetId) as AssetRow | undefined
     if (row === undefined) throw new Error('Stored collaboration asset is missing')
     return toRecord(row)
-  }
-
-  private _initializeSchema(): void {
-    const version = this._database
-      .prepare('SELECT version FROM collaboration_schema_versions WHERE component = ?')
-      .get(ASSET_SCHEMA_COMPONENT) as SchemaVersionRow | undefined
-    const placeholders = ASSET_TABLES.map(() => '?').join(', ')
-    const existingTables = this._database
-      .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${placeholders})`)
-      .all(...ASSET_TABLES) as unknown as TableNameRow[]
-
-    if (version !== undefined) {
-      if (
-        version.version !== ASSET_SCHEMA_VERSION ||
-        existingTables.length !== ASSET_TABLES.length
-      ) {
-        throw new Error(
-          `unsupported collaboration assets schema: expected ${ASSET_SCHEMA_VERSION} with all tables`
-        )
-      }
-      return
-    }
-    if (existingTables.length > 0) {
-      throw new Error('collaboration assets tables exist without a schema version')
-    }
-
-    runUniverfileSQLiteTransaction(this._database, () => {
-      this._database.exec(`
-        CREATE TABLE collaboration_asset_blobs (
-          digest TEXT PRIMARY KEY CHECK (length(digest) = 64),
-          byte_size INTEGER NOT NULL CHECK (byte_size >= 0),
-          bytes BLOB NOT NULL
-        ) STRICT, WITHOUT ROWID;
-
-        CREATE TABLE collaboration_assets (
-          asset_id TEXT PRIMARY KEY,
-          unit_id TEXT NOT NULL,
-          worktree_id TEXT,
-          digest TEXT NOT NULL,
-          original_filename TEXT NOT NULL,
-          media_type TEXT NOT NULL,
-          byte_size INTEGER NOT NULL CHECK (byte_size >= 0),
-          created_at_ms INTEGER NOT NULL CHECK (created_at_ms >= 0),
-          FOREIGN KEY (digest) REFERENCES collaboration_asset_blobs(digest) ON DELETE RESTRICT
-        ) STRICT;
-
-        CREATE INDEX collaboration_assets_scope
-          ON collaboration_assets(unit_id, worktree_id, created_at_ms, asset_id);
-
-        INSERT INTO collaboration_schema_versions (component, version)
-        VALUES ('assets', 1);
-      `)
-    })
   }
 }
 

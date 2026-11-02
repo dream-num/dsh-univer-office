@@ -2,10 +2,9 @@ import { randomUUID } from 'node:crypto'
 import { copyFileSync, existsSync, renameSync, unlinkSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { UniverfileSQLiteConnection } from '../connection.ts'
-import { UniverfileSQLiteAssetStore } from '../database-adapters/asset-store.ts'
-import { UniverfileSQLiteHistoryDatabaseAdapter } from '../database-adapters/history-database-adapter.ts'
 import { UniverfileSQLiteError } from '../errors.ts'
 import { detectUniverfileSQLiteFormat } from '../schema/detect.ts'
+import { installSchema } from '../schema/install.ts'
 import { createUniverfileBackup, sha256 } from './backup.ts'
 import { migrateLegacyBaseContentToV2 } from './base-content.ts'
 import { withUniverfileUpgradeLock } from './lock.ts'
@@ -138,8 +137,7 @@ function migrateCandidate(
       if (sourceFormat === 'v1') normalizedMergingWorktrees = migrateV1CandidateToV2(connection)
       migrateV2CandidateToV3(connection)
     }
-    new UniverfileSQLiteAssetStore({ connection })
-    new UniverfileSQLiteHistoryDatabaseAdapter({ connection })
+    installSchema(connection.database)
     if (sourceFormat !== 'v2') migrateLegacyBaseContentToV2(connection.database)
     pruneCandidateToCurrentSchema(connection.database)
     return normalizedMergingWorktrees

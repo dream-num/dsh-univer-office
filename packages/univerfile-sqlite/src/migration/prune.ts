@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { runUniverfileSQLiteTransaction } from '../connection.ts'
-import { CURRENT_V3_INDEXES, CURRENT_V3_TABLES } from '../schema/objects.ts'
+import { V3_INDEXES, V3_TABLES } from '../schema/v3.ts'
 
 interface SchemaObjectRow {
   readonly name: string
@@ -8,8 +8,8 @@ interface SchemaObjectRow {
   readonly type: 'index' | 'table' | 'trigger' | 'view'
 }
 
-const CURRENT_TABLES = new Set<string>(CURRENT_V3_TABLES)
-const CURRENT_INDEXES = new Set<string>(CURRENT_V3_INDEXES)
+const CURRENT_TABLES = new Set<string>(V3_TABLES)
+const CURRENT_INDEXES = new Set<string>(V3_INDEXES)
 
 /**
  * Removes source-only SQLite objects after their supported content has been migrated.

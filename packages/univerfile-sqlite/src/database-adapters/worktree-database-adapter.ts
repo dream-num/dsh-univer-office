@@ -26,18 +26,8 @@ import type {
   WorktreeUnitSeed
 } from '@univerjs-pro/collaboration-worktree-service'
 import { UniverType, type IChangeset } from '@univerjs/protocol'
-import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
+import { type UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
 import { decodeStoredJson, encodeStoredJson } from '../stored-json.ts'
-const SCHEMA_COMPONENT = 'worktree'
-const SCHEMA_VERSION = 3
-const TABLE_NAMES = [
-  'collaboration_worktrees',
-  'collaboration_worktree_units',
-  'collaboration_worktree_changesets',
-  'collaboration_worktree_unit_seeds',
-  'collaboration_worktree_unit_merge_artifacts',
-  'collaboration_worktree_deleted_units'
-] as const
 
 const SUPPORTED_UNIT_TYPES = new Set<UniverType>([
   UniverType.UNIVER_SHEET,
@@ -84,14 +74,6 @@ interface MergeArtifactRow extends SeedRow {
   readonly ready_draft_head_revision: number
 }
 
-interface SchemaVersionRow {
-  readonly version: number
-}
-
-interface ColumnRow {
-  readonly name: string
-}
-
 interface DeletedUnitRow {
   readonly worktree_id: string
   readonly unit_id: string
@@ -103,12 +85,10 @@ interface DeletedUnitRow {
 }
 
 export interface UniverfileSQLiteWorktreeDatabaseAdapterOptions {
-  /** SQLite filename or `:memory:`. The parent directory must already exist. */
+  /** SQLite filename or `:memory:`; must match the connection. */
   readonly filename: string
-  /** How long SQLite waits for another writer when this adapter opens its own connection. */
-  readonly busyTimeoutMs?: number
-  /** Borrow a connection owned by the gateway instead of opening and closing another one. */
-  readonly connection?: UniverfileSQLiteConnection
+  /** Shared connection to a file whose current schema is installed. The adapter never closes it. */
+  readonly connection: UniverfileSQLiteConnection
 }
 
 /**
@@ -159,29 +139,12 @@ export const UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY =
   '@univer/univerfile-sqlite/worktree-change-metadata'
 
 export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabaseAdapter {
-  private readonly _connection: UniverfileSQLiteConnection
   private readonly _database: DatabaseSync
-  private readonly _ownsConnection: boolean
   private _disposed = false
 
   constructor(options: UniverfileSQLiteWorktreeDatabaseAdapterOptions) {
     validateOptions(options)
-    this._ownsConnection = options.connection === undefined
-    this._connection =
-      options.connection ??
-      new UniverfileSQLiteConnection({
-        filename: options.filename,
-        ...(options.busyTimeoutMs === undefined ? {} : { busyTimeoutMs: options.busyTimeoutMs })
-      })
-    this._database = this._connection.database
-    try {
-      this._initializeSchema()
-    } catch (error) {
-      if (this._ownsConnection) {
-        this._connection.dispose()
-      }
-      throw error
-    }
+    this._database = options.connection.database
   }
 
   async getWorktree(
@@ -902,163 +865,6 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
   async dispose(): Promise<void> {
     if (this._disposed) return
     this._disposed = true
-    if (this._ownsConnection) {
-      this._connection.dispose()
-    }
-  }
-
-  private _initializeSchema(): void {
-    this._transaction(() => {
-      if (!this._hasTable('collaboration_schema_versions')) {
-        if (this._hasAnyOwnedTable()) {
-          throw incompatibleSchema('SQLite Worktree tables exist without a schema version')
-        }
-        this._database.exec(`
-          CREATE TABLE collaboration_schema_versions (
-            component TEXT PRIMARY KEY,
-            version INTEGER NOT NULL CHECK (version >= 1)
-          );
-        `)
-      }
-
-      const row = this._database
-        .prepare(
-          `SELECT version
-           FROM collaboration_schema_versions
-           WHERE component = ?`
-        )
-        .get(SCHEMA_COMPONENT) as SchemaVersionRow | undefined
-      if (row) {
-        if (row.version !== SCHEMA_VERSION) {
-          throw incompatibleSchema(`SQLite Worktree schema version ${row.version} is not supported`)
-        }
-        const missingTables = TABLE_NAMES.filter((tableName) => !this._hasTable(tableName))
-        if (missingTables.length > 0) {
-          throw incompatibleSchema(
-            `SQLite Worktree schema v${SCHEMA_VERSION} is incomplete: missing ${missingTables.join(', ')}`
-          )
-        }
-        this._assertGatewayColumns()
-        return
-      }
-
-      if (this._hasAnyOwnedTable()) {
-        throw incompatibleSchema('SQLite Worktree tables exist without a schema version')
-      }
-
-      this._database.exec(`
-        CREATE TABLE collaboration_worktrees (
-          worktree_id TEXT PRIMARY KEY,
-          sid TEXT NOT NULL,
-          status TEXT NOT NULL
-            CHECK (status IN ('draft', 'ready', 'merging', 'merged', 'discarded')),
-          agent_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          created_at_ms INTEGER NOT NULL,
-          merged_at_ms INTEGER
-        );
-
-        ${worktreeUnitsTableSql('collaboration_worktree_units')}
-
-        ${worktreeChangesetsTableSql('collaboration_worktree_changesets')}
-
-        CREATE INDEX collaboration_worktree_changesets_revision
-          ON collaboration_worktree_changesets(
-            worktree_id, unit_id, revision ASC
-          );
-
-        CREATE TABLE collaboration_worktree_unit_seeds (
-          worktree_id TEXT NOT NULL,
-          unit_id TEXT NOT NULL,
-          snapshot_json TEXT NOT NULL,
-          sheet_blocks_json TEXT,
-          resources_json TEXT,
-          PRIMARY KEY (worktree_id, unit_id),
-          FOREIGN KEY (worktree_id, unit_id)
-            REFERENCES collaboration_worktree_units(worktree_id, unit_id)
-            ON DELETE CASCADE
-        );
-
-        CREATE TABLE collaboration_worktree_unit_merge_artifacts (
-          worktree_id TEXT NOT NULL,
-          unit_id TEXT NOT NULL,
-          ready_draft_head_revision INTEGER NOT NULL
-            CHECK (ready_draft_head_revision >= 1),
-          snapshot_json TEXT NOT NULL,
-          sheet_blocks_json TEXT,
-          resources_json TEXT,
-          PRIMARY KEY (worktree_id, unit_id),
-          FOREIGN KEY (worktree_id, unit_id)
-            REFERENCES collaboration_worktree_units(worktree_id, unit_id)
-            ON DELETE CASCADE
-        );
-
-        CREATE TABLE collaboration_worktree_deleted_units (
-          worktree_id TEXT NOT NULL,
-          unit_id TEXT NOT NULL,
-          type INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          source TEXT NOT NULL CHECK (source IN ('trunk', 'worktree')),
-          baseline_trunk_revision INTEGER NOT NULL
-            CHECK (baseline_trunk_revision >= 1),
-          deleted_at_ms INTEGER NOT NULL,
-          PRIMARY KEY (worktree_id, unit_id),
-          FOREIGN KEY (worktree_id)
-            REFERENCES collaboration_worktrees(worktree_id) ON DELETE CASCADE
-        );
-
-        INSERT INTO collaboration_schema_versions (component, version)
-        VALUES ('worktree', ${SCHEMA_VERSION});
-      `)
-    })
-  }
-
-  private _hasTable(tableName: string): boolean {
-    return Boolean(
-      this._database
-        .prepare(
-          `SELECT 1
-           FROM sqlite_schema
-           WHERE type = 'table' AND name = ?`
-        )
-        .get(tableName)
-    )
-  }
-
-  private _hasAnyOwnedTable(): boolean {
-    return TABLE_NAMES.some((tableName) => this._hasTable(tableName))
-  }
-
-  private _assertGatewayColumns(): void {
-    const worktreeColumns = this._tableColumns('collaboration_worktrees')
-    const unitColumns = this._tableColumns('collaboration_worktree_units')
-    const changesetColumns = this._tableColumns('collaboration_worktree_changesets')
-    const missingWorktree = ['agent_id', 'name', 'created_at_ms', 'merged_at_ms'].filter(
-      (column) => !worktreeColumns.has(column)
-    )
-    const missingUnit = ['name', 'creator_id', 'created_at_ms'].filter(
-      (column) => !unitColumns.has(column)
-    )
-    const missing = [
-      ...missingWorktree.map((column) => `collaboration_worktrees.${column}`),
-      ...missingUnit.map((column) => `collaboration_worktree_units.${column}`),
-      ...(changesetColumns.has('created_at_ms')
-        ? []
-        : ['collaboration_worktree_changesets.created_at_ms'])
-    ]
-    if (missing.length > 0) {
-      throw incompatibleSchema(
-        `SQLite Worktree schema v${SCHEMA_VERSION} is missing application columns: ${missing.join(', ')}`
-      )
-    }
-  }
-
-  private _tableColumns(tableName: string): ReadonlySet<string> {
-    return new Set(
-      (
-        this._database.prepare(`PRAGMA table_info(${tableName})`).all() as unknown as ColumnRow[]
-      ).map(({ name }) => name)
-    )
   }
 
   private _getWorktreeRow(worktreeID: string): WorktreeRow | null {
@@ -1266,17 +1072,8 @@ function rowToUnitRecord(row: WorktreeUnitRow): WorktreeUnitRecord {
 
 function validateOptions(options: UniverfileSQLiteWorktreeDatabaseAdapterOptions): void {
   if (!options.filename) throw invalidRequest('SQLite filename is required')
-  if (
-    options.busyTimeoutMs !== undefined &&
-    (!Number.isSafeInteger(options.busyTimeoutMs) || options.busyTimeoutMs < 0)
-  ) {
-    throw invalidRequest('SQLite busyTimeoutMs must be a non-negative integer')
-  }
-  if (options.connection !== undefined && options.connection.filename !== options.filename) {
+  if (options.connection.filename !== options.filename) {
     throw invalidRequest('Shared SQLite connection filename does not match adapter filename')
-  }
-  if (options.connection !== undefined && options.busyTimeoutMs !== undefined) {
-    throw invalidRequest('Shared SQLite connection owns busyTimeoutMs configuration')
   }
 }
 
@@ -1375,50 +1172,6 @@ function validateUnitIdentity(unit: WorktreeUnitRecord): void {
   }
 }
 
-/** `created_at_ms` stores the commit time in Unix milliseconds; payload `createTime` is its whole seconds. */
-export function worktreeChangesetsTableSql(tableName: string): string {
-  return `CREATE TABLE ${tableName} (
-          worktree_id TEXT NOT NULL,
-          unit_id TEXT NOT NULL,
-          revision INTEGER NOT NULL CHECK (revision >= 2),
-          base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
-          sid TEXT NOT NULL,
-          req_id INTEGER NOT NULL CHECK (req_id >= 1),
-          payload_json TEXT NOT NULL,
-          created_at_ms INTEGER NOT NULL,
-          PRIMARY KEY (worktree_id, unit_id, revision),
-          UNIQUE (worktree_id, unit_id, sid, req_id),
-          FOREIGN KEY (worktree_id, unit_id)
-            REFERENCES collaboration_worktree_units(worktree_id, unit_id)
-            ON DELETE CASCADE
-        );`
-}
-
-/** Column layout shared by schema creation and the v2-to-v3 `.univer` upgrade. */
-export function worktreeUnitsTableSql(tableName: string): string {
-  return `CREATE TABLE ${tableName} (
-          worktree_id TEXT NOT NULL,
-          unit_id TEXT NOT NULL,
-          unit_order INTEGER NOT NULL CHECK (unit_order >= 0),
-          type INTEGER NOT NULL,
-          name TEXT NOT NULL,
-          creator_id TEXT NOT NULL,
-          created_at_ms INTEGER NOT NULL,
-          source TEXT NOT NULL
-            CHECK (source IN ('trunk', 'worktree')),
-          baseline_trunk_revision INTEGER NOT NULL
-            CHECK (baseline_trunk_revision >= 1),
-          draft_head_revision INTEGER NOT NULL
-            CHECK (draft_head_revision >= baseline_trunk_revision),
-          ready_draft_head_revision INTEGER,
-          merge_result_json TEXT,
-          PRIMARY KEY (worktree_id, unit_id),
-          UNIQUE (worktree_id, unit_order),
-          FOREIGN KEY (worktree_id)
-            REFERENCES collaboration_worktrees(worktree_id) ON DELETE CASCADE
-        );`
-}
-
 function validateSubmissionIdentity(changeset: IChangeset): void {
   if (!changeset.sid || !Number.isSafeInteger(changeset.reqId) || (changeset.reqId as number) < 1) {
     throw invalidRequest('Changeset sid and positive integer reqId are required')
@@ -1497,8 +1250,4 @@ function toWorktreeUnitSource(value: string): 'trunk' | 'worktree' {
 
 function invalidRequest(message: string): CollabError {
   return new CollabError('INVALID_REQUEST', message)
-}
-
-function incompatibleSchema(message: string): CollabError {
-  return new CollabError('INTERNAL_ERROR', message)
 }
