@@ -64,6 +64,7 @@ Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before ev
 - Validate deployable configuration before use. Resolve behavioral defaults explicitly in the Provider that owns them; do not hide deployment defaults deep inside execution code.
 - Model-visible facts must come from replayable structured session events. `univer_*` tools return the file, worktree, and Unit identities required to recover a target; Client code must not parse free text or shell output.
 - Tool presentation depends only on arguments and persisted results. Before adding a tool, define execution, cancellation, timeout, structured output, presentation, approval, and skill guidance, then validate the real Consumer path.
+- `packages/univerfile-sqlite` exists both here and in `dream-num/univer-cli`. Keep `src/` and `test/` byte-identical in the two copies, and change both together. This is a deliberate exception to the rule against copying implementation snapshots between Univer repositories.
 
 ## 4. Runtime boundaries
 
