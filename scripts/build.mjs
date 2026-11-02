@@ -49,30 +49,6 @@ const external = [
   'puppeteer-core'
 ]
 
-// The Host needs only `CollaborationRuntimeError` from the collaboration runtime (through the
-// runtime pool), yet the package entry pulls in the whole Univer engine. Resolve it to an
-// engine-free copy of that class until the Univer CLI SDK exposes it without the engine (CLI SDK
-// issue #83). Only ESM imports are redirected, so any other named import fails the build with a
-// missing-export error; a `require` would bypass that check, so it fails the build outright.
-function collaborationRuntimeErrorOnlyPlugin() {
-  return {
-    name: 'collaboration-runtime-error-only',
-    setup(pluginBuild) {
-      pluginBuild.onResolve({ filter: /^@univer-cli\/univer-collaboration-runtime$/ }, (args) =>
-        args.kind === 'import-statement'
-          ? { path: resolve('src/host/adapters/unit-content/collaboration-runtime-error.ts') }
-          : {
-              errors: [
-                {
-                  text: `${args.importer} loads @univer-cli/univer-collaboration-runtime by ${args.kind}; the Host build only supports ESM imports of CollaborationRuntimeError`
-                }
-              ]
-            }
-      )
-    }
-  }
-}
-
 // Univer packages ship both CJS and ESM builds. The Gateway's CJS dependencies `require` them
 // while its sources and ESM dependencies `import` them, so esbuild bundled both builds: two
 // copies of the engine (+27 MB) and two instances of every Univer module in one process. Resolve
@@ -112,7 +88,6 @@ if (target === 'all' || target === 'lib') {
     format: 'esm',
     sourcemap: false,
     legalComments: 'none',
-    plugins: [collaborationRuntimeErrorOnlyPlugin()],
     // Bundled CJS dependencies (the WS relay uses `ws`) require bare Node builtins
     // (`events`, `stream`); ESM output has no ambient `require`, so provide one.
     banner: {
