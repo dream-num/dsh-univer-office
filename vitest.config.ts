@@ -52,7 +52,8 @@ export default defineConfig({
           hookTimeout: 180_000
         }
       },
-      'packages/unit-comparison-viewer'
+      'packages/unit-comparison-viewer',
+      'packages/univerfile-sqlite'
     ]
   }
 })

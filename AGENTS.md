@@ -43,7 +43,7 @@ Choose the narrowest validation that proves the change. Run one file with `pnpm 
 | Bundled skills                                                                                | `pnpm run build:lib`             | `test/integration/skills.test.ts`                                        |
 | Product telemetry or lifecycle packaging                                                      | `pnpm run build:lib`             | `test/integration/telemetry.test.ts`                                     |
 | Viewer UI                                                                                     | `pnpm run build:viewer`          | `test/unit/` for Viewer logic; `test/e2e/viewer.test.ts` for built pages |
-| `.univer` schema or migration                                                                 | None                             | `test/unit/univerfile-migration.test.ts`                                 |
+| `.univer` schema, stores, or upgrade                                                          | None                             | `pnpm run test:univerfile`; `test/unit/gateway-univerfile.test.ts`       |
 | Import or export fidelity                                                                     | Build every affected application | `test/integration/exchange.test.ts`                                      |
 | Gateway, Worker, persistence, worktree lifecycle, Render Machine, or a cross-process protocol | Build every affected application | `pnpm run test:integration`                                              |
 | Cross-layer, SDK upgrade, or release change                                                   | None separately                  | `pnpm test`                                                              |

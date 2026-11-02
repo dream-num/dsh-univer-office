@@ -82,6 +82,7 @@
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",
     "test:comparison": "pnpm --filter @univer/unit-comparison-viewer test",
+    "test:univerfile": "pnpm --filter @univer/univerfile-sqlite test",
     "test": "pnpm run build && vitest run",
     "verify:public-dependencies": "node scripts/verify-public-runtime-dependencies.mjs",
     "prepublishOnly": "pnpm run build && pnpm run test"
