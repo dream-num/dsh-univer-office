@@ -1,15 +1,13 @@
 import { existsSync, statSync } from 'node:fs'
 import type { DatabaseSync } from 'node:sqlite'
 import type { IChangeset, IMutation, ISheetBlock, ISnapshot } from '@univerjs/protocol'
-import {
-  type UniverfileSQLiteConnection,
-  runUniverfileSQLiteTransaction
-} from '../../connection.ts'
-import { UniverfileSQLiteDatabaseAdapter } from '../../database-adapters/collaboration-database-adapter.ts'
-import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../../database-adapters/worktree-database-adapter.ts'
+import type { UniverfileSQLiteConnection } from '../../driver/connection.ts'
+import { runUniverfileSQLiteTransaction } from '../../driver/transaction.ts'
+import { UniverfileSQLiteDatabaseAdapter } from '../../stores/trunk.ts'
+import { UniverfileSQLiteWorktreeDatabaseAdapter } from '../../stores/worktree.ts'
 import { installSchema } from '../../schema/install.ts'
 import { ANONYMOUS_CREATOR_ID } from './v2.ts'
-import { encodeStoredJson } from '../../stored-json.ts'
+import { encodeStoredJson } from '../../codec/stored-json.ts'
 
 const LEGACY_PREFIX = '__collaboration_migration_v0_'
 const LEGACY_BINARY_TAG = '__u8__'

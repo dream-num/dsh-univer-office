@@ -1,4 +1,4 @@
-/** Table layouts of the formats an upgrade reads. The current schema lives in `v3.ts`. */
+/** Table layouts of the formats an upgrade reads. The current schema lives in `schema/v3.ts`. */
 export const V0_TABLES = [
   'units',
   'changesets',

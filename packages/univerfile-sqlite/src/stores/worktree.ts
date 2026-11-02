@@ -26,8 +26,9 @@ import type {
   WorktreeUnitSeed
 } from '@univerjs-pro/collaboration-worktree-service'
 import { UniverType, type IChangeset } from '@univerjs/protocol'
-import { type UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
-import { decodeStoredJson, encodeStoredJson } from '../stored-json.ts'
+import type { UniverfileSQLiteConnection } from '../driver/connection.ts'
+import { runUniverfileSQLiteTransaction } from '../driver/transaction.ts'
+import { decodeStoredJson, encodeStoredJson } from '../codec/stored-json.ts'
 
 const SUPPORTED_UNIT_TYPES = new Set<UniverType>([
   UniverType.UNIVER_SHEET,

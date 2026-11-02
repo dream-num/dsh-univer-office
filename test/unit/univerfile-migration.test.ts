@@ -36,7 +36,7 @@ beforeAll(async () => {
     stdin: {
       contents: `export * from './packages/univerfile-sqlite/src/index.ts';
         export { CollabService } from './src/gateway-app/collab-service.ts';
-        export * from './packages/univerfile-sqlite/src/stored-json.ts';`,
+        export * from './packages/univerfile-sqlite/src/codec/stored-json.ts';`,
       resolveDir: repoPath()
     },
     outfile: bundle,

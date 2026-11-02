@@ -1,5 +1,5 @@
-import type { UniverfileSQLiteConnection } from '../../connection.ts'
-import { runUniverfileSQLiteTransaction } from '../../connection.ts'
+import type { UniverfileSQLiteConnection } from '../../driver/connection.ts'
+import { runUniverfileSQLiteTransaction } from '../../driver/transaction.ts'
 
 export function migrateV1CandidateToV2(connection: UniverfileSQLiteConnection): number {
   const { database } = connection

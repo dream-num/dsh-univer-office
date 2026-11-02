@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { runUniverfileSQLiteTransaction } from '../connection.ts'
+import { runUniverfileSQLiteTransaction } from '../driver/transaction.ts'
 import { V3_INDEXES, V3_TABLES } from '../schema/v3.ts'
 
 interface SchemaObjectRow {

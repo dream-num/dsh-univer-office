@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
-import type { UniverfileSQLiteConnection } from '../../connection.ts'
-import { runUniverfileSQLiteTransaction } from '../../connection.ts'
+import type { UniverfileSQLiteConnection } from '../../driver/connection.ts'
+import { runUniverfileSQLiteTransaction } from '../../driver/transaction.ts'
 import {
   CORE_CHANGESETS_INDEX_SQL,
   HISTORY_SQL,

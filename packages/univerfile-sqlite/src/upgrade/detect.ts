@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite'
-import { DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS } from '../connection.ts'
+import { DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS } from '../driver/connection.ts'
 import { UniverfileSQLiteError } from '../errors.ts'
 import {
   ASSET_V1_TABLES,
@@ -8,8 +8,8 @@ import {
   V0_TABLES,
   WORKTREE_COMMON_TABLES,
   WORKTREE_V1_ONLY_TABLES
-} from './objects.ts'
-import { assertCurrentSchema } from './check.ts'
+} from './legacy-objects.ts'
+import { assertCurrentSchema } from '../schema/check.ts'
 
 export type UniverfileSQLiteFormat = 'v0' | 'v1' | 'v2' | 'v3'
 

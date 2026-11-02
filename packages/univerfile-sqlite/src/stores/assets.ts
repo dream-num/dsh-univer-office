@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import type { UniverfileSQLiteConnection } from '../connection.ts'
-import { runUniverfileSQLiteTransaction } from '../connection.ts'
+import type { UniverfileSQLiteConnection } from '../driver/connection.ts'
+import { runUniverfileSQLiteTransaction } from '../driver/transaction.ts'
 
 export const MAX_UNIVERFILE_ASSET_BYTES = 50 * 1024 * 1024
 

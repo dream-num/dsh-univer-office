@@ -1,15 +1,15 @@
 import { existsSync, unlinkSync } from 'node:fs'
-import { UniverfileSQLiteConnection } from './connection.ts'
-import { UniverfileSQLiteAssetStore } from './database-adapters/asset-store.ts'
-import { UniverfileSQLiteDatabaseAdapter } from './database-adapters/collaboration-database-adapter.ts'
-import { UniverfileSQLiteHistoryDatabaseAdapter } from './database-adapters/history-database-adapter.ts'
-import { UniverfileSQLiteWorktreeDatabaseAdapter } from './database-adapters/worktree-database-adapter.ts'
+import { UniverfileSQLiteConnection } from './driver/connection.ts'
+import { UniverfileSQLiteAssetStore } from './stores/assets.ts'
+import { UniverfileSQLiteDatabaseAdapter } from './stores/trunk.ts'
+import { UniverfileSQLiteHistoryDatabaseAdapter } from './stores/history.ts'
+import { UniverfileSQLiteWorktreeDatabaseAdapter } from './stores/worktree.ts'
 import { UniverfileSQLiteError } from './errors.ts'
 import {
   upgradeUniverfileSQLite,
   type UniverfileUpgradeResult,
   type UpgradeUniverfileSQLiteOptions
-} from './migration/upgrade.ts'
+} from './upgrade/upgrade.ts'
 import { installSchema } from './schema/install.ts'
 
 export interface OpenUniverfileSQLiteOptions extends UpgradeUniverfileSQLiteOptions {

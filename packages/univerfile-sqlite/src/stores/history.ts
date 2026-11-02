@@ -9,7 +9,8 @@ import type {
   ListHistoryRecordsOptions,
   ListHistoryRecordsResult
 } from '@univerjs-pro/collaboration-history-service'
-import { UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
+import { UniverfileSQLiteConnection } from '../driver/connection.ts'
+import { runUniverfileSQLiteTransaction } from '../driver/transaction.ts'
 
 interface HistoryRow {
   readonly unit_id: string

@@ -16,8 +16,9 @@ import {
   type UnitRecord
 } from '@univerjs-pro/collaboration-service'
 import type { IChangeset, ISheetBlock, ISnapshot, UniverType } from '@univerjs/protocol'
-import { type UniverfileSQLiteConnection, runUniverfileSQLiteTransaction } from '../connection.ts'
-import { decodeStoredJson, encodeStoredJson } from '../stored-json.ts'
+import type { UniverfileSQLiteConnection } from '../driver/connection.ts'
+import { runUniverfileSQLiteTransaction } from '../driver/transaction.ts'
+import { decodeStoredJson, encodeStoredJson } from '../codec/stored-json.ts'
 
 interface UnitRow {
   readonly unit_id: string
