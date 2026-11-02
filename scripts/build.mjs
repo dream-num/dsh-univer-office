@@ -213,9 +213,11 @@ if (target === 'all' || target === 'worker') {
     platform: 'node',
     target: 'node22.19',
     format: 'esm',
-    // @univerjs-pro/exchange-node's ESM entry re-exports its CJS build, which calls require()
-    // for Node built-ins and resolves its native binding from __filename. Neither exists in
-    // ESM output, so every worker file defines them from its own module URL.
+    // @univerjs-pro/exchange-node's ESM entry re-exports its CJS build, so the workers would
+    // otherwise bundle the ESM and CJS builds of every Univer package it reaches (+31 MB).
+    // Resolve Univer packages as CJS, as the Gateway does. CJS code calls require() for Node
+    // built-ins and exchange-node resolves its native binding from __filename; neither exists
+    // in ESM output, so every worker file defines them from its own module URL.
     banner: {
       js: [
         "import { createRequire as __workerCreateRequire } from 'node:module'",
@@ -225,7 +227,8 @@ if (target === 'all' || target === 'worker') {
       ].join('\n')
     },
     legalComments: 'none',
-    sourcemap: false
+    sourcemap: false,
+    plugins: [univerCjsOnlyPlugin()]
   })
   console.log(
     'built artifacts/unit-content-worker.mjs + artifacts/collaboration-runtime-worker.mjs + ' +
