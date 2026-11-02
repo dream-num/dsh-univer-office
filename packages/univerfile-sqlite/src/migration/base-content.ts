@@ -1,4 +1,4 @@
-import type Database from 'libsql'
+import type { DatabaseSync } from 'node:sqlite'
 import { UniverType } from '@univerjs/protocol'
 import { runUniverfileSQLiteTransaction } from '../connection.ts'
 import { decodeStoredJson, encodeStoredJson } from '../stored-json.ts'
@@ -63,7 +63,7 @@ interface SnapshotMigration {
  * Upgrades only legacy Base content while a storage-v0/v1 file is still a candidate.
  * The storage-v2 schema itself deliberately remains unchanged.
  */
-export function migrateLegacyBaseContentToV2(database: Database.Database): void {
+export function migrateLegacyBaseContentToV2(database: DatabaseSync): void {
   runUniverfileSQLiteTransaction(database, () => {
     const trunkLegacyUnits = migrateTrunkSnapshots(database)
     migrateTrunkChangesets(database, trunkLegacyUnits)
@@ -71,7 +71,7 @@ export function migrateLegacyBaseContentToV2(database: Database.Database): void 
   })
 }
 
-function migrateTrunkSnapshots(database: Database.Database): ReadonlySet<string> {
+function migrateTrunkSnapshots(database: DatabaseSync): ReadonlySet<string> {
   const rows = database
     .prepare(
       `SELECT snapshots.unit_id, snapshots.revision, snapshots.payload_json
@@ -115,7 +115,7 @@ function migrateTrunkSnapshots(database: Database.Database): ReadonlySet<string>
 }
 
 function migrateTrunkBlocks(
-  database: Database.Database,
+  database: DatabaseSync,
   blockPlansByUnit: ReadonlyMap<string, ReadonlyMap<string, BaseBlockPlan>>
 ): void {
   const rows = database
@@ -142,10 +142,7 @@ function migrateTrunkBlocks(
   }
 }
 
-function migrateTrunkChangesets(
-  database: Database.Database,
-  legacyUnitIds: ReadonlySet<string>
-): void {
+function migrateTrunkChangesets(database: DatabaseSync, legacyUnitIds: ReadonlySet<string>): void {
   if (legacyUnitIds.size === 0) return
   const rows = database
     .prepare(
@@ -172,7 +169,7 @@ function migrateTrunkChangesets(
 }
 
 function migrateWorktreeContent(
-  database: Database.Database,
+  database: DatabaseSync,
   trunkLegacyUnitIds: ReadonlySet<string>
 ): void {
   const legacyWorktreeUnits = new Set<string>()
@@ -213,7 +210,7 @@ function migrateWorktreeContent(
 }
 
 function migrateWorktreeSnapshots(
-  database: Database.Database,
+  database: DatabaseSync,
   tableName: 'collaboration_worktree_unit_seeds' | 'collaboration_worktree_unit_merge_artifacts',
   legacyWorktreeUnits: Set<string>
 ): void {

@@ -1,4 +1,4 @@
-import type Database from 'libsql'
+import type { DatabaseSync } from 'node:sqlite'
 import {
   CollabError,
   type CommitChangesetInput,
@@ -99,7 +99,7 @@ export const UNIVERFILE_UNIT_METADATA_KEY = '@univer/univerfile-sqlite/unit-meta
 
 export class UniverfileSQLiteDatabaseAdapter implements IDatabaseAdapter {
   private readonly _connection: UniverfileSQLiteConnection
-  private readonly _database: Database.Database
+  private readonly _database: DatabaseSync
   private readonly _ownsConnection: boolean
   private _disposed = false
 

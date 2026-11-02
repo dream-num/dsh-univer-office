@@ -26,7 +26,7 @@ export const RENDER_MACHINE_ROOT = fileURLToPath(
 )
 
 // The worker and gateway resolve their native dependencies (@univerjs-pro/exchange-node-binding,
-// engine-formula-rust-binding, libsql) through this plugin's own node_modules. The bindings are
+// engine-formula-rust-binding) through this plugin's own node_modules. The bindings are
 // never declared anywhere in this repository — the published manifest declares their wrappers
 // (@univerjs-pro/engine-formula-rust, @univerjs-pro/exchange-node) at the SDK baseline and npm
 // installs the bindings transitively, while the dev workspace hoists them via publicHoistPattern

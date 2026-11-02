@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import type Database from 'libsql'
+import type { DatabaseSync } from 'node:sqlite'
 import type { UniverfileSQLiteConnection } from '../connection.ts'
 import { runUniverfileSQLiteTransaction } from '../connection.ts'
 
@@ -58,7 +58,7 @@ export interface UniverfileSQLiteAssetStoreOptions {
  * distinct scoped identities, while the digest table stores identical bytes once.
  */
 export class UniverfileSQLiteAssetStore {
-  private readonly _database: Database.Database
+  private readonly _database: DatabaseSync
 
   public constructor(options: UniverfileSQLiteAssetStoreOptions) {
     this._database = options.connection.database

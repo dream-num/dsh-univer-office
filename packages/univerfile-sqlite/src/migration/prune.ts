@@ -1,4 +1,4 @@
-import type Database from 'libsql'
+import type { DatabaseSync } from 'node:sqlite'
 import { runUniverfileSQLiteTransaction } from '../connection.ts'
 import { CURRENT_V3_INDEXES, CURRENT_V3_TABLES } from '../schema/objects.ts'
 
@@ -18,7 +18,7 @@ const CURRENT_INDEXES = new Set<string>(CURRENT_V3_INDEXES)
  * the current owned schema so retired caches and unrelated application tables cannot influence a
  * later format detection or adapter initialization.
  */
-export function pruneCandidateToCurrentSchema(database: Database.Database): void {
+export function pruneCandidateToCurrentSchema(database: DatabaseSync): void {
   const objects = database
     .prepare(
       `SELECT type, name, sql

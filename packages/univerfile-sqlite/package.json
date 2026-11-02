@@ -19,8 +19,7 @@
     "@univerjs-pro/collaboration-history-service": "1.2.0",
     "@univerjs-pro/collaboration-service": "1.2.0",
     "@univerjs-pro/collaboration-worktree-service": "1.2.0",
-    "@univerjs/protocol": "1.2.0",
-    "libsql": "^0.5.29"
+    "@univerjs/protocol": "1.2.0"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

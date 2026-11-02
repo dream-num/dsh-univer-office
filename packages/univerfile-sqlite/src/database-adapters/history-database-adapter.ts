@@ -1,4 +1,4 @@
-import type Database from 'libsql'
+import type { DatabaseSync } from 'node:sqlite'
 import type {
   AppendHistoryRecordResult,
   HistoryCreatorIndex,
@@ -58,7 +58,7 @@ export interface UniverfileSQLiteHistoryDatabaseAdapterOptions {
  * grouping policy; this class only provides its CAS persistence contract and Gateway repair seam.
  */
 export class UniverfileSQLiteHistoryDatabaseAdapter implements IHistoryDatabaseAdapter {
-  private readonly _database: Database.Database
+  private readonly _database: DatabaseSync
   private _disposed = false
 
   public constructor(options: UniverfileSQLiteHistoryDatabaseAdapterOptions) {

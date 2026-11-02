@@ -1,16 +1,17 @@
 // Source-level `.univer` migration regressions: legacy files, atomic replacement, failure cleanup,
 // concurrent opens, and History readback. The integration tier separately exercises the built
-// Gateway. Source is bundled first because the upgrade helper re-executes its own module file in
-// a child process, which needs plain JavaScript.
+// Gateway. Source is bundled first because the concurrent-open case loads it in child processes,
+// which need plain JavaScript.
 import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { existsSync, renameSync, unlinkSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { build } from 'esbuild'
-import Database from 'libsql'
+import { DatabaseSync } from 'node:sqlite'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { repoPath } from '../support/paths.ts'
 
@@ -163,7 +164,7 @@ describe('V2 upgrade', () => {
 it('drops an inconsistent History index for the affected Unit only', async () => {
   const file = join(workspace, 'inconsistent-history.univer')
   createLegacy(file)
-  const db = new Database(file)
+  const db = new DatabaseSync(file)
   // Revision 3 points at a segment start that revision 2 does not declare.
   db.exec('UPDATE collaboration_history_revisions SET history_revision = 1 WHERE revision = 2;')
   db.close()
@@ -185,7 +186,7 @@ it.each([
   const name = `failed-${failure}.univer`
   const file = join(workspace, name)
   createLegacy(file)
-  const db = new Database(file)
+  const db = new DatabaseSync(file)
   if (failure === 'foreign-key') {
     db.exec(`PRAGMA foreign_keys = OFF;
       INSERT INTO collaboration_worktree_units
@@ -231,7 +232,7 @@ describe('older formats', () => {
   it('routes V1 through its legacy reader before the V2 to V3 conversion', async () => {
     const file = join(workspace, 'v1.univer')
     createLegacy(file)
-    const db = new Database(file)
+    const db = new DatabaseSync(file)
     db.exec(V1_ALTER)
     db.close()
     expect(api.detectUniverfileSQLiteFormat(file)).toBe('v1')
@@ -244,7 +245,7 @@ describe('older formats', () => {
   it('initializes History and assets missing from V1', async () => {
     const file = join(workspace, 'optional-v1.univer')
     createLegacy(file)
-    const db = new Database(file)
+    const db = new DatabaseSync(file)
     db.exec(`${V1_ALTER}
       DROP TABLE collaboration_history_revisions;
       DROP TABLE collaboration_assets;
@@ -264,7 +265,7 @@ describe('older formats', () => {
   // V0 initializes current adapters directly; its encoded snapshot and timestamps still survive.
   it('converts V0 with its encoded snapshot and timestamps', async () => {
     const file = join(workspace, 'v0.univer')
-    const db = new Database(file)
+    const db = new DatabaseSync(file)
     db.exec(await readFile(repoPath('test', 'fixtures', 'univerfile-v0.sql'), 'utf8'))
     const iso = new Date(createdAt).toISOString()
     db.prepare('INSERT INTO units VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
@@ -351,7 +352,7 @@ describe('stored JSON', () => {
   })
 })
 
-describe('concurrent and out-of-process upgrades', () => {
+describe('concurrent upgrades', () => {
   // Independent openers share the filesystem lock; only one publishes an upgrade and backup.
   it('publishes one upgrade and one backup for concurrent openers', async () => {
     const file = join(workspace, 'concurrent.univer')
@@ -379,27 +380,23 @@ describe('concurrent and out-of-process upgrades', () => {
     expect(await backupsOf('concurrent.univer')).toHaveLength(1)
     expect(api.detectUniverfileSQLiteFormat(file)).toBe('v3')
   })
+})
 
-  // The helper process exits before the original is replaced, including on platforms where an
-  // in-process rename would succeed. A second open must not leave another backup.
-  it('upgrades in a helper process once', async () => {
-    const file = join(workspace, 'subprocess.univer')
-    createLegacy(file)
-    const opened = api.openUniverfileSQLite(file, { execution: 'subprocess' })
-    try {
-      expect(opened.upgrade).toMatchObject({ status: 'upgraded', sourceFormat: 'v2' })
-      expect(api.detectUniverfileSQLiteFormat(file)).toBe('v3')
-    } finally {
-      await opened.dispose()
-    }
-    const again = api.openUniverfileSQLite(file, { execution: 'subprocess' })
-    try {
-      expect(again.upgrade.status).toBe('unchanged')
-    } finally {
-      await again.dispose()
-    }
-    expect(await backupsOf('subprocess.univer')).toHaveLength(1)
-  })
+// Windows refuses to rename or unlink a file while any handle to it stays open, so this only
+// proves the release there; elsewhere it guards the call sequence.
+it('releases the file as soon as it is disposed', async () => {
+  const file = join(workspace, 'release.univer')
+  const service = new api.CollabService({ dbPath: file, create: true })
+  try {
+    await service.createUnit(2, { unitId: 'unit', name: 'Document' })
+    expect(await service.runtime.trunkAdapter.getSnapshot(context, 'unit')).toBeTruthy()
+  } finally {
+    await service.dispose()
+  }
+  const moved = join(workspace, 'released.univer')
+  renameSync(file, moved)
+  unlinkSync(moved)
+  expect(existsSync(moved)).toBe(false)
 })
 
 // Unknown combinations and future versions must never be treated as an upgradable V2.
@@ -409,7 +406,7 @@ it.each([
 ] as const)('rejects schema component %s at version %i', async (component, version) => {
   const file = join(workspace, `unsupported-${component}.univer`)
   createLegacy(file)
-  const db = new Database(file)
+  const db = new DatabaseSync(file)
   db.prepare('UPDATE collaboration_schema_versions SET version = ? WHERE component = ?').run(
     version,
     component
@@ -475,7 +472,7 @@ function changeset(revision: number, createTime: number) {
 }
 
 function createLegacy(filename: string, options: { active?: boolean } = {}): void {
-  const db = new Database(filename)
+  const db = new DatabaseSync(filename)
   try {
     db.exec(schema)
     db.prepare('INSERT INTO collaboration_units VALUES (?, ?, ?, ?, ?, ?)').run(

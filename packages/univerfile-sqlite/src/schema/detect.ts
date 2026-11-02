@@ -1,4 +1,5 @@
-import Database from 'libsql'
+import { DatabaseSync } from 'node:sqlite'
+import { DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS } from '../connection.ts'
 import { UniverfileSQLiteError } from '../errors.ts'
 import {
   ASSET_V1_TABLES,
@@ -26,9 +27,13 @@ interface ColumnRow {
 }
 
 export function detectUniverfileSQLiteFormat(filename: string): UniverfileSQLiteFormat {
-  let database: Database.Database | undefined
+  let database: DatabaseSync | undefined
   try {
-    database = new Database(filename, { readonly: true, fileMustExist: true })
+    // Another process may be initializing the file it just upgraded; wait like any other reader.
+    database = new DatabaseSync(filename, {
+      readOnly: true,
+      timeout: DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS
+    })
     const tables = new Set(
       (
         database
@@ -123,7 +128,7 @@ const V3_REQUIRED_COLUMNS: readonly (readonly [string, readonly string[]])[] = [
 
 /** Core v2, worktree v3, assets v1, and history v2. */
 function detectV3(
-  database: Database.Database,
+  database: DatabaseSync,
   tables: ReadonlySet<string>,
   versions: ReadonlyMap<string, number>
 ): 'v3' {
@@ -156,7 +161,7 @@ function detectV3(
   return 'v3'
 }
 
-function columns(database: Database.Database, table: string): ReadonlySet<string> {
+function columns(database: DatabaseSync, table: string): ReadonlySet<string> {
   return new Set(
     (database.prepare(`PRAGMA table_info(${table})`).all() as unknown as ColumnRow[]).map(
       ({ name }) => name

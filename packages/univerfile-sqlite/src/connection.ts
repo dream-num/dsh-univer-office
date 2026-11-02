@@ -1,4 +1,4 @@
-import Database from 'libsql'
+import { DatabaseSync } from 'node:sqlite'
 
 export const DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS = 5_000
 
@@ -15,10 +15,10 @@ export interface UniverfileSQLiteConnectionOptions {
  * Owns one physical SQLite connection shared by the trunk and Worktree adapters.
  *
  * Adapters borrowed from this owner never close the database independently. This mirrors the
- * original CLI gateway, where the trunk and Worktree stores shared one libsql connection.
+ * original CLI gateway, where the trunk and Worktree stores shared one connection.
  */
 export class UniverfileSQLiteConnection {
-  public readonly database: Database.Database
+  public readonly database: DatabaseSync
   public readonly filename: string
 
   private _disposed = false
@@ -26,32 +26,18 @@ export class UniverfileSQLiteConnection {
   public constructor(options: UniverfileSQLiteConnectionOptions) {
     validateOptions(options)
     this.filename = options.filename
-    this.database = new Database(options.filename, {
-      timeout: options.busyTimeoutMs ?? DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS
+    this.database = new DatabaseSync(options.filename, {
+      timeout: options.busyTimeoutMs ?? DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS,
+      enableForeignKeyConstraints: true
     })
-
-    try {
-      this.database.exec('PRAGMA foreign_keys = ON;')
-      this.database.exec(
-        `PRAGMA busy_timeout = ${
-          options.busyTimeoutMs ?? DEFAULT_UNIVERFILE_SQLITE_BUSY_TIMEOUT_MS
-        };`
-      )
-    } catch (error) {
-      this.database.close()
-      this._disposed = true
-      throw error
-    }
   }
 
   /**
    * Closes this connection.
    *
-   * libsql 0.5.29 does not finalize prepared statements when `Database.close()` runs. On Windows,
-   * those statements may keep the database file locked until V8 collects them or the process
-   * exits (https://github.com/tursodatabase/libsql-js/issues/228). Callers must therefore not
-   * assume that a disposed database can be unlinked immediately in the same process. The CLI's
-   * supported way to delete a recently used `.univer` file on Windows is to stop the daemon first.
+   * `node:sqlite` finalizes every statement prepared on this connection before it closes the
+   * handle, so once this returns the file is no longer held by this process and can be renamed or
+   * unlinked immediately, including on Windows.
    */
   public dispose(): void {
     if (this._disposed) {
@@ -66,18 +52,15 @@ export class UniverfileSQLiteConnection {
  * Runs a synchronous SQLite operation atomically. Adapter calls made inside a larger gateway
  * transaction use a savepoint so schema initialization and migration can share one outer commit.
  */
-export function runUniverfileSQLiteTransaction<T>(
-  database: Database.Database,
-  operation: () => T
-): T {
-  if (!database.inTransaction) {
+export function runUniverfileSQLiteTransaction<T>(database: DatabaseSync, operation: () => T): T {
+  if (!database.isTransaction) {
     database.exec('BEGIN IMMEDIATE;')
     try {
       const result = operation()
       database.exec('COMMIT;')
       return result
     } catch (error) {
-      if (database.inTransaction) {
+      if (database.isTransaction) {
         database.exec('ROLLBACK;')
       }
       throw error
@@ -92,7 +75,7 @@ export function runUniverfileSQLiteTransaction<T>(
     database.exec(`RELEASE ${savepoint};`)
     return result
   } catch (error) {
-    if (database.inTransaction) {
+    if (database.isTransaction) {
       database.exec(`ROLLBACK TO ${savepoint};`)
       database.exec(`RELEASE ${savepoint};`)
     }

@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util'
-import type Database from 'libsql'
+import type { DatabaseSync } from 'node:sqlite'
 import { CollabError, type DatabaseContext } from '@univerjs-pro/collaboration-service'
 import type {
   AddWorktreeUnitDatabaseInput,
@@ -160,7 +160,7 @@ export const UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY =
 
 export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabaseAdapter {
   private readonly _connection: UniverfileSQLiteConnection
-  private readonly _database: Database.Database
+  private readonly _database: DatabaseSync
   private readonly _ownsConnection: boolean
   private _disposed = false
 
@@ -315,8 +315,8 @@ export class UniverfileSQLiteWorktreeDatabaseAdapter implements IWorktreeDatabas
   }
 
   /**
-   * Synchronous compatibility entry used by the existing Gateway control facade. libsql completes
-   * the transaction before returning, so initialization errors propagate to the caller instead of
+   * Synchronous compatibility entry used by the existing Gateway control facade. The SQLite driver
+   * is synchronous and completes the transaction before returning, so initialization errors propagate to the caller instead of
    * becoming an ignored rejected Promise.
    */
   public createWorktreeForGateway(

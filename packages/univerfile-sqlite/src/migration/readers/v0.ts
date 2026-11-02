@@ -1,5 +1,5 @@
 import { existsSync, statSync } from 'node:fs'
-import type Database from 'libsql'
+import type { DatabaseSync } from 'node:sqlite'
 import type { IChangeset, IMutation, ISheetBlock, ISnapshot } from '@univerjs/protocol'
 import {
   type UniverfileSQLiteConnection,
@@ -165,8 +165,7 @@ export type V0CandidateMigrationResult =
  * Converts the complete pre-database-v1 Univer CLI schema in one SQLite transaction.
  *
  * Transactional DDL keeps the original legacy schema intact on any conversion failure without
- * copying, deleting or replacing the database file. This also avoids libsql's nondeterministic
- * same-process file-handle release on Windows.
+ * copying, deleting or replacing the database file.
  */
 export function migrateV0CandidateToV3(
   connection: UniverfileSQLiteConnection
@@ -203,7 +202,7 @@ export function migrateV0CandidateToV3(
   }
 }
 
-function inspectLegacySchema(database: Database.Database): boolean {
+function inspectLegacySchema(database: DatabaseSync): boolean {
   const legacyTables = legacyTableNames().filter((tableName) => hasTable(database, tableName))
   const collaborationTables = (
     database
@@ -239,7 +238,7 @@ function inspectLegacySchema(database: Database.Database): boolean {
   return true
 }
 
-function renameLegacyTables(database: Database.Database): void {
+function renameLegacyTables(database: DatabaseSync): void {
   for (const tableName of legacyTableNames()) {
     database.exec(`ALTER TABLE ${tableName} RENAME TO ${legacyTable(tableName)};`)
   }
@@ -258,7 +257,7 @@ function initializeCurrentDatabase(filename: string, connection: UniverfileSQLit
   }
 }
 
-function migrateTrunk(database: Database.Database): void {
+function migrateTrunk(database: DatabaseSync): void {
   const units = database
     .prepare(
       `SELECT unit_id, type, name, head_rev, created_at, deleted_at
@@ -377,7 +376,7 @@ function migrateTrunk(database: Database.Database): void {
   }
 }
 
-function migrateWorktrees(database: Database.Database): void {
+function migrateWorktrees(database: DatabaseSync): void {
   const trunkUnits = database
     .prepare(
       `SELECT unit_id, type, name, head_rev, created_at, deleted_at
@@ -400,7 +399,7 @@ function migrateWorktrees(database: Database.Database): void {
 }
 
 function migrateWorktree(
-  database: Database.Database,
+  database: DatabaseSync,
   worktree: LegacyWorktreeRow,
   trunkById: ReadonlyMap<string, LegacyUnitRow>
 ): void {
@@ -572,7 +571,7 @@ function migrateWorktree(
 }
 
 function migrateWorktreeSeeds(
-  database: Database.Database,
+  database: DatabaseSync,
   worktree: LegacyWorktreeRow,
   activeUnits: readonly {
     readonly unitId: string
@@ -621,7 +620,7 @@ function migrateWorktreeSeeds(
 }
 
 function migrateActiveWorktreeChangesets(
-  database: Database.Database,
+  database: DatabaseSync,
   worktree: LegacyWorktreeRow,
   activeUnits: readonly { readonly unitId: string; readonly type: number }[],
   changesetsByUnit: ReadonlyMap<string, readonly LegacyWorktreeChangesetRow[]>
@@ -650,7 +649,7 @@ function migrateActiveWorktreeChangesets(
 }
 
 function migrateDeletedWorktreeUnits(
-  database: Database.Database,
+  database: DatabaseSync,
   worktree: LegacyWorktreeRow,
   baseline: Readonly<Record<string, number>>,
   created: ReadonlyMap<
@@ -687,7 +686,7 @@ function migrateDeletedWorktreeUnits(
 }
 
 function migrateChangesets(
-  database: Database.Database,
+  database: DatabaseSync,
   rows: readonly LegacyChangesetRow[],
   unitById: ReadonlyMap<string, LegacyUnitRow>,
   targetTable: 'collaboration_changesets'
@@ -867,7 +866,7 @@ function validateCommitSequence(
   })
 }
 
-function legacySheetBlocks(database: Database.Database, unitId: string): readonly ISheetBlock[] {
+function legacySheetBlocks(database: DatabaseSync, unitId: string): readonly ISheetBlock[] {
   const rows = database
     .prepare(
       `SELECT unit_id, block_id, start_row, end_row, data
@@ -978,7 +977,7 @@ function legacyStatus(status: string): 'draft' | 'ready' | 'merged' | 'discarded
   throw new Error(`legacy Worktree status ${status} is not supported`)
 }
 
-function countMergingWorktrees(database: Database.Database, table: string): number {
+function countMergingWorktrees(database: DatabaseSync, table: string): number {
   const row = database
     .prepare(`SELECT COUNT(*) AS count FROM ${table} WHERE status = 'merging'`)
     .get() as { readonly count: number }
@@ -1014,7 +1013,7 @@ function legacyTable(tableName: LegacyTableName): string {
   return `${LEGACY_PREFIX}${tableName}`
 }
 
-function hasTable(database: Database.Database, tableName: string): boolean {
+function hasTable(database: DatabaseSync, tableName: string): boolean {
   return Boolean(
     database
       .prepare(

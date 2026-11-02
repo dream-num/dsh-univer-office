@@ -1,4 +1,4 @@
-import type Database from 'libsql'
+import type { DatabaseSync } from 'node:sqlite'
 import type { UniverfileSQLiteConnection } from '../../connection.ts'
 import { runUniverfileSQLiteTransaction } from '../../connection.ts'
 import {
@@ -85,7 +85,7 @@ export function migrateV2CandidateToV3(connection: UniverfileSQLiteConnection): 
 }
 
 /** Matches the SDK Core migration: the creator is the legacy History author of revision 1. */
-function rebuildCoreUnits(database: Database.Database, hasLegacyHistory: boolean): void {
+function rebuildCoreUnits(database: DatabaseSync, hasLegacyHistory: boolean): void {
   const creator = hasLegacyHistory
     ? `COALESCE(NULLIF((SELECT history.user_id FROM ${LEGACY_HISTORY_TABLE} AS history
                         WHERE history.unit_id = units.unit_id AND history.revision = 1), ''),
@@ -110,7 +110,7 @@ function rebuildCoreUnits(database: Database.Database, hasLegacyHistory: boolean
  * Matches the SDK Worktree migration: trunk-sourced Units take the trunk creation identity, and
  * Worktree-created Units have no recorded author.
  */
-function rebuildWorktreeUnits(database: Database.Database): void {
+function rebuildWorktreeUnits(database: DatabaseSync): void {
   database.exec(`
     ${worktreeUnitsTableSql('collaboration_worktree_units_v3')}
 
@@ -138,7 +138,7 @@ function rebuildWorktreeUnits(database: Database.Database): void {
 }
 
 /** `created_at_ms` starts at 0 here; `normalizeAllChangesetCreateTimes` fills it. */
-function rebuildChangesetTables(database: Database.Database): void {
+function rebuildChangesetTables(database: DatabaseSync): void {
   database.exec(`
     ${coreChangesetsTableSql('collaboration_changesets_v3')}
 
@@ -171,11 +171,11 @@ function rebuildChangesetTables(database: Database.Database): void {
  * nothing. Like the SDK migrations, a missing value takes the legacy History commit time for trunk
  * changesets and otherwise the migration start time.
  */
-export function normalizeChangesetCreateTimes(database: Database.Database): void {
+export function normalizeChangesetCreateTimes(database: DatabaseSync): void {
   runUniverfileSQLiteTransaction(database, () => normalizeAllChangesetCreateTimes(database))
 }
 
-function normalizeAllChangesetCreateTimes(database: Database.Database): void {
+function normalizeAllChangesetCreateTimes(database: DatabaseSync): void {
   const migrationStartedAtMs = Date.now()
   const legacyCommittedAt = hasTable(database, LEGACY_HISTORY_TABLE)
     ? `(SELECT history.committed_at FROM ${LEGACY_HISTORY_TABLE} AS history
@@ -239,7 +239,7 @@ function toMilliseconds(value: unknown): number | undefined {
  * `history_revision = revision`. The SDK stores only the starts, and revision 1 belongs to the
  * creation record alone.
  */
-function migrateHistory(database: Database.Database): void {
+function migrateHistory(database: DatabaseSync): void {
   const units = database
     .prepare(
       `SELECT unit_id, head_revision, creator_id, created_at_ms
@@ -332,7 +332,7 @@ function historyStarts(
     }))
 }
 
-function hasTable(database: Database.Database, tableName: string): boolean {
+function hasTable(database: DatabaseSync, tableName: string): boolean {
   return (
     database
       .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?")
