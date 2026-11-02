@@ -4,8 +4,9 @@
 
 univerfile（`.univer`）是本地优先的 Univer 文档容器。一个 SQLite 文件保存一组 Sheet、Doc、Slide、Base 与 Board
 Unit，以及每个 Unit 的修订历史、在合并前与 trunk 隔离的 Worktree 草稿，和内容引用的嵌入资产。应用通常在本机
-进程中基于本 package 运行 Collaboration SDK 的各个 Service，即可使用修订、History、Worktree 与合并，数据始终是一个可以复制、备份和移动的文件。Univer CLI 与 DSH 的 Univer Office 插件都是这样，由本地
-Gateway 承载这些 Service。
+进程中基于本 package 运行 Collaboration SDK 的各个 Service，即可使用修订、History、Worktree 与合并，数据始终
+是一个可以复制、备份和移动的文件。Univer CLI 与 DSH 的 Univer Office 插件都是这样，由本地 Gateway 承载这些
+Service。
 
 `@univer/univerfile-sqlite` 通过 Node 内置的 `node:sqlite` 把 `.univer` 文件存储在 SQLite 中。它拥有当前
 schema，识别并升级旧格式，并向 Collaboration SDK 各 Service 提供持久化所用的 store。
