@@ -64,8 +64,8 @@ and in what order.
   converts a copy, verifies it, checks that the source did not change, and then replaces the
   source. Any failure before the replacement leaves the source unchanged and the backup in place.
   Reopening an unchanged file reuses its existing backup.
-- Node 22 and 24 print an `ExperimentalWarning` when `node:sqlite` loads. The package leaves
-  process warnings alone; start the process with `--disable-warning=ExperimentalWarning` to hide it.
+- Node 22 and 24 print an `ExperimentalWarning` to stderr when `node:sqlite` first loads. It does
+  not affect behaviour, and the package leaves process warnings alone.
 
 ## Formats
 

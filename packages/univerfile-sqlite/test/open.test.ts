@@ -161,7 +161,6 @@ it('upgrades once for concurrent openers in separate processes', async () => {
   const attempts = await Promise.all(
     [0, 1].map(() =>
       run(process.execPath, [
-        '--disable-warning=ExperimentalWarning',
         '--input-type=module',
         '-e',
         script,

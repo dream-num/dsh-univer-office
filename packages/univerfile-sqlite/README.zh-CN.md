@@ -57,8 +57,8 @@ SDK Service 调用契约方法，应用直接调用扩展方法。本地文件�
   目录协调，只有一个进程执行升级。
 - 升级先只读识别格式，在文件旁写一份逐字节相同的备份，在副本上转换并校验，确认源文件未变化后再替换。替换前任何
   失败都保持源文件不变并保留备份。再次打开同一份未变化的文件时复用已有备份。
-- Node 22 与 24 加载 `node:sqlite` 时会打印 `ExperimentalWarning`。package 不修改进程的 warning 处理；需要
-  隐藏时用 `--disable-warning=ExperimentalWarning` 启动进程。
+- Node 22 与 24 首次加载 `node:sqlite` 时会在 stderr 打印 `ExperimentalWarning`，不影响功能；package 不修改
+  进程的 warning 处理。
 
 ## 格式
 

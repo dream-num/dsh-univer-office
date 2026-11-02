@@ -27,9 +27,7 @@ export function gatewayLaunch(port: number): {
   }
   return {
     command: process.execPath,
-    // `.univer` files use the built-in `node:sqlite`, which Node 22 and 24 flag as experimental
-    // on first load; the warning would otherwise land in the Gateway's stderr log.
-    args: ['--disable-warning=ExperimentalWarning', GATEWAY_ENTRY],
+    args: [GATEWAY_ENTRY],
     options: {
       env: spawnEnvironment(env),
       stdio: ['ignore', 'ignore', 'pipe'],
