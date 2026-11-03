@@ -38,7 +38,7 @@ describe('Univer credentials', () => {
         ...univerServerCredentials({})
       })
       expect(service.license.status).toBe('valid')
-      expect(service.license.domains).toEqual(['localhost', 'app'])
+      expect(service.license.domains).toEqual(['localhost', 'app', '127.0.0.1'])
     } finally {
       await file.close()
     }
