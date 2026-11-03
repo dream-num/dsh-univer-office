@@ -15,7 +15,10 @@ ROOT="$(dirname "$HERE")"
 DIST="$ROOT/dist"
 PKG_DIR="$DIST/univer"
 
-# 0. Generate every application and declaration artifact from src/.
+# 0. Generate every application and declaration artifact from src/. The build
+#    only overwrites its own outputs, so clear artifacts/ first: anything a
+#    removed build entry left there would otherwise be shipped by the copy below.
+rm -rf "$ROOT/artifacts"
 (cd "$ROOT" && pnpm run build)
 
 # 1. Package contents (dist/univer/): everything the plugin ships.

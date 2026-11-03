@@ -42,7 +42,7 @@ import type {
   UniverUnitKind
 } from '../service/types.ts'
 import { UniverError } from '../service/errors.ts'
-import { UNIVER_LICENSE } from '../../workers/unit-content/license.ts'
+import { univerLicense } from '../../shared/univer-license.ts'
 
 type MachineRuntime = UniverPrintPdfRuntime &
   UniverRenderRuntime &
@@ -206,7 +206,7 @@ export class RenderOperations {
       return await createUniverRenderRuntime({
         renderPageRoot: RENDER_MACHINE_ROOT,
         env: process.env,
-        license: process.env.UNIVER_LICENSE?.trim() || UNIVER_LICENSE,
+        license: univerLicense(process.env),
         ...(browserExecutablePath === undefined ? {} : { browserExecutablePath }),
         ...(signal === undefined ? {} : { signal })
       })
