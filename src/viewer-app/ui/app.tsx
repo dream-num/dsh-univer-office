@@ -130,6 +130,10 @@ class ViewerController {
     private readonly getDarkMode: () => boolean
   ) {}
 
+  public async flush(): Promise<void> {
+    await this.handle?.flush?.()
+  }
+
   public setDarkMode(isDarkMode: boolean): void {
     this.handle?.setDarkMode(isDarkMode)
   }
@@ -280,8 +284,11 @@ class ViewerController {
           ...(job.view.kind === 'worktree' ? { worktreeId: job.view.worktreeId } : {}),
           unitId: job.unit.unitId,
           unitType: job.unit.type,
-          // Only trunk views can be editable; worktree views are always read-only.
-          editable: job.view.kind === 'trunk' && job.editable,
+          editable: job.editable,
+          onReadOnlyEdit: () =>
+            toast(
+              job.view.kind === 'worktree' ? t().toast.sheetReadOnlyReady : t().toast.sheetReadOnly
+            ),
           locale: this.getLocale(),
           darkMode: this.getDarkMode()
         })
@@ -927,9 +934,9 @@ export class App {
         if (!this.comparisonMode && unitId !== undefined && (becameDraft || becameReady)) {
           void this.selectWorktreeUnit(worktree.worktreeId, unitId)
         } else {
-          // draft <-> ready changes the server-side write policy. Replace the collaboration
-          // session so an old tab cannot retain an in-flight/local queue against stale permissions.
-          this.viewer.reload()
+          // Compare retains a detached live viewer. Drop its old write policy; returning
+          // to View creates a fresh session for the authoritative worktree status.
+          this.viewer.clearView()
         }
       }
     }
@@ -1376,7 +1383,7 @@ export class App {
     if (this.viewPreview) {
       await this.showUnitPreview(worktreeId, unit)
     } else {
-      await this.viewer.show(this.view, unit, false)
+      await this.viewer.show(this.view, unit, this.worktrees.get(worktreeId)?.status === 'draft')
     }
   }
 
@@ -1428,6 +1435,35 @@ export class App {
     return [...changed, ...deleted]
   }
 
+  public async doReopen(worktreeId: string): Promise<void> {
+    if (this.busy || this.worktrees.get(worktreeId)?.status !== 'ready') return
+    const eventVersion = this.worktreeEventVersions.get(worktreeId) ?? 0
+    this.setBusy(true)
+    try {
+      const res = await this.control.reopen(worktreeId)
+      if (!res.ok || res.error.code !== 1) {
+        throw new Error(res.error.message || 'Unknown gateway error')
+      }
+      const worktree = (await this.control.listWorktrees()).find(
+        (candidate) => candidate.worktreeId === worktreeId
+      )
+      if (worktree && (this.worktreeEventVersions.get(worktreeId) ?? 0) === eventVersion) {
+        this.applyWorktreeSnapshot(worktree)
+      }
+      if (
+        this.view.kind === 'worktree' &&
+        this.view.worktreeId === worktreeId &&
+        this.worktrees.get(worktreeId)?.status === 'draft'
+      ) {
+        await this.setComparisonMode(false)
+      }
+    } catch (error) {
+      toast(t().toast.reopenFailed(String(error)))
+    } finally {
+      this.setBusy(false)
+    }
+  }
+
   public async doReady(worktreeId: string): Promise<void> {
     const worktree = this.worktrees.get(worktreeId)
     const ok = await confirmDialog({
@@ -1444,6 +1480,7 @@ export class App {
     const eventVersion = this.worktreeEventVersions.get(worktreeId) ?? 0
     this.setBusy(true)
     try {
+      await this.viewer.flush()
       const res = await this.control.ready(worktreeId)
       if (!res.ok || res.error.code !== 1) {
         throw new Error(res.error.message || 'Unknown gateway error')

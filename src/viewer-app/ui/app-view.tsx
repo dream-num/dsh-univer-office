@@ -1,4 +1,4 @@
-import { type UnitSummary, type Worktree } from '@univer/collab-gateway-contract'
+import { UNIT_TYPE_SHEET, type UnitSummary, type Worktree } from '@univer/collab-gateway-contract'
 import { UniverCliIcon } from '@univerjs/icons'
 import {
   Check,
@@ -683,6 +683,7 @@ type HeaderApp = Pick<
   | 'setComparisonMode'
   | 'setViewPreview'
   | 'refreshUnitComparison'
+  | 'doReopen'
   | 'doReady'
   | 'doMerge'
   | 'doDiscard'
@@ -700,6 +701,7 @@ type HeaderSnapshot = Pick<
   | 'viewPreview'
   | 'trunkEditingOptIn'
   | 'sidebarCollapsed'
+  | 'busy'
 >
 
 export function Topbar({ app, snap }: { app: HeaderApp; snap: HeaderSnapshot }): ReactElement {
@@ -845,6 +847,15 @@ function WorktreeTitle({
               )}
             </div>
           </div>
+          {unit?.type === UNIT_TYPE_SHEET &&
+            worktree?.status === 'ready' &&
+            !snap.comparisonMode &&
+            !snap.viewPreview && (
+              <Badge variant="outline" data-testid="sheet-readonly-status">
+                <Eye />
+                {t().topbar.readOnlyReady}
+              </Badge>
+            )}
           {previewError !== undefined ? (
             <Badge
               variant="warn"
@@ -879,7 +890,10 @@ function WorktreeTitle({
           itemClassName="min-h-7 min-w-0 whitespace-normal px-3.5 py-1 text-[13px] [overflow-wrap:anywhere]"
           value={snap.comparisonMode ? 'diff' : 'view'}
           options={[
-            { value: 'view', label: t().topbar.segView },
+            {
+              value: 'view',
+              label: worktree?.status === 'draft' ? t().topbar.editable : t().topbar.segView
+            },
             { value: 'diff', label: t().topbar.segDiff }
           ]}
           onChange={(value) => void app.setComparisonMode(value === 'diff')}
@@ -924,6 +938,18 @@ function WorktreeTitle({
             >
               <CircleCheck />
               <span className="min-w-0 wrap-anywhere">{t().topbar.submitForReview}</span>
+            </Button>
+          )}
+          {worktree?.status === 'ready' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-auto min-h-8 max-w-full py-1.5 leading-4 whitespace-normal"
+              disabled={snap.busy}
+              onClick={() => void app.doReopen(worktreeId)}
+            >
+              <Pencil />
+              <span className="min-w-0 wrap-anywhere">{t().topbar.continueEditing}</span>
             </Button>
           )}
           {worktree?.status === 'ready' && (

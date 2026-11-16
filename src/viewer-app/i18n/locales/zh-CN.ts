@@ -26,6 +26,9 @@ export function createZhCnMessages(): Messages {
       previewLoadFailed: (error: string): string => `预览加载失败:${error}`
     },
     toast: {
+      sheetReadOnlyReady: '当前修改待确认，点击「继续编辑」后即可修改。',
+      sheetReadOnly: '当前视图为只读。',
+      reopenFailed: (error: string): string => `恢复编辑失败：${error}`,
       worktreeGone: '该修改已不存在,已切回当前版本',
       agentReset: 'AI 撤回了上一步,正在刷新…',
       workDone: (name: string): string => `「${name}」改完了,待你确认`,
@@ -66,6 +69,8 @@ export function createZhCnMessages(): Messages {
       updated: '已更新'
     },
     topbar: {
+      readOnlyReady: '只读 · 待确认',
+      continueEditing: '继续编辑',
       currentVersion: '当前版本',
       fallbackDocumentName: '文档',
       submitForReview: '提交确认',

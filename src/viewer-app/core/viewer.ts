@@ -4,6 +4,7 @@ import '@univer/render-preset/facades'
 
 import {
   IAuthzIoService,
+  IConfigService,
   ICommandService,
   LocaleService,
   IPermissionService,
@@ -14,6 +15,8 @@ import {
   Univer,
   UniverInstanceType
 } from '@univerjs/core'
+import { SheetPermissionCheckController } from '@univerjs/sheets'
+import { SHEETS_UI_PLUGIN_CONFIG_KEY } from '@univerjs/sheets-ui'
 import { SetDocZoomRatioOperation } from '@univerjs/docs-ui'
 import type { IBoardData } from '@univerjs-pro/boards'
 import { SetSlideZoomRatioOperation, type ISlidePageSize } from '@univerjs-pro/slides'
@@ -66,6 +69,7 @@ import { startPreviewSheetFormulaCalculation } from './preview-formula'
 import {
   blockLocalEditingCommands,
   enforceSheetViewerReadOnlyPermissions,
+  installSheetReadOnlyFeedback,
   resolveViewerReadOnlyEnforcement,
   resolveViewerWorkbenchChrome
 } from './viewer-readonly'
@@ -88,6 +92,7 @@ export interface ViewerOptions {
   unitType: UnitType
   /** Allow the user to edit this unit (generate changesets). Default false = read-only viewer. */
   editable?: boolean
+  onReadOnlyEdit?: () => void
   /** Which language the Univer UI initially renders in. */
   locale: LocaleType
   /** Initial Univer appearance. Later changes use ViewerHandle.setDarkMode without rebuilding. */
@@ -95,6 +100,7 @@ export interface ViewerOptions {
 }
 
 export interface ViewerHandle {
+  flush?(): Promise<void>
   setDarkMode(isDarkMode: boolean): void
   setLocale(locale: LocaleType): Promise<void>
   dispose(): void
@@ -111,7 +117,7 @@ declare global {
 
 /**
  * Mount a Univer instance that views one unit (sheet, doc, or slide) of trunk or a worktree, live via the
- * official collaboration-client (comb). Read-only by default; pass `editable: true` (trunk only,
+ * official collaboration-client (comb). Read-only by default; pass `editable: true` (trunk or draft worktree,
  * gated by the caller) to let the user edit and submit changesets via comb. Switching context
  * (trunk<->worktree) or handling a `reset` is done by the caller disposing this and creating a fresh one.
  */
@@ -230,6 +236,15 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     }
   })
 
+  if (!editable && opts.unitType === UNIT_TYPE_SHEET) {
+    // Workbook permissions disable actions but do not prevent opening the cell editor.
+    // Stop typing, double-click and formula-bar edits before they create a local draft.
+    univer
+      .__getInjector()
+      .get(IConfigService)
+      .setConfig(SHEETS_UI_PLUGIN_CONFIG_KEY, { disableEdit: true }, { merge: true })
+  }
+
   let api: ViewerDebugAPI
   try {
     api = FUniver.newAPI(univer)
@@ -266,16 +281,28 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
   await materializeHostEmbedChildren(univer, opts.unitId)
   const disposeDebugEndpoint = exposeDebugEndpoint(univer, api)
 
+  let disposeSheetReadOnly: (() => void) | undefined
+  let sheetFeedback: ReturnType<typeof installSheetReadOnlyFeedback> | undefined
   if (readOnlyEnforcement === 'sheet-permission') {
-    enforceSheetViewerReadOnlyPermissions(
+    disposeSheetReadOnly = enforceSheetViewerReadOnlyPermissions(
       univer.__getInjector().get(IPermissionService),
       opts.unitId
     )
-  } else if (readOnlyEnforcement === 'mutation-gate') {
-    blockLocalEditingCommands(univer.__getInjector().get(ICommandService))
+    const container = document.getElementById(opts.container)
+    if (container && opts.onReadOnlyEdit) {
+      sheetFeedback = installSheetReadOnlyFeedback(
+        container,
+        univer.__getInjector().get(SheetPermissionCheckController),
+        opts.onReadOnlyEdit
+      )
+    }
+  }
+  if (readOnlyEnforcement !== 'none') {
+    blockLocalEditingCommands(univer.__getInjector().get(ICommandService), sheetFeedback?.notify)
   }
 
   return {
+    flush: () => collaboration.flush(opts.unitId),
     setDarkMode: (isDarkMode) => api.toggleDarkMode(isDarkMode),
     setLocale: async (locale) => {
       const pack = await loadViewerLocale(locale)
@@ -283,6 +310,8 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
       api.setLocale(locale)
     },
     dispose: () => {
+      sheetFeedback?.dispose()
+      disposeSheetReadOnly?.()
       documentViewPosition?.dispose()
       formulaResultAppliedSubscription.unsubscribe()
       sheetResourceRefDataProvider.dispose()

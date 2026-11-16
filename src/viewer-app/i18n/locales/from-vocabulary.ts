@@ -107,6 +107,9 @@ export function messagesFromVocabulary(
       previewLoadFailed: (error) => failure(v.preview, error)
     },
     toast: {
+      sheetReadOnlyReady: `${v.viewOnly} · ${v.awaiting}. ${v.continue} ${v.editing}.`,
+      sheetReadOnly: v.viewOnly,
+      reopenFailed: (error) => failure(v.editing, error),
       worktreeGone: `${v.modification}: ${v.no} · ${v.currentVersion}`,
       agentReset: `${v.aiAssistant}: ${v.updated} · ${v.loading}…`,
       workDone: (name) => `“${name}” · ${v.ready}`,
@@ -141,6 +144,8 @@ export function messagesFromVocabulary(
       updated: v.updated
     },
     topbar: {
+      readOnlyReady: `${v.viewOnly} · ${v.awaiting}`,
+      continueEditing: `${v.continue} ${v.editing}`,
       currentVersion: v.currentVersion,
       fallbackDocumentName: v.file,
       submitForReview: v.submitForReview,

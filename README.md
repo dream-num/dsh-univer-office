@@ -137,11 +137,13 @@ Create a monthly expense spreadsheet with dates, categories, amounts, a total, a
 - Review cards remain in the conversation and can be folded or opened fullscreen later. Fullscreen escapes conversation layout constraints, preserves the card's space without reloading the Viewer, and supports Esc to exit.
 - Continue editing, approve, or discard changes from the Univer page embedded in the card.
 
+- **Sheet review mode**: ready Sheets show a read-only status and explain editing attempts. Use **Continue editing** to resume. Selection and copying remain available; read-only mode does not additionally disable printing or export.
+
 ## How it works
 
 1. Describe the result you want and provide any source files.
 2. The agent creates an isolated draft and edits the Univer content there.
-3. Follow the live preview and ask for revisions until the result is ready.
+3. Edit draft worktrees directly in the live Viewer or ask the agent for revisions. For a ready worktree, click **Continue editing** to reopen it as a draft, then submit it for confirmation again. Compare and merge previews remain read-only.
 4. Approve the result to update the current version, or discard the draft without changing it.
 
 Approval and discarding always require an explicit user request.

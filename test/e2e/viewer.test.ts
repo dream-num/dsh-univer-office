@@ -116,6 +116,241 @@ describe('built Viewer', () => {
     })
   })
 
+  it('persists draft edits and resumes a ready worktree through Continue editing', async () => {
+    await withPage(browser, async (page) => {
+      page.on('dialog', (dialog) => void dialog.accept())
+      await openWorktree(page)
+      const edit = async (value: string): Promise<void> => {
+        await page.evaluate(async (text) => {
+          const api = window.univerAPI!
+          api.getActiveWorkbook().getActiveSheet().getRange('D4').setValue(text)
+          await api.getCollaboration().flush()
+        }, value)
+      }
+      await edit('user draft edit')
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await page.waitForFunction(() => Boolean(window.univerAPI?.getActiveWorkbook()))
+      expect(
+        await page.evaluate(() =>
+          window.univerAPI!.getActiveWorkbook().getActiveSheet().getRange('D4').getValue()
+        )
+      ).toBe('user draft edit')
+      await page.click('::-p-text(Submit for confirmation)')
+      await page.waitForSelector('[data-slot="dialog-content"]')
+      await page.click('[data-slot="dialog-content"] button:last-child')
+      await page.waitForSelector('[data-slot="dialog-content"]', { hidden: true })
+      const continueButton = '::-p-text(Continue editing)'
+      await page.waitForSelector(continueButton)
+      await page.waitForFunction(
+        () =>
+          Boolean(window.univerAPI?.getActiveWorkbook()) &&
+          [...document.querySelectorAll('.overlay')].every(
+            (element) => getComputedStyle(element).display === 'none'
+          )
+      )
+      await page.waitForSelector('[data-testid="sheet-readonly-status"]')
+      await browser
+        .defaultBrowserContext()
+        .overridePermissions(gateway.origin, [
+          'clipboard-read',
+          'clipboard-write',
+          'clipboard-sanitized-write'
+        ])
+      await sheetCanvasPosition(page)
+      expect(
+        await page.evaluate(() => {
+          const workbook = window.univerAPI!.getActiveWorkbook()
+          workbook.setEditable(true)
+          const permissions = workbook.getWorkbookPermission()
+          return {
+            editable: permissions.getPoint('WorkbookEdit'),
+            copy: permissions.getPoint('WorkbookCopy'),
+            print: permissions.getPoint('WorkbookPrint'),
+            export: permissions.getPoint('WorkbookExport')
+          }
+        })
+      ).toEqual({ editable: false, copy: true, print: true, export: true })
+      const valuesBefore = await page.evaluate(() =>
+        window.univerAPI!.getActiveWorkbook().getActiveSheet().getRange('A1:F8').getValues()
+      )
+      const assertReadOnly = async (): Promise<void> => {
+        await page.waitForFunction(() => {
+          const toast = document.getElementById('toast')
+          return (
+            toast?.textContent?.includes('Click Continue editing') &&
+            !toast.classList.contains('opacity-0')
+          )
+        })
+        expect(
+          await page.evaluate(() => ({
+            values: window
+              .univerAPI!.getActiveWorkbook()
+              .getActiveSheet()
+              .getRange('A1:F8')
+              .getValues(),
+            pending: window.univerAPI!.getCollaboration().hasWritePending()
+          }))
+        ).toEqual({ values: valuesBefore, pending: false })
+        await page.waitForFunction(() =>
+          document.getElementById('toast')?.classList.contains('opacity-0')
+        )
+      }
+      await page
+        .locator('canvas[id^="univer-sheet-main-canvas_"]')
+        .click({ offset: { x: 85, y: 32 }, count: 2 })
+      await page.keyboard.type('blocked typing')
+      await assertReadOnly()
+      await page.keyboard.press('F2')
+      await assertReadOnly()
+      await page.keyboard.press('Backspace')
+      await assertReadOnly()
+      await page.keyboard.press('Delete')
+      await assertReadOnly()
+      await page
+        .locator('[data-u-comp="formula-editor"] canvas')
+        .filter((canvas) => canvas.getBoundingClientRect().width > 0)
+        .click({ count: 2 })
+      await page.keyboard.type('blocked formula')
+      await assertReadOnly()
+      await page
+        .locator('canvas[id^="univer-sheet-main-canvas_"]')
+        .click({ offset: { x: 85, y: 32 } })
+      const modifier = await page.evaluate(() =>
+        navigator.platform.includes('Mac') ? 'Meta' : 'Control'
+      )
+      await page.evaluate(() => navigator.clipboard.writeText('blocked paste'))
+      await page.keyboard.down(modifier)
+      await page.keyboard.press('V')
+      await page.keyboard.up(modifier)
+      await assertReadOnly()
+      await page.evaluate(() =>
+        window.univerAPI!.getActiveWorkbook().getActiveSheet().getRange('D4').activate()
+      )
+      await page.keyboard.down(modifier)
+      await page.keyboard.press('C')
+      await page.keyboard.up(modifier)
+      await page.waitForFunction(async () =>
+        (await navigator.clipboard.readText()).includes('user draft edit')
+      )
+      expect(
+        await page.evaluate(() => document.getElementById('toast')?.classList.contains('opacity-0'))
+      ).toBe(true)
+      // Navigation inputs must remain usable without producing an editing warning.
+      await page.locator('input[value="D4"]').fill('E6')
+      await page.keyboard.press('Enter')
+      expect(
+        await page.evaluate(() => document.getElementById('toast')?.classList.contains('opacity-0'))
+      ).toBe(true)
+      const columnWidth = await page.evaluate(() =>
+        window.univerAPI!.getActiveWorkbook().getActiveSheet().getColumnWidth(0)
+      )
+      const dragCanvas = await sheetCanvasPosition(page)
+      const columnEdge = dragCanvas.x - 85 + 46 + columnWidth
+      const headerY = dragCanvas.y - 32 + 10
+      await page.mouse.move(columnEdge, headerY)
+      await page.mouse.down()
+      await page.mouse.move(columnEdge + 60, headerY, { steps: 12 })
+      await page.mouse.up()
+      expect(
+        await page.evaluate(() =>
+          window.univerAPI!.getActiveWorkbook().getActiveSheet().getColumnWidth(0)
+        )
+      ).toBe(columnWidth)
+      expect(
+        await page.evaluate(() => window.univerAPI!.getCollaboration().hasWritePending())
+      ).toBe(false)
+      // The same operation opens the cell editor for typing, double-click and F2.
+      expect(
+        await page.evaluate(() =>
+          window.univerAPI!.executeCommand('sheet.operation.set-cell-edit-visible', {
+            visible: true,
+            eventType: 3
+          })
+        )
+      ).toBe(false)
+      expect(
+        await page.evaluate(() =>
+          [...document.querySelectorAll('[role="dialog"]')]
+            .filter((element) => element.checkVisibility())
+            .map((element) => element.textContent)
+        )
+      ).toEqual([])
+      await page.setRequestInterception(true)
+      let rejectReopen = true
+      page.on('request', (request) => {
+        if (rejectReopen && request.url().endsWith('/reopen')) {
+          rejectReopen = false
+          void request.respond({ status: 503, body: 'temporarily unavailable' })
+        } else {
+          void request.continue()
+        }
+      })
+      await page.click(continueButton)
+      await page.waitForSelector('::-p-text(Failed to resume editing)')
+      expect(await page.$(continueButton)).not.toBeNull()
+      const status = await gateway.service.status({ ...gateway.scoped, worktreeId })
+      expect(status.result.selectedWorktree.status).toBe('ready')
+      await page.click(COMPARE_TOGGLE)
+      await page.waitForSelector('[data-unit-comparison-viewer="true"]')
+      await page.click(continueButton)
+      await page.waitForFunction(
+        () =>
+          document.querySelector('[data-unit-comparison-viewer="true"]') === null &&
+          Boolean(window.univerAPI?.getActiveWorkbook()) &&
+          !document.body.textContent?.includes('Continue editing')
+      )
+      const editableCanvas = await sheetCanvasPosition(page)
+      await page.mouse.click(editableCanvas.x, editableCanvas.y)
+      await page.evaluate(() =>
+        window.univerAPI!.getActiveWorkbook().getActiveSheet().getRange('E5').activate()
+      )
+      await page.keyboard.type('resumed user edit')
+      await page.keyboard.press('Enter')
+      await page.evaluate(() => window.univerAPI!.getCollaboration().flush())
+      expect(
+        await page.evaluate(() =>
+          window.univerAPI!.getActiveWorkbook().getActiveSheet().getRange('E5').getValue()
+        )
+      ).toBe('resumed user edit')
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await page.waitForFunction(() => Boolean(window.univerAPI?.getActiveWorkbook()))
+      expect(
+        await page.evaluate(() =>
+          window.univerAPI!.getActiveWorkbook().getActiveSheet().getRange('E5').getValue()
+        )
+      ).toBe('resumed user edit')
+    })
+  })
+
+  it('keeps a read-only Sheet live when remote collaboration updates arrive', async () => {
+    await withPage(browser, async (page) => {
+      await page.goto(
+        `${gateway.origin}/?file=${encodeURIComponent(gateway.fileKey)}&mode=embedded&scope=trunk&unit=${encodeURIComponent(trunk.sheet)}&editable=false&lang=en-US`
+      )
+      await page.waitForFunction(() => Boolean(window.univerAPI?.getActiveWorkbook()))
+      const remoteWorktree = await gateway.createWorktree('remote update to read-only viewer')
+      expect(
+        (
+          await gateway.execute(
+            remoteWorktree,
+            trunk.sheet,
+            'workbook.getActiveSheet().getRange("F6").setValue("remote update"); return "ok";'
+          )
+        ).committed
+      ).toBe(true)
+      await gateway.transition(remoteWorktree, 'ready', 'ready')
+      await gateway.transition(remoteWorktree, 'merge', 'merged')
+      await page.waitForFunction(
+        () =>
+          window.univerAPI?.getActiveWorkbook().getActiveSheet().getRange('F6').getValue() ===
+          'remote update'
+      )
+      expect(
+        await page.evaluate(() => window.univerAPI!.getCollaboration().hasWritePending())
+      ).toBe(false)
+    })
+  })
+
   const COMPARE_TOGGLE = '[data-testid="view-diff-center"] [aria-label="Compare"]'
 
   async function openWorktree(page: Page): Promise<void> {
@@ -137,7 +372,23 @@ describe('built Viewer', () => {
 
 declare global {
   interface Window {
-    univerAPI?: { executeCommand(id: string): Promise<boolean> }
+    univerAPI?: {
+      executeCommand(id: string, params?: Record<string, unknown>): Promise<boolean>
+      getActiveWorkbook(): {
+        setEditable(editable: boolean): void
+        getWorkbookPermission(): { getPoint(point: string): boolean }
+        getActiveSheet(): {
+          getColumnWidth(column: number): number
+          getRange(range: string): {
+            setValue(value: string): void
+            getValue(): unknown
+            getValues(): unknown[][]
+            activate(): void
+          }
+        }
+      }
+      getCollaboration(): { flush(): Promise<void>; hasWritePending(): boolean }
+    }
   }
 }
 
@@ -224,4 +475,21 @@ async function measureWorktreeTopbar(page: Page, width: number) {
     }
     return layout
   }, width)
+}
+
+/** Select a real cell in the main worksheet canvas, excluding formula and hidden editor canvases. */
+async function sheetCanvasPosition(page: Page): Promise<{ x: number; y: number }> {
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('canvas')].some((canvas) => {
+      const rect = canvas.getBoundingClientRect()
+      return rect.width > 200 && rect.height > 100
+    })
+  )
+  return page.evaluate(() => {
+    const rect = [...document.querySelectorAll('canvas')]
+      .map((canvas) => canvas.getBoundingClientRect())
+      .find((bounds) => bounds.width > 200 && bounds.height > 100)
+    if (!rect) throw new Error('Worksheet canvas is not visible')
+    return { x: rect.x + 85, y: rect.y + 32 }
+  })
 }
