@@ -8,6 +8,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/brand'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { closeServer, listen, listenOrAcceptOccupied } from '../support/net.ts'
 import { importHostBundle, repoPath } from '../support/paths.ts'
@@ -165,14 +166,21 @@ describe('browser routes and tools', () => {
     const response = await fetch(`${origin}${path}`, init)
     return { status: response.status, body: await response.json() }
   }
-  const execute = (name: string, args: Record<string, unknown>) =>
-    toolContext.tools.execute({
+  const execute = async (name: string, args: Record<string, unknown>) => {
+    const batch = await toolContext.tools.execute({
       signal: new AbortController().signal,
-      callId: ToolCallId(`host-${name}-${calls.length}-${Math.random()}`),
-      name,
-      arguments: args,
+      calls: [
+        {
+          type: 'tool-call',
+          id: ToolCallId(`host-${name}-${calls.length}-${Math.random()}`),
+          name,
+          arguments: JSON.stringify(args)
+        }
+      ],
       agent: owner
     })
+    return batch.results[0]!.result
+  }
 
   beforeAll(async () => {
     workspace = await mkdtemp(join(tmpdir(), 'dsh-univer-host-'))
@@ -241,6 +249,7 @@ describe('browser routes and tools', () => {
     toolContext = new Context()
     await toolContext.plugin(SystemPrompt)
     await toolContext.plugin(ToolRuntime)
+    await toolContext.plugin(NativeToolExecutor)
     toolContext.provide('attachments', {
       imageLimits: {
         mediaTypes: ['image/png'],

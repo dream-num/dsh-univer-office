@@ -5,6 +5,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/brand'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { renderBrowserPath } from '../support/browser.ts'
 import { startGateway, type GatewayHarness } from '../support/gateway.ts'
@@ -104,6 +105,7 @@ describe('rendering through the bundled render machine', () => {
     try {
       await context.plugin(SystemPrompt)
       await context.plugin(ToolRuntime)
+      await context.plugin(NativeToolExecutor)
       context.provide('attachments', {
         imageLimits: {
           mediaTypes: ['image/png'],
@@ -133,17 +135,22 @@ describe('rendering through the bundled render machine', () => {
         }
       })
       await context.plugin(gateway.plugin, { gatewayPort: gateway.port, skills: false })
-      const result = await context.tools.execute({
+      const batch = await context.tools.execute({
         signal: new AbortController().signal,
-        callId: ToolCallId('integration-screenshot'),
-        name: 'univer_screenshot',
-        arguments: {
-          file: gateway.file,
-          unitId: slide,
-          worktreeId,
-          output: 'screenshots-tool',
-          pages: [1]
-        },
+        calls: [
+          {
+            type: 'tool-call',
+            id: ToolCallId('integration-screenshot'),
+            name: 'univer_screenshot',
+            arguments: JSON.stringify({
+              file: gateway.file,
+              unitId: slide,
+              worktreeId,
+              output: 'screenshots-tool',
+              pages: [1]
+            })
+          }
+        ],
         // A minimal agent owner: the tool reads only the workspace and the model's modalities.
         agent: {
           ctx: context,
@@ -156,6 +163,7 @@ describe('rendering through the bundled render machine', () => {
           }
         } as never
       })
+      const result = batch.results[0]!.result
       expect(result.isError, JSON.stringify(result)).toBe(false)
       const payload = JSON.parse(
         result.content
