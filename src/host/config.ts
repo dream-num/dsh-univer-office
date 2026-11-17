@@ -58,6 +58,12 @@ export interface Config {
   tools?: boolean
   /** Register version-matched bundled Univer skills. */
   skills?: boolean
+  /**
+   * Skill names whose successful loading admits every `univer_*` tool from the following
+   * step. An empty list discloses them unconditionally; so does `skills: false`, because no
+   * bundled skill can load then.
+   */
+  activationSkills?: string[]
   /** Send anonymous product telemetry; `DO_NOT_TRACK` also turns it off. */
   telemetry?: boolean
 }
@@ -85,8 +91,29 @@ export interface ResolvedConfig {
   readonly unitCacheTtlMs: number
   readonly tools: boolean
   readonly skills: boolean
+  readonly activationSkills: readonly string[]
   readonly telemetry: boolean
 }
+
+/**
+ * Bundled skill directories that route the model to Univer; loading any one of them admits the
+ * tools. The LibreOffice Kit skills belong to DSH and stay independent. A unit test keeps this
+ * list in step with `skills/`.
+ */
+export const DEFAULT_ACTIVATION_SKILLS: readonly string[] = [
+  'office',
+  'office-docx',
+  'office-pptx',
+  'office-xlsx',
+  'univer',
+  'univer-base',
+  'univer-board',
+  'univer-cross-unit-formula',
+  'univer-doc',
+  'univer-embed',
+  'univer-sheet',
+  'univer-slide'
+]
 
 /**
  * Declare live fields using the serialized metadata understood by DSH 0.1.7+.
@@ -124,6 +151,9 @@ export const Config: z<Config> = z.object({
   unitCacheTtlMs: z.natural().default(5_000),
   tools: z.boolean().default(true),
   skills: z.boolean().default(true),
+  activationSkills: z
+    .array(z.string().pattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))
+    .default([...DEFAULT_ACTIVATION_SKILLS]),
   telemetry: z.boolean().default(true)
 })
 
@@ -152,6 +182,7 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     unitCacheTtlMs: config.unitCacheTtlMs ?? 5_000,
     tools: config.tools ?? true,
     skills: config.skills ?? true,
+    activationSkills: resolveActivationSkills(config.activationSkills),
     telemetry: config.telemetry ?? true
   }
   if (
@@ -187,6 +218,23 @@ export function resolveConfig(config: Config = {}): ResolvedConfig {
     throw new Error('univer: unitContentRuntimeMaxEntries must be a non-negative integer')
   }
   return resolved
+}
+
+/** Bundled skill identifiers are kebab-case directory names; duplicates collapse. */
+const ACTIVATION_SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+function resolveActivationSkills(configured: readonly string[] | undefined): readonly string[] {
+  if (configured === undefined) return DEFAULT_ACTIVATION_SKILLS
+  const skills: string[] = []
+  for (const name of configured) {
+    if (!ACTIVATION_SKILL_NAME.test(name)) {
+      throw new Error(
+        `univer: activationSkills entries must be kebab-case skill names, got ${JSON.stringify(name)}`
+      )
+    }
+    if (!skills.includes(name)) skills.push(name)
+  }
+  return skills
 }
 
 function resolveResourceCacheRoot(configured: string | undefined): string {

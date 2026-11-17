@@ -5,6 +5,8 @@ description: Create, inspect, edit, import, export, and hand off multi-Unit .uni
 
 # Univer files
 
+Loading this skill discloses the `univer_*` tools from the next step on; they are not declared before that.
+
 Use the structured `univer_*` tools whenever the task creates, reads, changes, converts, or reviews office content. Do not wait for the user to name a tool. Do not invoke a global `univer` CLI, edit `.univer` storage directly, or substitute openpyxl, python-pptx, python-docx, ZIP manipulation, or another writer.
 
 ## Start immediately

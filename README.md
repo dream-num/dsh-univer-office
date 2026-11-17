@@ -148,7 +148,7 @@ Approval and discarding always require an explicit user request.
 
 ## Built-in tools
 
-DSH selects these tools automatically; you normally do not need to call them manually.
+DSH selects these tools automatically; you normally do not need to call them manually. They are disclosed to the model from the step after a bundled Univer skill loads, so a task that never touches Office content pays no schema tokens for them.
 
 | Tool | Purpose |
 | --- | --- |
@@ -188,7 +188,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 - Screenshots, PDF printing, Slide layout checks, and SVG text measurement need a local Chromium-family browser. Chrome/Chromium and Microsoft Edge are detected automatically; set the `browserExecutablePath` option or the `UNIVER_RENDER_BROWSER` environment variable to point at a specific executable (for example Edge on Windows).
 - Slide master pages, layout pages, and speaker notes are outside the current editing scope.
 - Board mind maps, tables, ink, advanced editing, and file export are not yet supported.
-- While bundled task guidance is enabled, the plugin replaces DSH's built-in `office`, `office-docx`, `office-xlsx`, and `office-pptx` skills so Word, Excel, and PowerPoint tasks go through Univer instead of python-docx, openpyxl, or python-pptx. DSH's LibreOffice Kit skills (`office-render`, `office-recalculate`, and `office-export-pdf`) stay available. Set `skills: false` to keep DSH's originals.
+- While bundled task guidance is enabled, the plugin replaces DSH's built-in `office`, `office-docx`, `office-xlsx`, and `office-pptx` skills so Word, Excel, and PowerPoint tasks go through Univer instead of python-docx, openpyxl, or python-pptx. DSH's LibreOffice Kit skills (`office-render`, `office-recalculate`, and `office-export-pdf`) stay available. Set `skills: false` to keep DSH's originals. Loading any one of them discloses the `univer_*` tools from the next step; set `activationSkills: []` to disclose them unconditionally instead.
 
 ## Configuration
 
@@ -214,6 +214,7 @@ The defaults are designed for local use: the service starts at port `9080`. If t
 | `resourceOperationTimeoutMs` | `120000` | Overall timeout for one resource-library tool operation |
 | `tools` | `true` | Enable agent editing capabilities |
 | `skills` | `true` | Enable bundled task guidance |
+| `activationSkills` | every bundled skill | Skills whose successful loading discloses all `univer_*` tools from the following step. An empty list discloses them unconditionally, which is also what `skills: false` implies |
 | `telemetry` | `true` | Send anonymous product telemetry |
 
 The Viewer, its HTTP API, and its WebSocket collaboration traffic are served by the plugin on the DSH WebServer origin itself (`/univer-viewer/...` and `/uf/...`), so remote deployments work through whatever entry already fronts DSH — no extra reverse-proxy configuration. Every browser request passes DSH browser authentication via the `connection` service. Viewer document opens and `/univer-api` requests also validate the named session workspace; subsequent `/uf` API and WebSocket requests do not require a plugin session cookie or repeat that workspace check. Authenticated browsers can address any `.univer` file accessible to the Host process, including in remote deployments. In DSH Desktop, the Viewer obtains the current Host loopback address through an authenticated runtime endpoint for WebSocket connections; HTTP requests continue through the desktop shell. The Gateway itself stays on loopback and is never exposed. (The former `viewerBaseUrl` option was removed by this change and is ignored.)

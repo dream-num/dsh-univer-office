@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/brand'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { defineTool } from '@deepseek-ai/dsh-tools'
 import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { closeServer, listen, listenOrAcceptOccupied } from '../support/net.ts'
@@ -474,6 +474,123 @@ describe('browser routes and tools', () => {
         )
       }
     )
+  })
+})
+
+describe('skill activation (#159)', () => {
+  let context: Context
+  let agent: any
+
+  const admitted = async (): Promise<string[]> => {
+    const set = await context.tools.resolve({
+      agent,
+      modelSelection: { provider: 'host', model: 'vision' },
+      signal: new AbortController().signal
+    })
+    try {
+      return [...set.view(agent).keys()]
+    } finally {
+      set.dispose()
+    }
+  }
+
+  const loadSkill = async (name: string) => {
+    const batch = await context.tools.execute({
+      signal: new AbortController().signal,
+      calls: [
+        {
+          type: 'tool-call',
+          id: ToolCallId(`skill-${name}-${Math.random()}`),
+          name: 'skill',
+          arguments: JSON.stringify({ name })
+        }
+      ],
+      agent
+    })
+    return batch.results[0]!.result
+  }
+
+  beforeAll(async () => {
+    context = new Context()
+    await context.plugin(SystemPrompt)
+    await context.plugin(ToolRuntime)
+    await context.plugin(NativeToolExecutor)
+    context.provide('attachments', {
+      imageLimits: {
+        mediaTypes: ['image/png'],
+        maxImageBytes: 10_000_000,
+        maxMessageImageBytes: 20_000_000
+      },
+      async saveImage() {
+        throw new Error('activation is asserted before any tool runs')
+      }
+    })
+    context.provide('llm', {
+      async resolveModelInfo() {
+        return { inputModalities: ['image'] }
+      }
+    })
+    // Defaults keep the bundled skills on, so the tools stay withheld until one loads.
+    await context.plugin(plugin)
+    context.tools.register(
+      defineTool({
+        name: 'skill',
+        description: 'Test double for the DSH skill tool: records a successful load.',
+        parameters: { name: { type: 'string', required: true, description: 'Skill name.' } },
+        output: {
+          schema: {
+            type: 'object',
+            additionalProperties: false,
+            properties: { loaded: { type: 'string', required: true } }
+          },
+          render: () => [{ type: 'text', text: 'loaded' }]
+        },
+        async execute(args) {
+          return { loaded: args.name }
+        }
+      })
+    )
+    agent = {
+      ctx: context,
+      options: { provider: 'host', model: 'vision' },
+      session: {
+        header: { cwd: tmpdir() },
+        requestHeader() {
+          return { config: { provider: 'host', model: 'vision' } }
+        }
+      }
+    }
+  })
+
+  afterAll(async () => {
+    await context?.fiber.dispose()
+  })
+
+  it('admits every univer_* tool only after a listed skill loads', async () => {
+    expect(await admitted()).toContain('skill')
+    expect(await admitted()).not.toContain('univer_inspect')
+
+    // A skill outside the configured list leaves the tools withheld.
+    await loadSkill('dsh-doc')
+    expect(await admitted()).not.toContain('univer_inspect')
+
+    await loadSkill('univer')
+    expect((await admitted()).filter((name) => name.startsWith('univer_')).sort()).toEqual([
+      'univer_api',
+      'univer_compile_svg',
+      'univer_execute',
+      'univer_export',
+      'univer_import',
+      'univer_inspect',
+      'univer_lint',
+      'univer_new',
+      'univer_print_pdf',
+      'univer_resources',
+      'univer_screenshot',
+      'univer_status',
+      'univer_unit',
+      'univer_worktree'
+    ])
   })
 })
 
