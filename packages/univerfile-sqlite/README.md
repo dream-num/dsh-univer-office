@@ -46,6 +46,7 @@ file does not support the SDK's revocable `setUnitRemoved`, which returns `INVAL
 `worktree.deleteUnit()` removes a Unit from a Worktree instead. Application metadata reaches the
 stores through the SDK call's `customData` under `UNIVERFILE_UNIT_METADATA_KEY`,
 `UNIVERFILE_WORKTREE_METADATA_KEY`, and `UNIVERFILE_WORKTREE_CHANGE_METADATA_KEY`.
+The v3 adapters return an empty object for SDK Unit and changeset `metadata` on trunk and Worktrees. They discard values supplied in that field.
 
 ## Maintenance operations
 

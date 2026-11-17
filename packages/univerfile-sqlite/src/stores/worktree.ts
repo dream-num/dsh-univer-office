@@ -1,6 +1,10 @@
 import { isDeepStrictEqual } from 'node:util'
 import type { DatabaseSync } from 'node:sqlite'
-import { CollabError, type DatabaseContext } from '@univerjs-pro/collaboration-service'
+import {
+  CollabError,
+  type ChangesetRecord,
+  type DatabaseContext
+} from '@univerjs-pro/collaboration-service'
 import type {
   AddWorktreeUnitDatabaseInput,
   AddWorktreeUnitDatabaseResult,
@@ -28,6 +32,7 @@ import type {
 import { UniverType, type IChangeset } from '@univerjs/protocol'
 import type { UniverfileSQLiteConnection } from '../driver/connection.ts'
 import { runUniverfileSQLiteTransaction } from '../driver/transaction.ts'
+import { protocolChangeset, readChangeset } from '../codec/changeset.ts'
 import { decodeStoredJson, encodeStoredJson } from '../codec/stored-json.ts'
 import { deleteWorktreeAssets } from './assets.ts'
 
@@ -237,7 +242,7 @@ export class WorktreeStore implements UniverfileWorktreeStore {
     worktreeID: string,
     unitID: string,
     range: WorktreeRevisionRange
-  ): Promise<readonly IChangeset[] | null> {
+  ): Promise<readonly ChangesetRecord[] | null> {
     this._assertOpen()
     validateRange(range)
     const unit = this._getUnitRow(worktreeID, unitID)
@@ -255,7 +260,7 @@ export class WorktreeStore implements UniverfileWorktreeStore {
          ORDER BY revision ASC`
       )
       .all(worktreeID, unitID, range.from, to) as unknown as PayloadRow[]
-    return rows.map(({ payload_json }) => decodeStoredJson<IChangeset>(payload_json))
+    return rows.map(({ payload_json }) => readChangeset(payload_json))
   }
 
   async getUnitSeed(
@@ -521,7 +526,7 @@ export class WorktreeStore implements UniverfileWorktreeStore {
       const { worktreeID } = input
       const createdAt = Date.now()
       const changeset: IChangeset = {
-        ...input.changeset,
+        ...protocolChangeset(input.changeset),
         createTime: Math.floor(createdAt / 1000)
       }
       const worktree = this._getWorktreeRow(worktreeID)
@@ -581,7 +586,7 @@ export class WorktreeStore implements UniverfileWorktreeStore {
       }
       return {
         status: 'committed',
-        changeset: decodeStoredJson<IChangeset>(encodeStoredJson(changeset)),
+        changeset: readChangeset(encodeStoredJson(changeset)),
         headRevision: changeset.revision
       }
     })
@@ -1062,6 +1067,7 @@ export class WorktreeStore implements UniverfileWorktreeStore {
 function rowToUnitRecord(row: WorktreeUnitRow): WorktreeUnitRecord {
   const source = toWorktreeUnitSource(row.source)
   return {
+    metadata: {},
     worktreeID: row.worktree_id,
     unitID: row.unit_id,
     type: row.type as UniverType,

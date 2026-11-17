@@ -240,7 +240,7 @@ describe('verify and vacuum', () => {
 
 async function createSheet(file: Univerfile, unitID: string, blocks: string[]): Promise<void> {
   const result = await file.trunk.createUnit(context, {
-    record: { unitID, type: 2, headRevision: 1, creatorID: 'author', createdAt },
+    record: { unitID, type: 2, headRevision: 1, metadata: {}, creatorID: 'author', createdAt },
     snapshot: sheetSnapshot(unitID, 1, blocks),
     sheetBlocks: blocks.map(sheetBlock)
   })
@@ -267,7 +267,7 @@ async function saveSheetSnapshot(
   } as unknown as IChangeset
   const committed = await file.trunk.commitChangeset(
     { ...context, memberID: '', request: { changeset } },
-    { changeset }
+    { changeset: { ...changeset, metadata: {} }, unitMetadata: {} }
   )
   expect(committed.status).toBe('committed')
   await file.trunk.saveSnapshot(context, {

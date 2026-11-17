@@ -2,6 +2,7 @@
 import { execFile } from 'node:child_process'
 import { existsSync, renameSync, unlinkSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { DatabaseSync } from 'node:sqlite'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -14,6 +15,7 @@ import {
   V3_VERSIONS,
   backupsOf,
   context,
+  changeset,
   createV2,
   createdAt,
   snapshot,
@@ -36,10 +38,18 @@ const unitSnapshot = (unitID: string) => ({ ...snapshot, unitID }) as unknown as
 
 async function createUnit(file: Univerfile, unitID: string): Promise<void> {
   const result = await file.trunk.createUnit(context, {
-    record: { unitID, type: 2, headRevision: 1, creatorID: 'author', createdAt },
+    record: {
+      unitID,
+      type: 2,
+      headRevision: 1,
+      metadata: { name: 'ignored' },
+      creatorID: 'author',
+      createdAt
+    },
     snapshot: unitSnapshot(unitID)
   })
   expect(result.status).toBe('created')
+  expect(result.record.metadata).toEqual({})
 }
 
 describe('open and create', () => {
@@ -57,6 +67,60 @@ describe('open and create', () => {
     try {
       expect(reopened.upgrade).toEqual({ status: 'unchanged', format: 'v3' })
       expect(reopened.trunk.listUnits()).toMatchObject([{ unitId: 'unit', headRev: 1 }])
+    } finally {
+      await reopened.close()
+    }
+  })
+
+  it('returns empty SDK metadata for trunk and draft records and keeps it out of v3 payloads', async () => {
+    const path = join(workspace, 'metadata.univer')
+    createV2(path, { active: true })
+    const file = openUniverfile(path)
+    try {
+      const trunk = { ...changeset(4, 0), metadata: { tag: 'trunk' } }
+      const draft = { ...changeset(5, 0), metadata: { tag: 'draft' } }
+      const unitMetadata = { name: 'ignored' }
+      const submitted = await file.trunk.commitChangeset(
+        { ...context, memberID: '', request: { changeset: trunk } },
+        { changeset: trunk, unitMetadata }
+      )
+      const drafted = await file.worktree.commitDraftChangeset(context, {
+        worktreeID: 'draft',
+        changeset: draft,
+        unitMetadata
+      })
+      expect(submitted.status === 'committed' && submitted.changeset.metadata).toEqual({})
+      expect(drafted.status === 'committed' && drafted.changeset.metadata).toEqual({})
+    } finally {
+      await file.close()
+    }
+    const db = new DatabaseSync(path, { readOnly: true })
+    try {
+      for (const table of ['collaboration_changesets', 'collaboration_worktree_changesets']) {
+        const rows = db
+          .prepare(`SELECT payload_json FROM ${table} ORDER BY revision DESC LIMIT 1`)
+          .all()
+        expect(JSON.parse(String(rows[0]?.payload_json))).not.toHaveProperty('metadata')
+      }
+    } finally {
+      db.close()
+    }
+    const reopened = openUniverfile(path)
+    try {
+      expect(reopened.upgrade).toEqual({ status: 'unchanged', format: 'v3' })
+      expect((await reopened.trunk.getUnit(context, 'unit'))?.metadata).toEqual({})
+      expect((await reopened.worktree.getWorktreeUnit(context, 'draft', 'unit'))?.metadata).toEqual(
+        {}
+      )
+      expect(
+        (await reopened.trunk.getChangesets(context, 'unit', { from: 3 }))?.[0]?.metadata
+      ).toEqual({})
+      expect(
+        (await reopened.worktree.getDraftChangesets(context, 'draft', 'unit', { from: 4 }))?.[0]
+          ?.metadata
+      ).toEqual({})
+      expect(reopened.trunk.listUnits()[0]?.name).toBe('Document')
+      expect(reopened.worktree.listWorktreeUnits('draft')[0]?.name).toBe('Document')
     } finally {
       await reopened.close()
     }
@@ -160,13 +224,7 @@ it('upgrades once for concurrent openers in separate processes', async () => {
   const run = promisify(execFile)
   const attempts = await Promise.all(
     [0, 1].map(() =>
-      run(process.execPath, [
-        '--input-type=module',
-        '-e',
-        script,
-        pathToFileURL(bundle).href,
-        path
-      ])
+      run(process.execPath, ['--input-type=module', '-e', script, pathToFileURL(bundle).href, path])
     )
   )
   expect(attempts.map(({ stdout }) => stdout.trim()).toSorted()).toEqual(['unchanged', 'upgraded'])
