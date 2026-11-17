@@ -18,6 +18,7 @@ import {
 } from './comparison/unit-comparison-runtime.js'
 import type {
   CollabMemberContext,
+  UnitLoadDataWithBlocks,
   CreateUnitFromDataInput,
   DatabaseContext
 } from '@univerjs-pro/collaboration-service'
@@ -210,6 +211,7 @@ export class CollabService {
           unitID: unit.unitId,
           type: unit.type,
           source: 'trunk',
+          metadata: {},
           creatorID: record.creatorID,
           createdAt: record.createdAt,
           baselineTrunkRevision: unit.headRev,
@@ -1017,12 +1019,7 @@ export class CollabService {
     unitId: string,
     type: UniverType,
     revision: number
-  ): Promise<{
-    readonly snapshot: ISnapshot
-    readonly changesets: readonly IProtocolChangeset[]
-    readonly targetRevision: number
-    readonly sheetBlocks: readonly ISheetBlock[]
-  }> {
+  ): Promise<UnitLoadDataWithBlocks> {
     const loadData = await this.runtime.worktreeService.getUnitLoadData(
       { worktreeID: worktreeId, unitID: unitId, type, revision },
       callOptions('local')
@@ -1039,12 +1036,7 @@ export class CollabService {
     type: UniverType,
     revision: number,
     source: string
-  ): Promise<{
-    readonly snapshot: ISnapshot
-    readonly changesets: readonly IProtocolChangeset[]
-    readonly targetRevision: number
-    readonly sheetBlocks: readonly ISheetBlock[]
-  }> {
+  ): Promise<UnitLoadDataWithBlocks> {
     const loadData = await this.runtime.trunkService.getUnitLoadDataWithBlocks(
       { unitID: unitId, type, revision },
       callOptions('local', { source })

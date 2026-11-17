@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import {
   CollabError,
+  type ChangesetRecord,
   type CommitChangesetInput,
   type CommitChangesetResult,
   type CreateUnitDatabaseInput,
@@ -18,6 +19,7 @@ import {
 import type { IChangeset, ISheetBlock, ISnapshot, UniverType } from '@univerjs/protocol'
 import type { UniverfileSQLiteConnection } from '../driver/connection.ts'
 import { runUniverfileSQLiteTransaction } from '../driver/transaction.ts'
+import { protocolChangeset, readChangeset } from '../codec/changeset.ts'
 import { decodeStoredJson, encodeStoredJson } from '../codec/stored-json.ts'
 
 interface UnitRow {
@@ -244,7 +246,7 @@ export class TrunkStore implements UniverfileTrunkStore {
     _context: DatabaseContext,
     unitID: string,
     range: { readonly from: number; readonly to?: number }
-  ): Promise<readonly IChangeset[] | null> {
+  ): Promise<readonly ChangesetRecord[] | null> {
     this._assertOpen()
     const to = range.to ?? 0
     if (range.from < 0 || to < 0) {
@@ -273,7 +275,7 @@ export class TrunkStore implements UniverfileTrunkStore {
         to,
         unit.head_revision
       ) as unknown as PayloadRow[]
-    return rows.map((row) => decodeStoredJson<IChangeset>(row.payload_json))
+    return rows.map((row) => readChangeset(row.payload_json))
   }
 
   async getSnapshotInfo(
@@ -360,7 +362,7 @@ export class TrunkStore implements UniverfileTrunkStore {
         )
         .run(input.record.unitID, input.record.type, snapshotPayload)
 
-      return { status: 'created', record: { ...input.record } }
+      return { status: 'created', record: { ...input.record, metadata: {} } }
     })
   }
 
@@ -462,7 +464,7 @@ export class TrunkStore implements UniverfileTrunkStore {
     validateSubmissionIdentity(input.changeset)
     const createdAt = Date.now()
     const changeset: IChangeset = {
-      ...input.changeset,
+      ...protocolChangeset(input.changeset),
       createTime: Math.floor(createdAt / 1000)
     }
     const payload = encodeStoredJson(changeset)
@@ -519,7 +521,7 @@ export class TrunkStore implements UniverfileTrunkStore {
 
       return {
         status: 'committed',
-        changeset: decodeStoredJson<IChangeset>(payload),
+        changeset: readChangeset(payload),
         headRevision: changeset.revision
       }
     })
@@ -686,6 +688,7 @@ function validateCandidate(record: UnitRecord, changeset: IChangeset): void {
 
 function rowToUnitRecord(row: UnitRow): UnitRecord {
   return {
+    metadata: {},
     unitID: row.unit_id,
     type: row.type as UniverType,
     headRevision: row.head_revision,
