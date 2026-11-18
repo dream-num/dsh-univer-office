@@ -380,6 +380,8 @@ Tools Consumer 注册面向模型的领域工具，而不是一个透传 CLI 的
 - `univer_api`
 - `univer_resources`
 
+这些工具默认不参与模型请求：Tools Consumer 以 `when` 条件注册全部 14 个工具，只有当本会话成功加载过 `activationSkills` 之一（默认是 `skills/` 下全部 12 个内置技能）或当前请求头已携带其中任一工具的声明时，该步才披露并允许调用。技能加载的标记在当前步结束时生效，从下一步加入声明；恢复或分叉的会话由请求头中的既有声明兜底，PTC 请求头只含 `run_code`，因此 PTC 会话在内存标记丢失后需要重新加载技能。`skills: false` 或 `activationSkills: []` 表示无条件披露，保持全部工具常驻。
+
 每个工具有独立的参数 schema、结果 schema、超时/取消处理和纯 presentation。工具结果必须包含恢复 Client 预览目标所需的结构化文件、worktree 与 unit 标识，并进入 DSH 会话日志。领域失败使用 DSH 可持久化的稳定错误 code，并在模型可见文本中保留 `Error [CODE]`，使 Agent 不必解析自然语言即可选择恢复路径。Client 优先从 `tool/call` 与 `tool/result` 事件恢复目标，不依赖 bash 文本解析。
 
 `univer_status` 是发现文件状态与显式 Unit ID 的入口。所有内容工具要求显式 Unit ID，所有文件和输出路径都绑定当前 tool exec session 的 workspace，并在 Provider 边界再次验证。`univer_screenshot` 在读取文件前确认 attachment service、PNG 限制与当前模型图片输入能力，生成文件再次经过 workspace realpath 授权，再保存为持久 DSH image attachment；结构化文本保留恢复目标与图片元数据。`univer_print_pdf` 复用同一渲染源与 Render Machine，把 Sheet、Doc、Slide 或 Board 写入授权的 `.pdf` 路径，不支持 Base。`univer_resources` 的 cache root 只由 Provider 配置拥有，不向模型暴露；export 目录和每个实际输出文件都必须通过 workspace 授权。`ready` 提交修改等待审阅；同一任务需要继续修改时用 `reopen`。`merge` 与 `discard` 只有在用户明确要求时才可调用，并通过 `tools/pre-execute` 返回审批请求，不能由模型自行决定。

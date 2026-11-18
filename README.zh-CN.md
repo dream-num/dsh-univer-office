@@ -148,7 +148,7 @@ DSH 启动成功后，在已有的 DeepSeek Harness 浏览器页面按 **Cmd+R /
 
 ## 内置工具
 
-DSH 会自动选择这些工具，日常使用不需要手动调用。
+DSH 会自动选择这些工具，日常使用不需要手动调用。它们在加载任一内置 Univer 技能之后的下一步才披露给模型，因此与 Office 内容无关的任务不会为它们付出 schema token。
 
 | 工具 | 作用 |
 | --- | --- |
@@ -188,7 +188,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 - 截图、PDF 打印、Slide 布局检查和 SVG 文字度量需要本机 Chromium 系浏览器。Chrome/Chromium 与 Microsoft Edge 会被自动探测；也可以通过 `browserExecutablePath` 配置项或 `UNIVER_RENDER_BROWSER` 环境变量指定浏览器可执行文件路径（例如 Windows 上的 Edge）。
 - Slide 的母版、版式页和演讲者备注不在当前编辑范围内。
 - Board 的思维导图、表格、墨迹和高级编辑，以及 Board 文件导出尚未开放。
-- 启用内置任务指引时，插件会替换 DSH 自带的 `office`、`office-docx`、`office-xlsx` 和 `office-pptx` 技能，使 Word、Excel 和 PowerPoint 任务走 Univer，而不是 python-docx、openpyxl 或 python-pptx。DSH 的 LibreOffice Kit 技能（`office-render`、`office-recalculate` 和 `office-export-pdf`）保持可用。如需保留 DSH 原有技能，设置 `skills: false`。
+- 启用内置任务指引时，插件会替换 DSH 自带的 `office`、`office-docx`、`office-xlsx` 和 `office-pptx` 技能，使 Word、Excel 和 PowerPoint 任务走 Univer，而不是 python-docx、openpyxl 或 python-pptx。DSH 的 LibreOffice Kit 技能（`office-render`、`office-recalculate` 和 `office-export-pdf`）保持可用。如需保留 DSH 原有技能，设置 `skills: false`。加载其中任一技能后，`univer_*` 工具从下一步起披露；如需改为无条件披露，设置 `activationSkills: []`。
 
 ## 配置
 
@@ -214,6 +214,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。
 | `resourceOperationTimeoutMs` | `120000` | 一次资源库工具操作的总超时 |
 | `tools` | `true` | 启用 Agent 编辑能力 |
 | `skills` | `true` | 启用内置任务指引 |
+| `activationSkills` | 全部内置技能 | 成功加载其中任一技能后，从下一步起披露全部 `univer_*` 工具。空数组表示无条件披露；`skills: false` 也隐含此行为 |
 | `telemetry` | `true` | 发送匿名产品遥测 |
 
 Viewer 页面、HTTP API 与 WebSocket 协作流量由插件直接挂载在 DSH WebServer origin 上（`/univer-viewer/...` 与 `/uf/...`），远程部署沿用现有 DSH 访问入口即可，无需额外反向代理配置。每个浏览器请求均通过 `connection` 服务完成 DSH 浏览器鉴权。Viewer 文档打开与 `/univer-api` 请求还会校验指定会话的 workspace；后续 `/uf` API 与 WebSocket 请求不依赖插件会话 cookie，也不重复 workspace 校验。已通过鉴权的浏览器可以寻址 Host 进程有权访问的任意 `.univer` 文件，远程部署也采用相同规则。在 DSH 桌面端，Viewer 通过受鉴权保护的运行时接口获取当前 Host loopback 地址，用于 WebSocket 连接；HTTP 请求仍由桌面壳转发。Gateway 始终只监听 loopback，不对外暴露。（原 `viewerBaseUrl` 配置已随本次变更移除，保留时会被忽略。）
