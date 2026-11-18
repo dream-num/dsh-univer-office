@@ -148,7 +148,7 @@ Approval and discarding always require an explicit user request.
 
 ## Built-in tools
 
-DSH selects these tools automatically; you normally do not need to call them manually. They are disclosed to the model from the step after a bundled Univer skill loads, so a task that never touches Office content pays no schema tokens for them.
+DSH selects these tools automatically; you normally do not need to call them manually. They are disclosed to the model from the step after a bundled Univer skill loads, including when you invoke a skill directly with `/univer` or `/univer-sheet`, so a task that never touches Office content pays no schema tokens for them.
 
 | Tool | Purpose |
 | --- | --- |

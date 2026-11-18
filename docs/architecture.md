@@ -380,7 +380,7 @@ Tools Consumer 注册面向模型的领域工具，而不是一个透传 CLI 的
 - `univer_api`
 - `univer_resources`
 
-这些工具默认不参与模型请求：Tools Consumer 以 `when` 条件注册全部 14 个工具，只有当本会话成功加载过 `activationSkills` 之一（默认是 `skills/` 下全部 12 个内置技能）或当前请求头已携带其中任一工具的声明时，该步才披露并允许调用。技能加载的标记在当前步结束时生效，从下一步加入声明；恢复或分叉的会话由请求头中的既有声明兜底，PTC 请求头只含 `run_code`，因此 PTC 会话在内存标记丢失后需要重新加载技能。`skills: false` 或 `activationSkills: []` 表示无条件披露，保持全部工具常驻。
+这些工具默认不参与模型请求：Tools Consumer 以 `when` 条件注册全部 14 个工具，只有当本会话成功加载过 `activationSkills` 之一（默认是 `skills/` 下全部 12 个内置技能）或当前请求头已携带其中任一工具的声明时，该步才披露并允许调用。Tools Consumer 监听成功的 `skill` 工具结果，以及用户直接调用技能后提交的 `user/message`（`source.kind: skill-invocation`）事件。用户调用路径通过可选的 `agents` 注入取得会话当前 Agent，并验证其持有的 Session 与事件来源一致；Agent 销毁时清理内存标记，监听器随 fiber 卸载。技能加载的标记从下一步加入声明；恢复或分叉的会话由请求头中的既有声明兜底，PTC 请求头只含 `run_code`，因此 PTC 会话在内存标记丢失后需要重新加载技能。`skills: false` 或 `activationSkills: []` 表示无条件披露，保持全部工具常驻。
 
 每个工具有独立的参数 schema、结果 schema、超时/取消处理和纯 presentation。工具结果必须包含恢复 Client 预览目标所需的结构化文件、worktree 与 unit 标识，并进入 DSH 会话日志。领域失败使用 DSH 可持久化的稳定错误 code，并在模型可见文本中保留 `Error [CODE]`，使 Agent 不必解析自然语言即可选择恢复路径。Client 优先从 `tool/call` 与 `tool/result` 事件恢复目标，不依赖 bash 文本解析。
 

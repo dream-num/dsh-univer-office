@@ -1,4 +1,5 @@
 import type { Context } from '@deepseek-ai/cordis'
+import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { ResolvedConfig } from '../config.ts'
 import type {} from '../service/univer-service.ts'
 import { apiTool } from './definitions/api.ts'
@@ -41,20 +42,13 @@ const UNIVER_TOOL_NAMES: readonly string[] = [
   'univer_resources'
 ]
 
-/** The agent facts the activation gate reads; DSH's `Agent` satisfies this structurally. */
-interface GateAgent {
-  readonly session: {
-    requestHeader?(): { readonly tools?: readonly { readonly name: string }[] } | undefined
-  }
-}
-
 /**
  * Step-time disclosure condition shared by every `univer_*` tool. The tools stay registered but
  * undeclared until this session loads one of the configured skills or an earlier step already
  * declared them, so a deployment whose task never touches Univer pays no schema tokens for them.
  *
- * A listed skill loads through the `skill` tool, whose successful result marks the agent here; the
- * mark takes effect on the next step because the current step's admission is already sealed.
+ * Successful `skill` results and committed user skill invocations mark the owning agent. The mark
+ * takes effect on the next step because the current step's admission is already sealed.
  * Loads that predate this process (resume, fork) are recovered from the request header, which
  * carries the declarations for native executors. A PTC request header carries only `run_code`, so
  * a PTC agent that lost the in-memory mark loads a listed skill again.
@@ -68,17 +62,33 @@ interface GateAgent {
 function activationGate(
   ctx: Context,
   config: ResolvedConfig
-): ((context: { readonly agent: GateAgent }) => boolean) | undefined {
+): ((context: { readonly agent: Agent }) => boolean) | undefined {
   const skills = new Set(config.activationSkills)
   // A disabled skill bundle can never load a listed skill, and an empty list means always on.
   if (!config.skills || skills.size === 0) return undefined
-  const marked = new WeakSet<GateAgent>()
+  const marked = new WeakSet<Agent>()
   ctx.on('tools/result', (exec, result) => {
     if (exec.agent === undefined || exec.name !== 'skill' || result.isError) return
     const args: unknown = exec.arguments
     if (typeof args !== 'object' || args === null || !('name' in args)) return
     const skill: unknown = args.name
     if (typeof skill === 'string' && skills.has(skill)) marked.add(exec.agent)
+  })
+  ctx.inject(['agents'], (agentCtx) => {
+    agentCtx.on('session/event', (session, event) => {
+      if (
+        event.type !== 'user/message' ||
+        event.data.source.kind !== 'skill-invocation' ||
+        !skills.has(event.data.source.name)
+      )
+        return
+      const agent = agentCtx.agents.get(session.id)
+      // An event from a replaced Session must not activate its current Agent.
+      if (agent?.session === session) marked.add(agent)
+    })
+    agentCtx.on('agent/disposed', ({ agent }) => {
+      marked.delete(agent)
+    })
   })
   return ({ agent }) =>
     marked.has(agent) ||

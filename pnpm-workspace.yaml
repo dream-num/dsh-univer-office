@@ -11,6 +11,7 @@ publicHoistPattern:
 
 allowBuilds:
   esbuild: false
+  koffi: false
   protobufjs: false
   simple-git-hooks: false
 minimumReleaseAgeExclude:

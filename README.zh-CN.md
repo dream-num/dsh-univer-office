@@ -148,7 +148,7 @@ DSH 启动成功后，在已有的 DeepSeek Harness 浏览器页面按 **Cmd+R /
 
 ## 内置工具
 
-DSH 会自动选择这些工具，日常使用不需要手动调用。它们在加载任一内置 Univer 技能之后的下一步才披露给模型，因此与 Office 内容无关的任务不会为它们付出 schema token。
+DSH 会自动选择这些工具，日常使用不需要手动调用。它们在加载任一内置 Univer 技能之后的下一步才披露给模型，也支持通过 `/univer` 或 `/univer-sheet` 等命令直接加载技能，因此与 Office 内容无关的任务不会为它们付出 schema token。
 
 | 工具 | 作用 |
 | --- | --- |
