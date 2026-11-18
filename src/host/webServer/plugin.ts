@@ -12,12 +12,13 @@ export const name = 'univer-web'
 /** Register the browser API and the same-origin Viewer proxy behind the connection trust fence. */
 export function apply(ctx: Context): void {
   const connection = Reflect.get(ctx, 'connection') as ConnectionTrust
+  const sandbox = () => ctx.get('sandboxPolicy')
   ctx.effect(
     () =>
       ctx.webServer.register({
         kind: 'prefix',
         path: '/univer-api',
-        handler: createUniverRouter(ctx.univer, ctx.sessions, connection)
+        handler: createUniverRouter(ctx.univer, ctx.sessions, connection, sandbox)
       }),
     'univer: browser api'
   )
@@ -29,6 +30,7 @@ export function apply(ctx: Context): void {
         return started.gateway
       },
       sessions: ctx.sessions,
+      sandbox,
       connection
     })
     const disposers = [

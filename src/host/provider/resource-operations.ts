@@ -1,3 +1,5 @@
+import { resolve } from 'node:path'
+import type { FileScope } from '../service/session-file-scope.ts'
 import { createRequire } from 'node:module'
 import {
   createResourceLibrary,
@@ -36,7 +38,10 @@ export class ResourceOperations {
   ): Promise<UniverResourceResult> {
     signal?.throwIfAborted()
     try {
-      const library = this.library(signal)
+      const library = this.library(
+        signal,
+        request.action === 'export' ? request.outputWorkspace : undefined
+      )
       if (request.action === 'registries') {
         return result({ registries: library.listRegistries() as unknown as JsonValue })
       }
@@ -57,7 +62,7 @@ export class ResourceOperations {
         return result({ resourceCount: cleared.resourceCount, byteCount: cleared.byteCount })
       }
 
-      await assertAuthorizedPath(request.outputWorkspace, request.output, false)
+      await assertAuthorizedPath(request.outputWorkspace, request.output, false, 'write')
       const exported = await library.export({
         handles: request.handles,
         destination: request.output
@@ -65,7 +70,7 @@ export class ResourceOperations {
       signal?.throwIfAborted()
       await Promise.all(
         exported.exported.map(async (item) => {
-          await assertAuthorizedPath(request.outputWorkspace, item.path, true)
+          await assertAuthorizedPath(request.outputWorkspace, item.path, true, 'write')
         })
       )
       return result(exported as unknown as JsonValue)
@@ -80,7 +85,7 @@ export class ResourceOperations {
     }
   }
 
-  private library(signal?: AbortSignal): ResourceLibrary {
+  private library(signal?: AbortSignal, scope?: FileScope): ResourceLibrary {
     const fetchImpl: typeof fetch = async (input, init) => {
       const requestSignal = combinedSignal(signal, init?.signal)
       return fetch(input, {
@@ -91,7 +96,14 @@ export class ResourceOperations {
     return createResourceLibrary({
       manifest: this.manifest,
       cache: this.cache,
-      output: this.output,
+      output: {
+        write: async (destination, filename, svg) => {
+          if (scope === undefined)
+            throw new UniverError('Missing resource export scope.', 'SESSION_SCOPE_UNAVAILABLE')
+          await assertAuthorizedPath(scope, resolve(destination, filename), false, 'write')
+          return this.output.write(destination, filename, svg)
+        }
+      },
       downloader: new HttpsResourceDownloader({
         fetch: fetchImpl,
         timeoutMs: this.downloadTimeoutMs

@@ -93,6 +93,10 @@ function createGatewayRequestListener(
   return (req, res): void => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     let pathname = url.pathname
+    if (pathname.startsWith('/read-copy/')) {
+      apiRequestListener(req, res)
+      return
+    }
     // The Viewer is mounted under one base on every origin (direct Gateway access and the
     // same-origin DSH proxy alike), so one build serves both without path rewriting.
     if (pathname === VIEWER_BASE || pathname.startsWith(`${VIEWER_BASE}/`)) {

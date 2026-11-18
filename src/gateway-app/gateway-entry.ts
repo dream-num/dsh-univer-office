@@ -16,6 +16,11 @@ async function main(): Promise<void> {
     ...(allowedRoot === undefined ? {} : { allowedRoot })
   })
 
+  process.once('SIGTERM', () => {
+    void server.close().catch(() => {
+      process.exitCode = 1
+    })
+  })
   process.stdout.write(`[dsh-univer-gateway] listening on http://127.0.0.1:${server.port}\n`)
 }
 

@@ -163,7 +163,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 | `univer_lint` | Find off-page, overflowing, and overlapping Slide text |
 | `univer_compile_svg` | Add an SVG layout to a Slide with measured text |
 | `univer_screenshot` | Render supported content as PNG images for review |
-| `univer_print_pdf` | Print a Sheet, Doc, Slide, or Board to a workspace PDF file |
+| `univer_print_pdf` | Print a Sheet, Doc, Slide, or Board to a PDF file at a writable path |
 | `univer_api` | Find bundled Univer API symbols by keyword and show exact references |
 | `univer_resources` | Find and use bundled icons, logos, emoji, and illustrations |
 
@@ -182,9 +182,11 @@ DSH selects these tools automatically; you normally do not need to call them man
 
 ## Requirements and current limits
 
+Local paths are relative to the session working directory or absolute. With DSH's sandbox policy active, tools can read Host-readable inputs outside the workspace. In `workspace-write`, destinations must be under a DSH writable root (workspace, granted directories where supported, or platform temporary directories). `read-only` permits queries and inspection and rejects file mutations, including exports and screenshots. `danger-full-access` permits writes wherever the Host can write. For example, you can import a spreadsheet from a sibling directory into a draft in your workspace. Opening an interactive Viewer requires write access to the original. Hosts without the policy service retain workspace-only access.
+
 - DeepSeek Harness and Node.js `>=22.19.0`.
 - The file-tree preview needs no extra plugin: it registers a tab type on DSH's right sidebar and claims `dsh-resource://file/**` addresses ending in `.univer`. While `dsh-better-sidebar` (`^0.19.0`) is installed it takes over file addresses at the same priority with a broader pattern, so the preview is registered as one of its file viewers instead — both shapes are covered, and only one ever applies.
-- Older `.univer` files are automatically upgraded to format v3 when opened. A backup is saved beside the original; migration and validation run on a temporary copy, which replaces the original only after success. Failed upgrades leave the original unchanged. Opening the same unchanged file again reuses that backup instead of writing another copy.
+- Opening a writable legacy `.univer` file upgrades it to format v3. Queries on a read-only source upgrade a temporary copy. A backup is saved beside the original; migration and validation run on a temporary copy, which replaces the original only after success. Failed upgrades leave the original unchanged. Opening the same unchanged file again reuses that backup instead of writing another copy.
 - Screenshots, PDF printing, Slide layout checks, and SVG text measurement need a local Chromium-family browser. Chrome/Chromium and Microsoft Edge are detected automatically; set the `browserExecutablePath` option or the `UNIVER_RENDER_BROWSER` environment variable to point at a specific executable (for example Edge on Windows).
 - Slide master pages, layout pages, and speaker notes are outside the current editing scope.
 - Board mind maps, tables, ink, advanced editing, and file export are not yet supported.
@@ -217,7 +219,7 @@ The defaults are designed for local use: the service starts at port `9080`. If t
 | `activationSkills` | every bundled skill | Skills whose successful loading discloses all `univer_*` tools from the following step. An empty list discloses them unconditionally, which is also what `skills: false` implies |
 | `telemetry` | `true` | Send anonymous product telemetry |
 
-The Viewer, its HTTP API, and its WebSocket collaboration traffic are served by the plugin on the DSH WebServer origin itself (`/univer-viewer/...` and `/uf/...`), so remote deployments work through whatever entry already fronts DSH — no extra reverse-proxy configuration. Every browser request passes DSH browser authentication via the `connection` service. Viewer document opens and `/univer-api` requests also validate the named session workspace; subsequent `/uf` API and WebSocket requests do not require a plugin session cookie or repeat that workspace check. Authenticated browsers can address any `.univer` file accessible to the Host process, including in remote deployments. In DSH Desktop, the Viewer obtains the current Host loopback address through an authenticated runtime endpoint for WebSocket connections; HTTP requests continue through the desktop shell. The Gateway itself stays on loopback and is never exposed. (The former `viewerBaseUrl` option was removed by this change and is ignored.)
+The Viewer, its HTTP API, and its WebSocket collaboration traffic are served by the plugin on the DSH WebServer origin itself (`/univer-viewer/...` and `/uf/...`), so remote deployments work through whatever entry already fronts DSH — no extra reverse-proxy configuration. Every browser request passes DSH browser authentication via the `connection` service. Viewer document opens and `/univer-api` requests also check the named session’s file permissions; subsequent `/uf` API and WebSocket requests do not require a plugin session cookie or repeat the session policy check. Authenticated browsers can address any `.univer` file accessible to the Host process, including in remote deployments. In DSH Desktop, the Viewer obtains the current Host loopback address through an authenticated runtime endpoint for WebSocket connections; HTTP requests continue through the desktop shell. The Gateway itself stays on loopback and is never exposed. (The former `viewerBaseUrl` option was removed by this change and is ignored.)
 
 ## Telemetry
 

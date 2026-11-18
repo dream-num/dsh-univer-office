@@ -163,7 +163,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。它们在�
 | `univer_lint` | 检查 Slide 文字越界、溢出和重叠 |
 | `univer_compile_svg` | 将 SVG 布局按文字度量添加到 Slide |
 | `univer_screenshot` | 把支持的内容渲染为 PNG 图片供审阅 |
-| `univer_print_pdf` | 把 Sheet、Doc、Slide 或 Board 打印为 workspace 中的 PDF 文件 |
+| `univer_print_pdf` | 把 Sheet、Doc、Slide 或 Board 打印为 会话可写路径中的 PDF 文件 |
 | `univer_api` | 按关键词查找插件内置的 Univer API 符号并查看精确引用 |
 | `univer_resources` | 查找和使用内置图标、Logo、Emoji 与插画 |
 
@@ -182,9 +182,11 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。它们在�
 
 ## 要求与限制
 
+本地文件可以用相对于会话工作目录的路径或绝对路径。启用 DSH 沙箱策略时，工具可以读取工作区外 Host 可读的文件。`workspace-write` 只允许写入 DSH 的可写目录，包括工作区、当前版本支持的额外授权目录和平台临时目录。`read-only` 允许查询和检查，禁止修改文件、导出和保存截图。`danger-full-access` 允许写入 Host 可写的位置。例如，源表放在相邻目录时，可以直接导入当前工作区的草稿。打开交互式 Viewer 需要对原文件有写权限。未加载沙箱策略服务的 Host 仍只允许访问会话工作区。
+
 - DeepSeek Harness，以及 Node.js `>=22.19.0`。
 - 文件树预览不需要额外插件：它在 DSH 自带右侧栏注册一个 tab 类型，认领以 `.univer` 结尾的 `dsh-resource://file/**` 地址。安装 `dsh-better-sidebar`（`^0.19.0`）期间，该插件会以同档位、更宽的模式接管文件地址，因此预览改为注册成它的文件预览器——两种宿主形态都覆盖，且任一时刻只有一条生效。
-- 打开旧版 `.univer` 文件时会自动升级到 v3 格式：先在原文件旁保存备份，在临时副本中完成迁移和验证，成功后才替换原文件；升级失败时原文件保持不变。再次打开同一份未变化的文件时复用这份备份，不会再复制一份。
+- 查询只读的旧版 `.univer` 时，只在临时副本中升级。打开可写的旧版文件时会升级到 v3 格式，先在原文件旁保存备份，在临时副本中完成迁移和验证，成功后才替换原文件；升级失败时原文件保持不变。再次打开同一份未变化的文件时复用这份备份，不会再复制一份。
 - 截图、PDF 打印、Slide 布局检查和 SVG 文字度量需要本机 Chromium 系浏览器。Chrome/Chromium 与 Microsoft Edge 会被自动探测；也可以通过 `browserExecutablePath` 配置项或 `UNIVER_RENDER_BROWSER` 环境变量指定浏览器可执行文件路径（例如 Windows 上的 Edge）。
 - Slide 的母版、版式页和演讲者备注不在当前编辑范围内。
 - Board 的思维导图、表格、墨迹和高级编辑，以及 Board 文件导出尚未开放。
@@ -217,7 +219,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。它们在�
 | `activationSkills` | 全部内置技能 | 成功加载其中任一技能后，从下一步起披露全部 `univer_*` 工具。空数组表示无条件披露；`skills: false` 也隐含此行为 |
 | `telemetry` | `true` | 发送匿名产品遥测 |
 
-Viewer 页面、HTTP API 与 WebSocket 协作流量由插件直接挂载在 DSH WebServer origin 上（`/univer-viewer/...` 与 `/uf/...`），远程部署沿用现有 DSH 访问入口即可，无需额外反向代理配置。每个浏览器请求均通过 `connection` 服务完成 DSH 浏览器鉴权。Viewer 文档打开与 `/univer-api` 请求还会校验指定会话的 workspace；后续 `/uf` API 与 WebSocket 请求不依赖插件会话 cookie，也不重复 workspace 校验。已通过鉴权的浏览器可以寻址 Host 进程有权访问的任意 `.univer` 文件，远程部署也采用相同规则。在 DSH 桌面端，Viewer 通过受鉴权保护的运行时接口获取当前 Host loopback 地址，用于 WebSocket 连接；HTTP 请求仍由桌面壳转发。Gateway 始终只监听 loopback，不对外暴露。（原 `viewerBaseUrl` 配置已随本次变更移除，保留时会被忽略。）
+Viewer 页面、HTTP API 与 WebSocket 协作流量由插件直接挂载在 DSH WebServer origin 上（`/univer-viewer/...` 与 `/uf/...`），远程部署沿用现有 DSH 访问入口即可，无需额外反向代理配置。每个浏览器请求均通过 `connection` 服务完成 DSH 浏览器鉴权。Viewer 文档打开与 `/univer-api` 请求还会校验指定会话的文件权限；后续 `/uf` API 与 WebSocket 请求不依赖插件会话 cookie，也不重复会话权限校验。已通过鉴权的浏览器可以寻址 Host 进程有权访问的任意 `.univer` 文件，远程部署也采用相同规则。在 DSH 桌面端，Viewer 通过受鉴权保护的运行时接口获取当前 Host loopback 地址，用于 WebSocket 连接；HTTP 请求仍由桌面壳转发。Gateway 始终只监听 loopback，不对外暴露。（原 `viewerBaseUrl` 配置已随本次变更移除，保留时会被忽略。）
 
 ## 遥测
 

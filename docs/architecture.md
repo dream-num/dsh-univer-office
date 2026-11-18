@@ -287,13 +287,15 @@ bundled skill provider -> DSH skill registry
 - API Reference：查找 API 候选并读取指定 Facade/方法的完整参考。
 - Resource Library：列出 registry、按语义搜索、读取 SVG、导出到显式 workspace 目录和清理 Provider-owned 缓存。
 
-所有文件操作都接收显式 workspace scope。Provider 必须将文件解析为绝对路径，并拒绝 scope 外路径。文件 ID、worktree ID 和 unit ID 在服务层使用 branded 类型，不能以无语义的裸字符串跨层传递。
+所有文件操作都接收显式 workspace scope。工具入口从当前 session 解析 DSH sandboxPolicy。Provider 按用途复核 realpath：读取使用 Host 文件权限，写入按沙箱 mode 及 DSH writableRoots 检查。没有策略服务时沿用 workspace 内的读写范围。文件 ID、worktree ID 和 unit ID 在服务层使用 branded 类型，不能以无语义的裸字符串跨层传递。
+
+Gateway 打开旧版 SQLite 会升级文件。源文件只可读时，Host 通过 Gateway 内部的 `POST /read-copy/<id>/open` 创建 SQLite 一致性副本，状态查询、检查、lint 和渲染/导出从副本读取。副本的 Worker 不入池，结果仍以原文件寻址。Host 在 finally 中调用 `close`，Gateway 释放连接并移除自己创建的临时目录。审阅状态不为只读源生成可写 Viewer URL。浏览器 `/uf` 的既有连接鉴权契约见下文。
 
 默认值在 Provider 的 `resolve(request)` 阶段产生；执行方法不使用隐藏的 `value ?? default`。可随部署变化的端口、启动超时、轮询间隔和自动启动策略必须来自已校验配置。
 
 ## 7. Provider、Gateway、Runtime Pool 与 Unit Content Worker
 
-Provider 按规范化文件路径维护缓存；同一个插件实例只持有一个 Gateway 进程，多个 workspace 共享该协作进程，但浏览器文件请求必须先绑定 live DSH session 并通过该 session `cwd` 的 realpath 范围校验。Gateway 的进程复用不构成文件授权。并发的 `ensureGateway` 调用共享同一个启动 Promise；启动失败、进程提前退出和插件卸载都必须释放状态并允许安全重试。
+Provider 按规范化文件路径维护缓存；同一个插件实例只持有一个 Gateway 进程，多个 workspace 共享该协作进程，但浏览器文件请求必须先绑定 live DSH session 并通过该 session 的文件权限校验。Gateway 的进程复用不构成文件授权。并发的 `ensureGateway` 调用共享同一个启动 Promise；启动失败、进程提前退出和插件卸载都必须释放状态并允许安全重试。
 
 Gateway Supervisor 只负责：
 
@@ -307,8 +309,7 @@ Provider 与 Worker 使用 Gateway Supervisor 返回的 loopback origin 访问 G
 Viewer 面由插件挂载在 DSH WebServer origin 上：`/univer-viewer` 前缀承载 Viewer 文档与静态
 资源，`/uf` 前缀承载 Gateway 领域 API，`/univer-viewer/ws` 是 WebSocket 隧道（`?target=` 携带
 动态上游路径，因 DSH upgrade 注册只支持精确路径）。代理逐请求先通过 DSH `connection` 服务的
-信任门（Host/Origin fence 与浏览器鉴权）。Viewer 文档请求仍解码 fileKey 并验证其落在指定
-live session 的 `cwd` 内；后续 `/uf` 与隧道请求不设置或读取插件会话 cookie，也不重复 workspace
+信任门（Host/Origin fence 与浏览器鉴权）。Viewer 文档请求仍解码 fileKey 并验证指定 live session 对原文件有写权限；后续 `/uf` 与隧道请求不设置或读取插件会话 cookie，也不重复 workspace
 范围校验，以兼容桌面壳删除 Set-Cookie、替换请求 cookie 的转发行为。已通过 DSH 鉴权的浏览器
 可直接调用 Gateway 文件 API，访问范围由 Host 进程的文件权限决定；该契约同样适用于远程部署。
 `/univer-api` 与模型工具保留 session/workspace 校验。`computeFileState` 投影同源相对路径
@@ -384,7 +385,7 @@ Tools Consumer 注册面向模型的领域工具，而不是一个透传 CLI 的
 
 每个工具有独立的参数 schema、结果 schema、超时/取消处理和纯 presentation。工具结果必须包含恢复 Client 预览目标所需的结构化文件、worktree 与 unit 标识，并进入 DSH 会话日志。领域失败使用 DSH 可持久化的稳定错误 code，并在模型可见文本中保留 `Error [CODE]`，使 Agent 不必解析自然语言即可选择恢复路径。Client 优先从 `tool/call` 与 `tool/result` 事件恢复目标，不依赖 bash 文本解析。
 
-`univer_status` 是发现文件状态与显式 Unit ID 的入口。所有内容工具要求显式 Unit ID，所有文件和输出路径都绑定当前 tool exec session 的 workspace，并在 Provider 边界再次验证。`univer_screenshot` 在读取文件前确认 attachment service、PNG 限制与当前模型图片输入能力，生成文件再次经过 workspace realpath 授权，再保存为持久 DSH image attachment；结构化文本保留恢复目标与图片元数据。`univer_print_pdf` 复用同一渲染源与 Render Machine，把 Sheet、Doc、Slide 或 Board 写入授权的 `.pdf` 路径，不支持 Base。`univer_resources` 的 cache root 只由 Provider 配置拥有，不向模型暴露；export 目录和每个实际输出文件都必须通过 workspace 授权。`ready` 提交修改等待审阅；同一任务需要继续修改时用 `reopen`。`merge` 与 `discard` 只有在用户明确要求时才可调用，并通过 `tools/pre-execute` 返回审批请求，不能由模型自行决定。
+`univer_status` 是发现文件状态与显式 Unit ID 的入口。所有内容工具要求显式 Unit ID，所有文件和输出路径都绑定当前 tool exec session 的文件策略，并在 Provider 边界再次验证。`univer_screenshot` 在读取文件前确认 attachment service、PNG 限制与当前模型图片输入能力，生成文件再次经过 路径写权限复核，再保存为持久 DSH image attachment；结构化文本保留恢复目标与图片元数据。`univer_print_pdf` 复用同一渲染源与 Render Machine，把 Sheet、Doc、Slide 或 Board 写入授权的 `.pdf` 路径，不支持 Base。`univer_resources` 的 cache root 只由 Provider 配置拥有，不向模型暴露；export 目录和每个实际输出文件都必须有写权限。`ready` 提交修改等待审阅；同一任务需要继续修改时用 `reopen`。`merge` 与 `discard` 只有在用户明确要求时才可调用，并通过 `tools/pre-execute` 返回审批请求，不能由模型自行决定。
 
 包内 `univer` Skill 描述完整编排顺序，sheet、doc、slide、base 与 board Skill 只在对应 Unit 工作时按需加载，Embed 与跨 Unit 公式各有 Topic Skill。内容以同版本 Univer CLI runtime Skills 为基线：只移除插件未开放的 command，并把 CLI command 调用替换为结构化 DSH Tool 或 Client 自动预览。Slide Skill 要求新页面主动使用 `univer_compile_svg`，结构检查后对每个变更页运行 `univer_lint`，最终逐页运行 `univer_screenshot`；其他 Unit Skill 使用其范围、分页、工作台或画布截图目标。需要图标、Logo、Emoji 或插画时先通过 `univer_resources` 查找和导出。不确定或可能随 SDK 变化的 API 必须通过 `univer_api` 查询。
 
@@ -440,7 +441,7 @@ Client 必须满足：
 3. `univer_inspect` 可读取 trunk 或显式 worktree 中的 Sheet 范围、Doc/Slide 结构、Base 概览、Board 概览和单个 Board 元素详情；`univer_export` 可读取 trunk 或显式 worktree；
 4. `univer_api` 使用包依赖的精确版本 API Reference，不调用外部 CLI；
 5. `univer_lint` 只返回布局 coverage 与 findings，不生成或返回图片；
-6. `univer_compile_svg` 只读取 session workspace 内的 SVG 与引用资源，并把生成程序提交到显式 draft worktree；
+6. `univer_compile_svg` 按会话读权限读取 SVG 与引用资源，并把生成程序提交到显式 draft worktree；
 7. `univer_screenshot` 复用随包 Render Machine，显式装配目标 Unit、公式引用 Unit、Embed child Unit 与 Gateway 图片资源，PNG 同时落到授权 workspace 和 DSH attachment；
 8. `univer_print_pdf` 复用同一 Render Machine 与完整渲染源，把支持的 Unit 打印到授权 workspace PDF；
 9. `univer_resources` 复用随包 manifest 与 HTTPS-only resource library，不调用外部 CLI，缓存位置来自已校验配置；

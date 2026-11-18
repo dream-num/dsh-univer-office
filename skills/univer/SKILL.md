@@ -85,7 +85,7 @@ Never reopen or reuse a merged or discarded worktree; create a new worktree inst
 | Start | `univer_unit` | Create or remove a Sheet, Doc, Slide, Base, or Board in a draft worktree. |
 | Start | `univer_import` | Import local xlsx, csv, tsv, docx, or pptx as a new Unit. |
 | Write | `univer_execute` | Run version-matched Facade JavaScript against one Unit in a draft worktree. |
-| Write | `univer_compile_svg` | Compile workspace SVG into one explicit Slide page with browser text metrics. |
+| Write | `univer_compile_svg` | Compile a local SVG into one explicit Slide page with browser text metrics. |
 | Verify | `univer_inspect` | Read structured Unit content from trunk or one worktree. |
 | Verify | `univer_lint` | Check Slide text off-page, container escape, and text overlap. |
 | Verify | `univer_screenshot` | Render Sheet, Doc, Slide, Base, or Board PNG evidence and return it to an image-capable model. |
@@ -117,7 +117,7 @@ Read only task assets inside the session workspace. Do not print or return the d
 
 ## Import and export
 
-- Import accepts workspace files only; URL import is unavailable.
+- Import a local source directly from its original path, including outside the workspace when the DSH session policy is available. Relative paths start at the session cwd. Import writes the destination draft. Export, PDF, screenshot and resource export require writable destinations. In read-only mode, use status, inspect or lint. Hosts without sandbox policy restrict all local paths to the workspace.
 - Export Sheet or Base to `.xlsx`, `.csv`, or `.tsv`; Doc to `.docx`; Slide to `.pptx`.
 - Board export is unsupported.
 - Export uses an explicit Unit and an explicit trunk or worktree scope. Recalculate formulas and finish readback before exporting.
@@ -131,5 +131,5 @@ Do not invent equivalents for CLI maintenance, daemon/configuration, `compile-ty
 Tool failures use `Error [CODE]: message`. Route recovery by the code, not free text.
 
 - For `GATEWAY_UNAVAILABLE` or `GATEWAY_REQUEST_TIMEOUT`, retry one `univer_status` read. After a write timeout, inspect status and content before continuing.
-- For `FILE_PERMISSION_DENIED` or `SESSION_SCOPE_DENIED`, use an accessible in-workspace path or ask the user to correct access; do not retry the same path.
+- For `FILE_PERMISSION_DENIED` or `SESSION_SCOPE_DENIED`, check the session mode and choose a permitted input or output path; do not retry the same path.
 - For worktree or Unit state errors, refresh with `univer_status`; reopen `ready` worktrees and replace terminal ones.

@@ -2,14 +2,15 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
-import { existingToolFile, newToolPath } from '../workspace.ts'
+import { resolveExistingUniverPath, resolveNewWorkspacePath } from '../../service/workspace.ts'
+import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_print_pdf` tool definition. */
 export function printPdfTool(ctx: Context, timeoutMs: number) {
   return defineTool({
     name: 'univer_print_pdf',
     description:
-      'Print one explicit Sheet, Doc, Slide, or Board Unit from trunk or a worktree to a workspace PDF file. Base Units are not printable.',
+      'Print one explicit Sheet, Doc, Slide, or Board Unit from trunk or a worktree to a session-writable PDF path. Base Units are not printable.',
     timeoutMs,
     parameters: {
       file: {
@@ -34,9 +35,10 @@ export function printPdfTool(ctx: Context, timeoutMs: number) {
     },
     output: operationOutput,
     async execute(args, exec) {
+      const scope = toolFileScope(ctx, exec)
       const [target, output] = await Promise.all([
-        existingToolFile(exec, args.file),
-        newToolPath(exec, args.output)
+        resolveExistingUniverPath(scope, args.file, 'read'),
+        resolveNewWorkspacePath(scope, args.output)
       ])
       return ctx.univer.printUnitPdf(
         {

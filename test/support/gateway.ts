@@ -1,3 +1,4 @@
+import type {} from '../../src/host/service/univer-service.ts'
 import { mkdtemp, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -34,7 +35,7 @@ export interface GatewayHarness {
 }
 
 export async function startGateway(
-  options: { config?: Record<string, unknown>; fileName?: string } = {}
+  options: { config?: Record<string, unknown>; fileName?: string; context?: Context } = {}
 ): Promise<GatewayHarness> {
   const plugin = await importHostBundle(pluginRoot())
   const workspace = await realpath(await mkdtemp(join(tmpdir(), 'dsh-univer-test-')))
@@ -50,7 +51,20 @@ export async function startGateway(
     services.push(service)
     return service
   }
-  const service = createService()
+  if (options.context !== undefined) {
+    const fiber = await options.context.plugin(plugin, {
+      gatewayPort: port,
+      skills: false,
+      telemetry: false,
+      ...options.config
+    })
+    services.push({
+      dispose: async () => {
+        await fiber.dispose()
+      }
+    })
+  }
+  const service = options.context?.univer ?? createService()
   const harness: GatewayHarness = {
     plugin,
     service,

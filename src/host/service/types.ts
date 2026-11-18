@@ -1,7 +1,8 @@
+import type { FileScope } from './session-file-scope.ts'
 import type { WorktreeReviewAction, WorktreeActionResult } from '../../shared/wire/actions.ts'
 import type { FileState } from '../../shared/wire/state.ts'
 import type { EnsureGatewayResult, GatewayStatus } from '../../shared/wire/status.ts'
-import type { UniverFilePath, UnitId, WorkspacePath, WorktreeId } from './identifiers.ts'
+import type { UniverFilePath, UnitId, WorktreeId } from './identifiers.ts'
 
 /** JSON values accepted across the model tool boundary. */
 export type JsonValue =
@@ -17,7 +18,7 @@ export type UniverUnitKind = 'sheet' | 'doc' | 'slide' | 'base' | 'board'
 
 /** File request tied to one authorized workspace. */
 export interface ScopedFileRequest {
-  readonly workspace: WorkspacePath
+  readonly workspace: FileScope
   readonly file: UniverFilePath
 }
 
@@ -71,11 +72,13 @@ export interface InspectUnitContentRequest extends ScopedFileRequest {
 }
 
 /** Request for executing Univer Facade code. */
-export interface ExecuteUnitContentRequest extends ScopedFileRequest {
-  readonly code: string
-  readonly worktreeId: WorktreeId
-  readonly unitId: UnitId
-}
+export type ExecutionSource = { readonly code: string } | { readonly codeFile: string }
+
+export type ExecuteUnitContentRequest = ScopedFileRequest &
+  ExecutionSource & {
+    readonly worktreeId: WorktreeId
+    readonly unitId: UnitId
+  }
 
 /** Compatibility mode for .doc/.docx imports; traditional keeps the source page setup. */
 export type ImportDocType = 'traditional' | 'modern'
@@ -83,7 +86,7 @@ export type ImportDocType = 'traditional' | 'modern'
 /** Request for importing one Office file as a Unit in a draft worktree. */
 export interface ImportUnitContentRequest extends ScopedFileRequest {
   readonly source: string
-  readonly sourceWorkspace: WorkspacePath
+  readonly sourceWorkspace: FileScope
   readonly worktreeId: WorktreeId
   readonly name: string
   readonly docType?: ImportDocType
@@ -92,7 +95,7 @@ export interface ImportUnitContentRequest extends ScopedFileRequest {
 /** Request for exporting one Unit. */
 export interface ExportUnitContentRequest extends ScopedFileRequest {
   readonly output: string
-  readonly outputWorkspace: WorkspacePath
+  readonly outputWorkspace: FileScope
   readonly unitId: UnitId
   readonly worktreeId?: WorktreeId
 }
@@ -142,7 +145,7 @@ export interface ScreenshotUnitRequest extends ScopedFileRequest {
   readonly unitId: UnitId
   readonly worktreeId?: WorktreeId
   readonly output: string
-  readonly outputWorkspace: WorkspacePath
+  readonly outputWorkspace: FileScope
   readonly target?: ScreenshotTarget
 }
 
@@ -151,7 +154,7 @@ export interface PrintPdfUnitRequest extends ScopedFileRequest {
   readonly unitId: UnitId
   readonly worktreeId?: WorktreeId
   readonly output: string
-  readonly outputWorkspace: WorkspacePath
+  readonly outputWorkspace: FileScope
 }
 
 /** One PNG returned to the Tools Consumer before attachment persistence. */
@@ -191,7 +194,7 @@ export type ResourceOperationRequest =
       readonly action: 'export'
       readonly handles: readonly string[]
       readonly output: string
-      readonly outputWorkspace: WorkspacePath
+      readonly outputWorkspace: FileScope
     }
   | { readonly action: 'clear-cache' }
 
@@ -205,7 +208,7 @@ export interface UniverResourceResult {
 /** Request for compiling one SVG and applying it to a Slide page. */
 export interface CompileSvgRequest extends ScopedFileRequest {
   readonly source: string
-  readonly sourceWorkspace: WorkspacePath
+  readonly sourceWorkspace: FileScope
   readonly worktreeId: WorktreeId
   readonly unitId: UnitId
   readonly page: number

@@ -84,7 +84,7 @@ A new Slide Unit already contains one empty page. Compile page 1 into it. Do not
 - Reapplying the same replacement is idempotent.
 - `mode: "add"` overlays without clearing existing elements.
 
-Use browser-valid SVG: shapes, paths, transforms, gradients, text, bitmaps, `<use>`, style sheets, CSS units, and color functions. `<image>` must declare width and height and may reference only an asset inside the session workspace.
+Use browser-valid SVG: shapes, paths, transforms, gradients, text, bitmaps, `<use>`, style sheets, CSS units, and color functions. `<image>` must declare width and height and may reference a local asset readable under the session file policy.
 
 Break lines with `<tspan>` using scalar `x` and absolute `y` or non-zero `dy`. Do not use `dx`, per-glyph coordinate lists, or spaces for layout. Default SVG whitespace collapses consecutive and leading spaces. Use `xml:space="preserve"`, positioned text elements, or `&#160;` for deliberate fixed gaps.
 
