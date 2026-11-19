@@ -170,7 +170,10 @@ export class CollabService {
     if (unit === undefined || unit.type !== type) {
       throw new Error(`Unit ${unitId} was not found with type ${String(type)}`)
     }
-    const loadData = await this._getTrunkLoadDataWithBlocks(unitId, type, 0, 'gateway-exchange')
+    const loadData = await this.runtime.trunkService.getUnitLoadDataWithBlocks(
+      { unitID: unitId, type, revision: 0 },
+      callOptions('local', { source: 'gateway-exchange' })
+    )
     const materializer = new UnitSnapshotMaterializer(GATEWAY_UNIT_RUNTIME)
     try {
       return await materializer.materializeSnapshot(loadData)
@@ -182,9 +185,6 @@ export class CollabService {
   public async createWorktree(agentId = '', name = ''): Promise<WorktreeRecord> {
     const worktreeId = newWorktreeId()
     const units = this.listUnits()
-    const records = new Map(
-      this.runtime.trunkAdapter.listUnitRecords().map((record) => [record.unitID, record])
-    )
     const options = callOptions(agentId || 'local', {
       [UNIVERFILE_WORKTREE_METADATA_KEY]: {
         agentId,
@@ -193,32 +193,10 @@ export class CollabService {
         unitNames: Object.fromEntries(units.map((unit) => [unit.unitId, unit.name]))
       }
     })
-    // The Gateway creates the Worktree record through the adapter so the record carries its
-    // metadata; subsequent lifecycle/read/submit/merge semantics are SDK Service-owned.
-    await this.runtime.worktreeAdapter.createWorktree(databaseContext(options), {
-      record: {
-        worktreeID: worktreeId,
-        sid: randomUUID(),
-        status: 'draft'
-      },
-      units: units.map((unit) => {
-        const record = records.get(unit.unitId)
-        if (record === undefined) throw new Error(`Unit ${unit.unitId} disappeared`)
-        // A Worktree Unit joined from trunk keeps the trunk Unit's creation identity, which the
-        // SDK requires of every Unit record.
-        return {
-          worktreeID: worktreeId,
-          unitID: unit.unitId,
-          type: unit.type,
-          source: 'trunk',
-          metadata: {},
-          creatorID: record.creatorID,
-          createdAt: record.createdAt,
-          baselineTrunkRevision: unit.headRev,
-          draftHeadRevision: unit.headRev
-        }
-      })
-    })
+    await this.runtime.worktreeService.createWorktree(
+      { worktreeID: worktreeId, units: units.map((unit) => unit.unitId) },
+      options
+    )
     return requireWorktree(this.runtime, worktreeId)
   }
 
@@ -987,11 +965,9 @@ export class CollabService {
 
     const loadData =
       side.ref.kind === 'trunk'
-        ? await this._getTrunkLoadDataWithBlocks(
-            unitId,
-            unit.type,
-            unit.revision,
-            'worktree-comparison'
+        ? await this.runtime.trunkService.getUnitLoadDataWithBlocks(
+            { unitID: unitId, type: unit.type, revision: unit.revision },
+            callOptions('local', { source: 'worktree-comparison' })
           )
         : await this._getWorktreeLoadDataWithBlocks(
             side.ref.worktreeId,
@@ -1029,37 +1005,6 @@ export class CollabService {
         ? []
         : await this._readWorktreeSerializedSheetBlocks(worktreeId, unitId, type, loadData.snapshot)
     return { ...loadData, sheetBlocks }
-  }
-
-  private async _getTrunkLoadDataWithBlocks(
-    unitId: string,
-    type: UniverType,
-    revision: number,
-    source: string
-  ): Promise<UnitLoadDataWithBlocks> {
-    const loadData = await this.runtime.trunkService.getUnitLoadDataWithBlocks(
-      { unitID: unitId, type, revision },
-      callOptions('local', { source })
-    )
-    if (loadData.snapshot.workbook === undefined || loadData.sheetBlocks.length > 0) {
-      return loadData
-    }
-    const blockIDs = Object.values(loadData.snapshot.workbook.blockMeta ?? {}).flatMap(
-      (meta) => meta.blocks
-    )
-    const blocks = await Promise.all(
-      blockIDs.map(async (blockID) => {
-        const result = await this.runtime.trunkService.getSheetBlock(
-          { unitID: unitId, type, blockID },
-          callOptions('local', { source })
-        )
-        return result.block ?? undefined
-      })
-    )
-    return {
-      ...loadData,
-      sheetBlocks: blocks.filter((block): block is ISheetBlock => block !== undefined)
-    }
   }
 
   private async _comparisonHistory(

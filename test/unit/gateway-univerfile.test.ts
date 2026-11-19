@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
-import { afterAll, beforeAll, expect, it } from 'vitest'
+import { afterAll, beforeAll, expect, it, vi } from 'vitest'
 import {
   changeset,
   context,
@@ -59,6 +59,31 @@ afterAll(async () => {
 
 const changesetAt = async (trunk: any, revision: number) =>
   (await trunk.getChangesets(context, 'unit', { from: revision - 1, to: revision }))[0]
+
+it('publishes a new worktree with its trunk baseline and display names', async () => {
+  const live = new api.CollabService()
+  try {
+    await live.createUnit(2, { unitId: 'tasks', name: 'Task List' })
+    const created = vi.fn()
+    live.runtime.worktreeService.on('worktreeCreated', created)
+    const worktree = await live.createWorktree('agent', 'Review tasks')
+
+    expect(worktree).toMatchObject({
+      agentId: 'agent',
+      name: 'Review tasks',
+      status: 'draft',
+      baseline: { tasks: 1 }
+    })
+    expect(live.worktreeUnits(worktree.worktreeId)).toMatchObject([
+      { unitId: 'tasks', name: 'Task List', headRev: 1 }
+    ])
+    expect(created.mock.calls).toMatchObject([
+      [{ userID: 'agent', worktree: { worktreeID: worktree.worktreeId } }]
+    ])
+  } finally {
+    await live.dispose()
+  }
+})
 
 it('serves upgraded History and Worktree submits with protocol-second timestamps', async () => {
   const file = join(workspace, 'v2.univer')
