@@ -1,10 +1,4 @@
-import type {
-  IBaseSnapshot,
-  ICellData,
-  IObjectMatrixPrimitiveType,
-  ITableSnapshot,
-  IWorkbookData
-} from '@univerjs/core'
+import type { IWorkbookData } from '@univerjs/core'
 import { UniverInstanceType } from '@univerjs/core'
 import {
   transformSnapshotToDocumentData,
@@ -12,6 +6,7 @@ import {
   transformSnapshotToWorkbookData
 } from '@univerjs-pro/collaboration'
 import type { IDeserializedSheetBlock, ISheetBlock, ISnapshot } from '@univerjs/protocol'
+import { decodeBaseSnapshotData, decodeBoardSnapshotData } from '../shared/base-board-snapshot.ts'
 
 /** Application adapter from Collaboration Protocol snapshots to final UnitData. */
 export async function decodeComparisonUnitData(
@@ -69,68 +64,6 @@ function decodeSnapshotFromWire(snapshot: unknown): unknown {
     }
   }
   return out
-}
-
-function decodeBoardSnapshotData(snapshot: ISnapshot): unknown {
-  const meta = snapshot.board
-  if (meta === undefined) throw new Error('decodeBoardSnapshotData: missing board meta')
-  return {
-    ...decodeJsonData(meta.originalMeta),
-    id: snapshot.unitID || meta.unitID,
-    rev: snapshot.rev || meta.rev,
-    name: meta.name,
-    resources: meta.resources
-  }
-}
-
-function decodeBaseSnapshotData(
-  snapshot: ISnapshot,
-  blocks: readonly (IDeserializedSheetBlock | ISheetBlock)[]
-): IBaseSnapshot {
-  const meta = snapshot.workbook
-  if (meta === undefined) {
-    throw new Error('decodeBaseSnapshotData: missing workbook-shaped base meta')
-  }
-  const blockById = new Map(blocks.map((block) => [block.id, block]))
-  const tables: Record<string, ITableSnapshot> = {}
-  for (const [tableId, tableMeta] of Object.entries(meta.sheets)) {
-    const cellData: IObjectMatrixPrimitiveType<ICellData> = {}
-    for (const blockId of meta.blockMeta?.[tableId]?.blocks ?? []) {
-      const block = blockById.get(blockId)
-      if (block === undefined) {
-        throw new Error(`decodeBaseSnapshotData: missing base block ${blockId}`)
-      }
-      Object.assign(cellData, decodeJsonData(block.data))
-    }
-    tables[tableId] = {
-      id: tableMeta.id,
-      name: tableMeta.name,
-      ...decodeJsonData(tableMeta.originalMeta),
-      cellData
-    } as unknown as ITableSnapshot
-  }
-  return {
-    id: snapshot.unitID || meta.unitID,
-    name: meta.name,
-    schemaVersion: 1,
-    tableOrder: meta.sheetOrder,
-    tables,
-    createdAt: 0,
-    updatedAt: 0,
-    ...decodeJsonData(meta.originalMeta),
-    rev: snapshot.rev || meta.rev
-  } as unknown as IBaseSnapshot
-}
-
-function decodeJsonData(data: unknown): Record<string, unknown> {
-  if (data === undefined || data === null || data === '') return {}
-  if (typeof data === 'string') {
-    return JSON.parse(new TextDecoder().decode(base64ToBytes(data))) as Record<string, unknown>
-  }
-  if (data instanceof Uint8Array) {
-    return JSON.parse(new TextDecoder().decode(data)) as Record<string, unknown>
-  }
-  return asRecord(data) ?? {}
 }
 
 function base64ToBytes(base64: string): Uint8Array {

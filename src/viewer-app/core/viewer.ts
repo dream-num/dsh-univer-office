@@ -15,15 +15,8 @@ import {
   UniverInstanceType
 } from '@univerjs/core'
 import { SetDocZoomRatioOperation } from '@univerjs/docs-ui'
-import type { IBoardData } from '@univerjs-pro/boards'
 import { SetSlideZoomRatioOperation, type ISlidePageSize } from '@univerjs-pro/slides'
-import type {
-  IBaseSnapshot,
-  ICellData,
-  IObjectMatrixPrimitiveType,
-  IWorkbookData,
-  ITableSnapshot
-} from '@univerjs/core'
+import type { IWorkbookData } from '@univerjs/core'
 import type { IDeserializedSheetBlock, ISheetBlock, ISnapshot } from '@univerjs/protocol'
 import {
   transformSnapshotToDocumentData,
@@ -61,6 +54,10 @@ import {
   UNIT_TYPE_SLIDE,
   type UnitType
 } from '@univer/collab-gateway-contract'
+import {
+  decodeBaseSnapshotData,
+  decodeBoardSnapshotData
+} from '../../shared/base-board-snapshot.ts'
 import { isProxyServedViewer, resolveWebSocketUrl } from './config'
 import { startPreviewSheetFormulaCalculation } from './preview-formula'
 import {
@@ -363,7 +360,7 @@ export async function createPreviewViewer(opts: PreviewViewerOptions): Promise<V
     unitId = data.id ?? ''
     univer.createUnit(UniverInstanceType.UNIVER_SLIDE, data)
   } else if (opts.unitType === UNIT_TYPE_BASE) {
-    const data = decodeBaseSnapshotData(
+    const data = await decodeBaseSnapshotData(
       snapshot,
       (opts.sheetBlocks ?? []) as Array<IDeserializedSheetBlock | ISheetBlock>
     )
@@ -564,78 +561,6 @@ export async function decodeComparisonUnitData(
     return decodeComparisonWorkbookData(snapshot, sheetBlocks)
   }
   throw new Error(`Unsupported comparison unit type: ${String(unitType)}`)
-}
-
-function decodeBoardSnapshotData(snapshot: ISnapshot): IBoardData {
-  const meta = snapshot.board
-  if (meta === undefined) {
-    throw new Error('decodeBoardSnapshotData: missing board meta')
-  }
-  return {
-    ...decodeJsonData(meta.originalMeta),
-    id: snapshot.unitID || meta.unitID,
-    rev: snapshot.rev || meta.rev,
-    name: meta.name,
-    resources: meta.resources
-  } as unknown as IBoardData
-}
-
-function decodeBaseSnapshotData(
-  snapshot: ISnapshot,
-  blocks: readonly (IDeserializedSheetBlock | ISheetBlock)[]
-): IBaseSnapshot {
-  const meta = snapshot.workbook
-  if (meta === undefined) {
-    throw new Error('decodeBaseSnapshotData: missing workbook-shaped base meta')
-  }
-
-  const blockById = new Map<string, IDeserializedSheetBlock | ISheetBlock>()
-  for (const block of blocks) {
-    blockById.set(block.id, block)
-  }
-
-  const tables: Record<string, ITableSnapshot> = {}
-  for (const [tableId, tableMeta] of Object.entries(meta.sheets)) {
-    const cellData: IObjectMatrixPrimitiveType<ICellData> = {}
-    for (const blockId of meta.blockMeta?.[tableId]?.blocks ?? []) {
-      const block = blockById.get(blockId)
-      if (block === undefined) {
-        throw new Error(`decodeBaseSnapshotData: missing base block ${blockId}`)
-      }
-      Object.assign(cellData, decodeJsonData(block.data))
-    }
-    tables[tableId] = {
-      id: tableMeta.id,
-      name: tableMeta.name,
-      ...decodeJsonData(tableMeta.originalMeta),
-      cellData
-    } as unknown as ITableSnapshot
-  }
-
-  return {
-    id: snapshot.unitID || meta.unitID,
-    name: meta.name,
-    schemaVersion: 1,
-    tableOrder: meta.sheetOrder,
-    tables,
-    createdAt: 0,
-    updatedAt: 0,
-    ...decodeJsonData(meta.originalMeta),
-    rev: snapshot.rev || meta.rev
-  } as unknown as IBaseSnapshot
-}
-
-function decodeJsonData(data: unknown): Record<string, unknown> {
-  if (data === undefined || data === null || data === '') {
-    return {}
-  }
-  if (typeof data === 'string') {
-    return JSON.parse(new TextDecoder().decode(base64ToBytes(data))) as Record<string, unknown>
-  }
-  if (data instanceof Uint8Array) {
-    return JSON.parse(new TextDecoder().decode(data)) as Record<string, unknown>
-  }
-  return data as Record<string, unknown>
 }
 
 function base64ToBytes(b64: string): Uint8Array {
