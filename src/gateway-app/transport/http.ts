@@ -216,33 +216,6 @@ async function dispatch(
     const method = req.method ?? 'GET'
     const segments = splitPath(url.pathname)
 
-    if (segments[0] === 'read-copy' && segments.length === 3 && method === 'POST') {
-      // Internal Host RPC. Browsers cannot send this request cross-origin or as a simple form.
-      if (req.headers.origin !== undefined || req.headers['content-type'] !== 'application/json') {
-        sendJson(res, 403, { error: { code: 0, message: 'Gateway Host request required' } })
-        return
-      }
-      const [, id, action] = segments
-      if (!id || !/^[a-f0-9-]{36}$/u.test(id)) throw new UniverfileError('Invalid read copy ID')
-      if (action === 'close') {
-        await manager.releaseReadCopy(id)
-        sendJson(res, 200, { ok: true })
-        return
-      }
-      const body: unknown = await readJsonBody(req)
-      if (
-        action !== 'open' ||
-        !body ||
-        typeof body !== 'object' ||
-        !('file' in body) ||
-        typeof body.file !== 'string'
-      ) {
-        throw new UniverfileError('Invalid read copy request')
-      }
-      sendJson(res, 200, { file: manager.createReadCopy(id, body.file) })
-      return
-    }
-
     if (segments.length < 2 || segments[0] !== 'uf') {
       sendJson(res, 404, { error: { code: 0, message: `no route for ${method} ${url.pathname}` } })
       return

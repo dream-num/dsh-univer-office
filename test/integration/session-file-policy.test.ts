@@ -5,7 +5,6 @@ import {
   copyFile,
   mkdtemp,
   readFile,
-  readdir,
   realpath,
   rm,
   stat,
@@ -24,6 +23,11 @@ import { ToolCallId } from '@deepseek-ai/dsh-llm/brand'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { startGateway, type GatewayHarness } from '../support/gateway.ts'
+import {
+  V3_VERSIONS,
+  backupsOf,
+  versionsOf
+} from '../../packages/univerfile-sqlite/test/support/legacy.ts'
 import { repoPath } from '../support/paths.ts'
 
 const ctx = new Context()
@@ -122,7 +126,7 @@ it('imports an external Office source and enforces per-session write grants on e
   })
 })
 
-it('reads a legacy file without upgrading the source or leaving adjacent backups (#146)', async () => {
+it('upgrades an external legacy file in place during a read-only status query (#146)', async () => {
   const { run, session } = await caller()
   setSandboxMode(session, 'read-only')
   const file = join(external, 'legacy.univer')
@@ -131,12 +135,19 @@ it('reads a legacy file without upgrading the source or leaving adjacent backups
     file
   )
   const bytes = await readFile(file)
-  const entries = await readdir(external)
   const result = await run('univer_status', { file })
   expect(result.isError, JSON.stringify(result.content)).toBe(false)
   expect(result.content[0]).toMatchObject({ type: 'text', text: expect.stringContaining(file) })
-  expect(await readFile(file)).toEqual(bytes)
-  expect(await readdir(external)).toEqual(entries)
+  expect(versionsOf(file)).toEqual(V3_VERSIONS)
+  const backups = await backupsOf(external, 'legacy.univer')
+  expect(backups).toHaveLength(1)
+  expect(await readFile(join(external, backups[0]!))).toEqual(bytes)
+  expect(await run('univer_worktree', { file, action: 'create' })).toMatchObject({
+    isError: true,
+    error: { info: { code: 'SESSION_SCOPE_DENIED' } }
+  })
+  expect((await run('univer_status', { file })).content).toEqual(result.content)
+  expect(await backupsOf(external, 'legacy.univer')).toEqual(backups)
 })
 
 it.skipIf(process.platform === 'win32')(
@@ -177,6 +188,9 @@ it('rechecks the named browser session for reads and worktree actions (#146)', a
           sessionId: session.id
         })
       })
+    expect(await (await fetch(stateUrl)).json()).toMatchObject({
+      viewerUrl: expect.stringContaining(session.id)
+    })
     setSandboxMode(session, 'read-only')
     const state = await fetch(stateUrl)
     expect(state.status).toBe(200)
@@ -191,28 +205,4 @@ it('rechecks the named browser session for reads and worktree actions (#146)', a
   } finally {
     await closeServer(server)
   }
-})
-
-it('releases a Gateway read copy and its SQLite handle after overlapping closes (#146)', async () => {
-  const route = `${gateway.origin}/read-copy/${randomUUID()}`
-  const post = (action: string, body: Record<string, unknown>) =>
-    fetch(`${route}/${action}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body)
-    })
-  const response = await post('open', { file: gateway.file })
-  expect(response.status).toBe(200)
-  const { file } = await response.json()
-  try {
-    const units = await fetch(
-      `${gateway.origin}/uf/${Buffer.from(file).toString('base64url')}/units`
-    )
-    expect(units.status).toBe(200)
-  } finally {
-    const replies = await Promise.all([post('close', {}), post('close', {})])
-    expect(replies.map((reply) => reply.status)).toEqual([200, 200])
-  }
-  await expect(stat(file)).rejects.toMatchObject({ code: 'ENOENT' })
-  expect((await stat(gateway.file)).isFile()).toBe(true)
 })

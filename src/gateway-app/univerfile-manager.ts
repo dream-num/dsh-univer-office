@@ -1,6 +1,4 @@
-import { tmpdir } from 'node:os'
-import { copyUniverfile } from '@univer/univerfile-sqlite'
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, realpathSync } from 'node:fs'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path'
 import { CollabService } from './collab-service.js'
 import { EventHub } from './transport/events.js'
@@ -59,8 +57,6 @@ interface UniverfileEntry {
  * when idle. Same file via different spellings (relative / symlink) -> one authority.
  */
 export class UniverfileManager {
-  private readonly _readCopies = new Map<string, { path: string; closing?: Promise<void> }>()
-  private _disposed = false
   private readonly _univerfiles = new Map<string, UniverfileEntry>()
   private readonly _allowedRoot: string | undefined
   private readonly _idleTtlMs: number | undefined
@@ -79,39 +75,6 @@ export class UniverfileManager {
       this._evictTimer = setInterval(() => this.evictIdle(ttl), ttl)
       this._evictTimer.unref()
     }
-  }
-
-  /** SQLite reads the source in one transaction. Schema upgrades and collaboration writes touch only the copy. */
-  public createReadCopy(id: string, source: string): string {
-    if (this._disposed) throw new UniverfileError('Gateway is stopping')
-    const file = this._normalizeUniverfile(source)
-    if (this._readCopies.has(id)) throw new UniverfileExistsError('Read copy already exists')
-    const directory = realpathSync(mkdtempSync(join(this._allowedRoot ?? tmpdir(), 'univer-read-')))
-    const copy = join(directory, 'snapshot.univer')
-    try {
-      copyUniverfile(file, copy)
-      this._readCopies.set(id, { path: copy })
-      return copy
-    } catch (error) {
-      rmSync(directory, { recursive: true, force: true })
-      throw error
-    }
-  }
-
-  public async releaseReadCopy(id: string): Promise<void> {
-    const copy = this._readCopies.get(id)
-    if (copy === undefined) return
-    copy.closing ??= (async () => {
-      const entry = this._univerfiles.get(copy.path)
-      this._univerfiles.delete(copy.path)
-      try {
-        await entry?.univerfile.collab.dispose()
-      } finally {
-        rmSync(dirname(copy.path), { recursive: true, force: true })
-        this._readCopies.delete(id)
-      }
-    })()
-    await copy.closing
   }
 
   /** Open an EXISTING univerfile; never creates. Throws `UniverfileNotFoundError` if the file is gone. */
@@ -229,12 +192,10 @@ export class UniverfileManager {
   }
 
   public async dispose(): Promise<void> {
-    this._disposed = true
     if (this._evictTimer !== undefined) {
       clearInterval(this._evictTimer)
       this._evictTimer = undefined
     }
-    await Promise.all([...this._readCopies.keys()].map((id) => this.releaseReadCopy(id)))
     const disposals = [...this._univerfiles.values()].map((entry) =>
       entry.univerfile.collab.dispose()
     )

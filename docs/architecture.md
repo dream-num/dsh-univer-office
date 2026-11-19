@@ -289,7 +289,7 @@ bundled skill provider -> DSH skill registry
 
 所有文件操作都接收显式 workspace scope。工具入口从当前 session 解析 DSH sandboxPolicy。Provider 按用途复核 realpath：读取使用 Host 文件权限，写入按沙箱 mode 及 DSH writableRoots 检查。没有策略服务时沿用 workspace 内的读写范围。文件 ID、worktree ID 和 unit ID 在服务层使用 branded 类型，不能以无语义的裸字符串跨层传递。
 
-Gateway 打开旧版 SQLite 会升级文件。源文件只可读时，Host 通过 Gateway 内部的 `POST /read-copy/<id>/open` 创建 SQLite 一致性副本，状态查询、检查、lint 和渲染/导出从副本读取。副本的 Worker 不入池，结果仍以原文件寻址。Host 在 finally 中调用 `close`，Gateway 释放连接并移除自己创建的临时目录。审阅状态不为只读源生成可写 Viewer URL。浏览器 `/uf` 的既有连接鉴权契约见下文。
+Provider 将已获准读取的原文件路径交给 Gateway。打开旧版 `.univer` 时，存储层在原文件旁备份、迁移并验证后替换原文件。格式升级使用进程的文件系统权限，无需会话写权限。审阅状态仅向有会话写权限的调用者提供交互式 Viewer URL。浏览器 `/uf` 的既有连接鉴权契约见下文。
 
 默认值在 Provider 的 `resolve(request)` 阶段产生；执行方法不使用隐藏的 `value ?? default`。可随部署变化的端口、启动超时、轮询间隔和自动启动策略必须来自已校验配置。
 
