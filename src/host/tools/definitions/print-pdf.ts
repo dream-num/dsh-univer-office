@@ -44,7 +44,6 @@ export function printPdfTool(ctx: Context, timeoutMs: number) {
         {
           workspace: target.workspace,
           file: target.path,
-          outputWorkspace: output.workspace,
           output: output.path,
           unitId: unitId(args.unitId),
           ...(args.worktreeId === undefined ? {} : { worktreeId: worktreeId(args.worktreeId) })

@@ -12,7 +12,7 @@ import {
   writeFile
 } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import {
   mountAgentLoopTestDependencies,
@@ -99,6 +99,16 @@ it('imports an external Office source and enforces per-session write grants on e
     error: { info: { code: 'SESSION_SCOPE_DENIED' } }
   })
   await expect(stat(output)).rejects.toMatchObject({ code: 'ENOENT' })
+  // Direct service callers can still designate a separate workspace for their output.
+  const legacyOutput = join(external, 'direct-export.xlsx')
+  await gateway.service.exportUnitContent({
+    ...gateway.scoped,
+    worktreeId,
+    unitId,
+    output: legacyOutput,
+    outputWorkspace: external
+  })
+  expect((await readFile(legacyOutput)).subarray(0, 2).toString()).toBe('PK')
   const revoke = ctx.sandboxPolicy.registerWritableRoot(session, external)
   try {
     expect((await run('univer_export', args)).isError).toBe(false)
@@ -123,6 +133,33 @@ it('imports an external Office source and enforces per-session write grants on e
   })
   await expect(stat(join(gateway.workspace, 'denied.univer'))).rejects.toMatchObject({
     code: 'ENOENT'
+  })
+})
+
+it('applies the session read scope to local images referenced by an SVG (#146)', async () => {
+  const { run } = await caller()
+  const worktreeId = await gateway.createWorktree('SVG asset scope')
+  const unitId = await gateway.createUnit(worktreeId, 'slide', 'Slide')
+  const source = join(gateway.workspace, 'slide.svg')
+  const asset = join(external, 'mark.svg')
+  await writeFile(
+    asset,
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="#0055aa"/></svg>'
+  )
+  const href = relative(gateway.workspace, asset).split(sep).join('/')
+  await writeFile(
+    source,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><image href="${href}" width="80" height="80"/></svg>`
+  )
+  const args = { file: gateway.file, source, worktreeId, unitId, page: 1 }
+  await expect(
+    gateway.service.compileSvg({ ...args, workspace: gateway.workspace })
+  ).rejects.toThrow('outside the session workspace')
+  const compiled = await run('univer_compile_svg', args)
+  expect(compiled.isError, JSON.stringify(compiled.content)).toBe(false)
+  expect(compiled.content[0]).toMatchObject({
+    type: 'text',
+    text: expect.stringContaining('"committed":true')
   })
 })
 

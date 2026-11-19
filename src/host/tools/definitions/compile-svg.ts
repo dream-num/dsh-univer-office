@@ -48,7 +48,6 @@ export function compileSvgTool(ctx: Context, timeoutMs: number) {
           workspace: target.workspace,
           file: target.path,
           source: source.path,
-          sourceWorkspace: source.workspace,
           worktreeId: worktreeId(args.worktreeId),
           unitId: unitId(args.unitId),
           page: args.page,

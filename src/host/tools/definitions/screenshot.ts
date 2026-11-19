@@ -155,7 +155,6 @@ export function screenshotTool(ctx: Context, timeoutMs: number) {
           workspace: target.workspace,
           file: target.path,
           unitId: unitId(args.unitId),
-          outputWorkspace: output.workspace,
           output: output.path,
           ...(args.worktreeId === undefined ? {} : { worktreeId: worktreeId(args.worktreeId) }),
           ...screenshotTarget(args)

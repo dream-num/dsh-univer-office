@@ -86,7 +86,7 @@ export type ImportDocType = 'traditional' | 'modern'
 /** Request for importing one Office file as a Unit in a draft worktree. */
 export interface ImportUnitContentRequest extends ScopedFileRequest {
   readonly source: string
-  readonly sourceWorkspace: FileScope
+  readonly sourceWorkspace?: FileScope
   readonly worktreeId: WorktreeId
   readonly name: string
   readonly docType?: ImportDocType
@@ -95,7 +95,7 @@ export interface ImportUnitContentRequest extends ScopedFileRequest {
 /** Request for exporting one Unit. */
 export interface ExportUnitContentRequest extends ScopedFileRequest {
   readonly output: string
-  readonly outputWorkspace: FileScope
+  readonly outputWorkspace?: FileScope
   readonly unitId: UnitId
   readonly worktreeId?: WorktreeId
 }
@@ -145,7 +145,7 @@ export interface ScreenshotUnitRequest extends ScopedFileRequest {
   readonly unitId: UnitId
   readonly worktreeId?: WorktreeId
   readonly output: string
-  readonly outputWorkspace: FileScope
+  readonly outputWorkspace?: FileScope
   readonly target?: ScreenshotTarget
 }
 
@@ -154,7 +154,7 @@ export interface PrintPdfUnitRequest extends ScopedFileRequest {
   readonly unitId: UnitId
   readonly worktreeId?: WorktreeId
   readonly output: string
-  readonly outputWorkspace: FileScope
+  readonly outputWorkspace?: FileScope
 }
 
 /** One PNG returned to the Tools Consumer before attachment persistence. */
@@ -208,7 +208,7 @@ export interface UniverResourceResult {
 /** Request for compiling one SVG and applying it to a Slide page. */
 export interface CompileSvgRequest extends ScopedFileRequest {
   readonly source: string
-  readonly sourceWorkspace: FileScope
+  readonly sourceWorkspace?: FileScope
   readonly worktreeId: WorktreeId
   readonly unitId: UnitId
   readonly page: number

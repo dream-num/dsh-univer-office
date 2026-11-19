@@ -49,7 +49,6 @@ export function importTool(ctx: Context, timeoutMs: number) {
           {
             workspace: target.workspace,
             file: target.path,
-            sourceWorkspace: source.workspace,
             source: source.path,
             worktreeId: worktreeId(args.worktreeId),
             name: args.name,

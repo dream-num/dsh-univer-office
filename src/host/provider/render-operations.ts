@@ -1,9 +1,9 @@
 import type { FileScope } from '../service/session-file-scope.ts'
-import { assertAuthorizedPath } from '../service/workspace.ts'
+import { assertAuthorizedPath, canReadPath } from '../service/workspace.ts'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
-import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import {
   compileSvgToFacade,
   isSvgFacadeError,
@@ -458,12 +458,7 @@ function assetResolver(
         { cause: error }
       )
     }
-    const fromWorkspace = typeof workspace === 'string' ? relative(workspace, path) : ''
-    if (
-      fromWorkspace === '..' ||
-      fromWorkspace.startsWith(`..${sep}`) ||
-      isAbsolute(fromWorkspace)
-    ) {
+    if (!canReadPath(workspace, path)) {
       throw new UniverError(
         `SVG asset ${JSON.stringify(href)} is outside the session workspace.`,
         'SESSION_SCOPE_DENIED'

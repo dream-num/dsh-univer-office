@@ -102,9 +102,7 @@ async function resolveAuthorizedPath(
       ? workspacePath(workspace)
       : { cwd: workspacePath(workspace), policy: scope.policy }
   const allowed =
-    access === 'write'
-      ? canWritePath(authorized, canonical)
-      : typeof authorized !== 'string' || contains(authorized, canonical)
+    access === 'write' ? canWritePath(authorized, canonical) : canReadPath(authorized, canonical)
   if (!allowed) {
     throw new UniverError('Path is outside the session file permissions.', 'SESSION_SCOPE_DENIED')
   }
@@ -112,6 +110,10 @@ async function resolveAuthorizedPath(
 }
 
 export type FileAccess = 'read' | 'write'
+
+export function canReadPath(scope: FileScope, canonical: string): boolean {
+  return typeof scope !== 'string' || contains(scope, canonical)
+}
 
 export function canWritePath(scope: FileScope, canonical: string): boolean {
   if (typeof scope === 'string') return contains(scope, canonical)

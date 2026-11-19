@@ -312,9 +312,10 @@ export class GatewayUniverService extends UniverService {
     request: ImportUnitContentRequest,
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
+    const sourceWorkspace = request.sourceWorkspace ?? request.workspace
     await Promise.all([
       assertAuthorizedPath(request.workspace, request.file, true, 'write'),
-      assertAuthorizedPath(request.sourceWorkspace, request.source, true, 'read')
+      assertAuthorizedPath(sourceWorkspace, request.source, true, 'read')
     ])
     const gateway = await this.requireGateway()
     await this.requireWorktreeStatus(gateway, request.file, request.worktreeId, 'draft')
@@ -338,9 +339,10 @@ export class GatewayUniverService extends UniverService {
     request: ExportUnitContentRequest,
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
+    const outputWorkspace = request.outputWorkspace ?? request.workspace
     await Promise.all([
       assertAuthorizedPath(request.workspace, request.file, true, 'read'),
-      assertAuthorizedPath(request.outputWorkspace, request.output, false, 'write')
+      assertAuthorizedPath(outputWorkspace, request.output, false, 'write')
     ])
     const gateway = await this.requireGateway()
     return this.unitContent.export(gateway, request, signal)
@@ -369,9 +371,10 @@ export class GatewayUniverService extends UniverService {
     request: ScreenshotUnitRequest,
     signal?: AbortSignal
   ): Promise<ScreenshotServiceResult> {
+    const outputWorkspace = request.outputWorkspace ?? request.workspace
     await Promise.all([
       assertAuthorizedPath(request.workspace, request.file, true, 'read'),
-      assertAuthorizedPath(request.outputWorkspace, request.output, false, 'write')
+      assertAuthorizedPath(outputWorkspace, request.output, false, 'write')
     ])
     const gateway = await this.requireGateway()
     const source = await this.renderSources.load(
@@ -384,7 +387,7 @@ export class GatewayUniverService extends UniverService {
     const result = await this.render.screenshot({
       source,
       output: request.output,
-      outputWorkspace: request.outputWorkspace,
+      outputWorkspace,
       maxPages: this.config.screenshotMaxPages,
       maxPixels: this.config.screenshotMaxPixels,
       ...(request.target === undefined ? {} : { target: request.target }),
@@ -392,7 +395,7 @@ export class GatewayUniverService extends UniverService {
     })
     await Promise.all(
       result.images.map(async (image) => {
-        await assertAuthorizedPath(request.outputWorkspace, image.path, true, 'write')
+        await assertAuthorizedPath(outputWorkspace, image.path, true, 'write')
       })
     )
     return { ok: true, operation: 'screenshot', file: request.file, result }
@@ -403,9 +406,10 @@ export class GatewayUniverService extends UniverService {
     request: PrintPdfUnitRequest,
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
+    const outputWorkspace = request.outputWorkspace ?? request.workspace
     await Promise.all([
       assertAuthorizedPath(request.workspace, request.file, true, 'read'),
-      assertAuthorizedPath(request.outputWorkspace, request.output, false, 'write')
+      assertAuthorizedPath(outputWorkspace, request.output, false, 'write')
     ])
     const gateway = await this.requireGateway()
     const source = await this.renderSources.load(
@@ -418,10 +422,10 @@ export class GatewayUniverService extends UniverService {
     const result = await this.render.printPdf({
       source,
       output: request.output,
-      outputWorkspace: request.outputWorkspace,
+      outputWorkspace,
       ...(signal === undefined ? {} : { signal })
     })
-    await assertAuthorizedPath(request.outputWorkspace, result.output, true, 'write')
+    await assertAuthorizedPath(outputWorkspace, result.output, true, 'write')
     return { ok: true, operation: 'print-pdf', file: request.file, result }
   }
 
@@ -430,9 +434,10 @@ export class GatewayUniverService extends UniverService {
     request: CompileSvgRequest,
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
+    const sourceWorkspace = request.sourceWorkspace ?? request.workspace
     await Promise.all([
       assertAuthorizedPath(request.workspace, request.file, true, 'write'),
-      assertAuthorizedPath(request.sourceWorkspace, request.source, true, 'read')
+      assertAuthorizedPath(sourceWorkspace, request.source, true, 'read')
     ])
     if (!Number.isSafeInteger(request.page) || request.page < 1) {
       throw new UniverError('SVG target page must be a positive integer.', 'INVALID_REQUEST')
@@ -441,7 +446,7 @@ export class GatewayUniverService extends UniverService {
     await this.requireWorktreeStatus(gateway, request.file, request.worktreeId, 'draft')
     const compiled = await this.render.compileSvg({
       source: request.source,
-      workspace: request.sourceWorkspace,
+      workspace: sourceWorkspace,
       page: request.page,
       ...(request.mode === undefined ? {} : { mode: request.mode }),
       ...(signal === undefined ? {} : { signal })
