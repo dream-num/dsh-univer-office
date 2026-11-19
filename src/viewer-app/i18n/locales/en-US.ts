@@ -23,6 +23,10 @@ function buildEnUsMessages() {
       previewLoadFailed: (error: string): string => `Failed to load the preview: ${error}`
     },
     toast: {
+      sheetReadOnlyReady:
+        'These changes are awaiting confirmation. Click Continue editing to make changes.',
+      sheetReadOnly: 'This view is read-only.',
+      reopenFailed: (error: string): string => `Failed to resume editing: ${error}`,
       worktreeGone: 'That modification no longer exists; switched back to the current version',
       agentReset: 'The AI undid its last step; refreshing…',
       workDone: (name: string): string => `"${name}" is done and awaiting your confirmation`,
@@ -64,6 +68,8 @@ function buildEnUsMessages() {
       updated: 'Updated'
     },
     topbar: {
+      readOnlyReady: 'Read only · Awaiting confirmation',
+      continueEditing: 'Continue editing',
       currentVersion: 'Current version',
       fallbackDocumentName: 'Document',
       submitForReview: 'Submit for confirmation',

@@ -25,6 +25,7 @@ Use the structured `univer_*` tools whenever the task creates, reads, changes, c
 - Every content write requires the complete address: `file`, draft `worktreeId`, and `unitId`.
 - `univer_execute` persists only when Facade mutations occurred. A read-only execution produces no revision.
 - `ready` rejects writes until `reopen`. `merged` and `discarded` are terminal; never reuse them.
+- Users can edit draft worktrees directly in the Viewer and click **Continue editing** on a ready worktree to reopen it. Re-read the current content before applying follow-up edits so you preserve their changes.
 - Tool success is not correctness evidence. Read the changed model back and verify task-specific assertions.
 
 ## SVG resources

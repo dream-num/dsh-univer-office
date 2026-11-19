@@ -33,6 +33,7 @@ function Fixture(): ReactElement {
       setPreview(value)
       setAction(`preview:${value}`)
     },
+    doReopen: () => Promise.resolve(setAction('reopen')),
     doReady: () => Promise.resolve(setAction('submit')),
     doMerge: () => Promise.resolve(setAction('merge')),
     doDiscard: () => Promise.resolve(setAction('discard')),
@@ -40,6 +41,7 @@ function Fixture(): ReactElement {
   }
   const snap: Parameters<typeof Topbar>[0]['snap'] = {
     view: state === 'trunk' ? { kind: 'trunk' } : { kind: 'worktree', worktreeId: 'worktree' },
+    busy: false,
     selectedUnitId: 'unit',
     trunkUnits: [unit],
     comparisonMode: compare,

@@ -32,6 +32,7 @@
 - 在 DSH 内以 Viewer 全屏预览文件；
 - 在 DSH 文件树中点击 `.univer` 文件即可按需打开 Viewer 预览，不需要任何 Agent 操作，也不要求安装 `dsh-better-sidebar`；该入口在关闭实时浮动窗口后仍然可用，并由 Viewer 提供主线与非终态 worktree 之间的切换；
 - worktree 创建或更新后显示实时浮动窗口；
+- draft worktree 的实时 Viewer 允许用户直接编辑；ready 保持只读，用户点击「继续编辑」通过现有 reopen 接口恢复 draft 并返回实时编辑视图，修改后再次提交确认。Compare 与 merge preview 始终只读，持久层仅允许 draft 写入的约束不变；
 - 用户可在 DSH 插件设置中分别关闭实时浮动窗口与会话审阅卡片，且不影响另一者与文件树按需预览；
 - 一个 worktree 改动多个 unit 时，只列出有改动的 unit 并允许切换；
 - draft 或 ready worktree 的 Viewer 可在 View 与 Compare 间切换，把当前 worktree 与固定的 trunk 或另一个活跃 worktree 并排比较，并为 Sheet、Doc、Slide、Base 与 Board 提供语义差异列表、定位和显式刷新；
@@ -397,6 +398,8 @@ Client 只解析结构化 `univer_*` 工具事件，不从 bash 命令或自由�
 Client 是状态投影，不拥有 worktree 真相。预览目标来自可回放的会话事件；实时状态来自 Host API；Viewer iframe 负责文档内容的实时展示。
 
 审阅卡片平时使用文档流中的非模态 dialog，全屏时通过 `showModal()` 进入浏览器 top layer，避免对话祖先的 containment、transform 或裁剪限制。切换不迁移 DOM 或重载 Viewer iframe，原位置保留等高占位；退出或卸载时撤销模态状态与键盘监听。Esc 同时监听 Host 与同源 Viewer，已被 Viewer 消费的按键不用于退出全屏。
+
+Sheet 的临时只读模式由 Viewer 本地权限点、禁止进入编辑器的配置和本地 mutation 拦截共同实现，不写入文档权限策略；权限刷新不能解除当前实例的只读限制。Sheet 保留复制、打印和导出的原有权限，Viewer 显示只读原因，并对明确的编辑尝试限频提示。提示监听与权限订阅随实例销毁，远端协作更新与导航不触发编辑提示。
 
 Viewer 内的 Compare 是 Gateway 的只读 Consumer，不扩大 Client 权限。DSH Client 仍只投影 Host 授权后的不透明 Viewer URL；Viewer 使用该 URL 已绑定的文件和 worktree 创建固定比较会话，并把同一个 `/diff` 语义结果交给差异列表、双栏渲染和定位行为。
 
