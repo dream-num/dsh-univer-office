@@ -25,15 +25,9 @@ Provider 先授权文件，再按文件路径缓存短期的 `FileState` Promise
 
 每个插件实例管理一个 Gateway。并发启动共享一个启动操作，启动失败、进程提前退出或插件卸载时释放所有权。多个工作区复用进程，各次工具操作仍须单独授权。
 
-Gateway Supervisor 只负责：
+Host 从配置的端口（默认 `9080`）启动随包 Gateway。子进程成功绑定回环端口后，通过本次启动专属的 Node IPC 通道报告实际监听端口。Host 核对端口并验证 Viewer 健康页后才对外提供 origin。复用时再次检查该子进程的 IPC 连接与 Viewer 健康状态。
 
-- 选择并验证监听端口；
-- 启动随包发布、由 `src/gateway-app` 构建的 Gateway；
-- 等待健康检查成功；
-- 提供 Gateway origin；
-- 在所属 Cordis fiber 结束时终止插件启动的进程。
-
-插件启动的内置 Gateway 不得复用或终止外部启动的 Gateway。它默认从 `9080` 启动，端口被占用时逐次加一；只有结构化确认端口占用时才能继续尝试下一端口，其他启动失败必须立即返回。健康检查需要验证 Viewer 身份，不能把任意返回 HTTP 200 的本地服务误认为 Gateway。
+如果绑定失败且子进程以约定的端口占用退出码结束，Host 将端口加一再试。其他启动错误或超时会结束本次启动并返回失败。两个 Host 即使同时从同一端口启动，也各自持有独立的 Gateway。卸载时 Host 等待自己启动的子进程退出；Host 意外退出时，子进程随 IPC 断开关闭服务。参见[启动协议](../../src/shared/gateway-process-protocol.ts)和[进程管理](../../src/host/processes/gateway/supervisor.ts)。
 
 ## 浏览器会话 API
 

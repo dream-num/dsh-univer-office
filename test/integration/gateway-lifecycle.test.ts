@@ -1,3 +1,5 @@
+import { fork } from 'node:child_process'
+import { once } from 'node:events'
 import { readFile, mkdtemp, realpath, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { createServer as createNetServer, type Server } from 'node:net'
@@ -5,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { closeServer, listen, occupyPortWithFreeSuccessor } from '../support/net.ts'
+import { closeServer, freePort, listen, occupyPortWithFreeSuccessor } from '../support/net.ts'
 import { importHostBundle, pluginRoot, REPO_ROOT } from '../support/paths.ts'
 
 const BINDINGS = [
@@ -104,6 +106,71 @@ describe('Gateway ownership', () => {
     await listen(released, availablePort)
     await closeServer(released)
   })
+})
+
+it.each(['together', 'in sequence'] as const)(
+  'keeps independent Gateways when two Hosts start %s on the same port (#153)',
+  async (order) => {
+    const plugin = await importHostBundle(pluginRoot())
+    const port = await freePort()
+    const config = plugin.resolveConfig({ gatewayPort: port, tools: false, telemetry: false })
+    const first = new plugin.GatewayUniverService(new Context(), config)
+    const second = new plugin.GatewayUniverService(new Context(), config)
+    try {
+      const firstStart = first.ensureGateway()
+      if (order === 'in sequence') await firstStart
+      const [a, b] = await Promise.all([firstStart, second.ensureGateway()])
+      expect(a.ok).toBe(true)
+      expect(b.ok).toBe(true)
+      expect([a.gateway, b.gateway]).toContain(`http://127.0.0.1:${port}`)
+      expect(a.gateway).not.toBe(b.gateway)
+      for (const [host, origin] of [
+        [first, a.gateway],
+        [second, b.gateway]
+      ]) {
+        expect(await host.gatewayStatus()).toMatchObject({
+          phase: 'running',
+          owned: true,
+          gateway: origin
+        })
+      }
+      await first.dispose()
+      await expect(fetch(a.gateway)).rejects.toThrow()
+      expect(await (await fetch(b.gateway)).text()).toContain('<title>Univer</title>')
+      expect(await second.ensureGateway()).toMatchObject({ gateway: b.gateway, reused: true })
+      await second.dispose()
+      await expect(fetch(b.gateway)).rejects.toThrow()
+    } finally {
+      await Promise.all([first.dispose(), second.dispose()])
+    }
+  }
+)
+
+it('closes the bound Gateway when its Host IPC channel disconnects (#153)', async () => {
+  const root = pluginRoot()
+  const child = fork(join(root, 'artifacts/gateway.cjs'), {
+    execArgv: [],
+    stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+    env: {
+      ...process.env,
+      UNIVER_COLLAB_GATEWAY_PORT: '0',
+      UNIVER_VIEW_ASSETS_ROOT: join(root, 'artifacts/viewer')
+    }
+  })
+  const exited = once(child, 'exit')
+  try {
+    const [message] = await once(child, 'message', { signal: AbortSignal.timeout(10_000) })
+    expect(message).toMatchObject({ type: 'gateway-listening', port: expect.any(Number) })
+    const origin = `http://127.0.0.1:${message.port}`
+    expect((await fetch(origin)).ok).toBe(true)
+    child.disconnect()
+    await once(child, 'exit', { signal: AbortSignal.timeout(5_000) })
+    expect(child.exitCode).toBe(0)
+    await expect(fetch(origin)).rejects.toThrow()
+  } finally {
+    child.kill()
+    await exited
+  }
 })
 
 async function readNearestManifest(start: string): Promise<{ name?: string; version?: string }> {
