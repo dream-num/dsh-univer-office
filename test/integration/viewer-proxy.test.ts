@@ -1,4 +1,4 @@
-// Same-origin Viewer proxy (docs/viewer-same-origin-deployment.md): the real proxy handler in
+// Same-origin Viewer proxy (docs/operations/viewer-same-origin.md): the real proxy handler in
 // front of a real Gateway. The DSH connection fence is a stub; DSH owns real Host/Origin checks.
 import { createServer, type Server } from 'node:http'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'

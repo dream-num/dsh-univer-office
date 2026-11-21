@@ -6,7 +6,7 @@
 //
 //   pnpm update:univer-sdk --sdk_version 1.0.0-rc.0
 //
-// Cohort policy (see docs/architecture.md):
+// Cohort policy (see docs/operations/build-and-release.md):
 //   - SDK dependencies (@univerjs/, @univerjs-pro/, @univer-cli/) are pinned to
 //     one exact version everywhere; they upgrade as a single compatible family.
 //   - Self-versioned packages follow their own release cadence and are left

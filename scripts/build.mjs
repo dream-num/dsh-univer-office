@@ -287,7 +287,7 @@ if (target === 'all' || target === 'viewer') {
     root: viewerRoot,
     // One base on every origin: the Gateway mounts the same prefix, and the DSH
     // same-origin proxy forwards `/univer-viewer/*` verbatim (see
-    // docs/viewer-same-origin-deployment.md).
+    // docs/operations/viewer-same-origin.md).
     base: '/univer-viewer/',
     build: {
       target: 'esnext',
