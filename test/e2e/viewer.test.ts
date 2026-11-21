@@ -1,4 +1,5 @@
 // The built Viewer, served by a real Gateway, driven through the render browser.
+import type { FUniverSheetsMixin } from '@univerjs/sheets/facade'
 import type { Browser, Page } from 'puppeteer-core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { launchRenderBrowser } from '../support/browser.ts'
@@ -41,6 +42,96 @@ describe('built Viewer', () => {
     ['Base', 'base', 'Version history', 'bases-history-ui.operation.open'],
     ['Board', 'board', null, 'boards-history-ui.operation.open']
   ] as const
+
+  it.each(['sheet', 'doc', 'slide', 'base', 'board'] as const)(
+    'preserves host typing when a %s worktree preview opens automatically (#153)',
+    async (kind) => {
+      await withPage(browser, async (page) => {
+        await openPreviewWhileTyping(
+          page,
+          new URLSearchParams({
+            file: gateway.fileKey,
+            worktree: worktreeId,
+            unit: trunk[kind],
+            mode: 'embedded',
+            scope: 'worktree'
+          })
+        )
+      })
+    }
+  )
+
+  it('accepts keyboard edits after the user clicks into a Sheet preview (#153)', async () => {
+    await withPage(browser, async (page) => {
+      const frame = await openPreviewWhileTyping(
+        page,
+        new URLSearchParams({
+          file: gateway.fileKey,
+          unit: trunk.sheet,
+          mode: 'embedded',
+          scope: 'trunk',
+          editable: 'true'
+        })
+      )
+      const canvas = await frame.waitForSelector(`canvas[data-u-unit-id="${trunk.sheet}"]`, {
+        visible: true
+      })
+      await canvas!.click({ offset: { x: 120, y: 70 } })
+      const selected = await frame.evaluate(() =>
+        window.univerAPI?.getActiveWorkbook()?.getActiveSheet().getActiveCell()?.getA1Notation()
+      )
+      if (selected === undefined) throw new Error('Sheet click did not select a cell')
+      await page.keyboard.type('from keyboard')
+      await page.keyboard.press('Enter')
+      await frame.waitForFunction(
+        (address) =>
+          window.univerAPI?.getActiveWorkbook()?.getActiveSheet().getRange(address).getValue() ===
+          'from keyboard',
+        {},
+        selected
+      )
+    })
+  })
+
+  async function openPreviewWhileTyping(page: Page, params: URLSearchParams) {
+    await page.setRequestInterception(true)
+    page.on('request', (request) => {
+      if (request.url() === gateway.origin + '/chat') {
+        void request.respond({ contentType: 'text/html', body: '<textarea id="chat"></textarea>' })
+      } else {
+        void request.continue()
+      }
+    })
+    await page.goto(gateway.origin + '/chat')
+    await page.click('#chat')
+    await page.keyboard.type('before')
+    const handle = await page.evaluateHandle((src) => {
+      const chat = document.querySelector('textarea')!
+      chat.addEventListener('blur', () => {
+        chat.dataset.blurred = 'true'
+      })
+      const frame = document.createElement('iframe')
+      frame.width = '560'
+      frame.height = '420'
+      frame.src = src
+      return document.body.appendChild(frame)
+    }, '/?' + params.toString())
+    const frame = await handle.contentFrame()
+    if (frame === null) throw new Error('Viewer iframe was not attached')
+    // SDK editor initialization continues after the Viewer exposes its facade.
+    await frame.waitForFunction(() => {
+      const api = window.univerAPI
+      return api !== undefined && api.getCurrentLifecycleStage() === api.Enum.LifecycleStages.Steady
+    })
+    await page.keyboard.type(' after')
+    expect(
+      await page.$eval('textarea', (chat) => ({
+        text: chat.value,
+        blurred: chat.dataset.blurred === 'true'
+      }))
+    ).toEqual({ text: 'before after', blurred: false })
+    return frame
+  }
 
   it.each(historyCases)(
     'exposes History UI for a trunk %s Unit',
@@ -137,7 +228,7 @@ describe('built Viewer', () => {
 
 declare global {
   interface Window {
-    univerAPI?: { executeCommand(id: string): Promise<boolean> }
+    univerAPI?: FUniverSheetsMixin
   }
 }
 

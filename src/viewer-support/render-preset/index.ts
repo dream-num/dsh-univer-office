@@ -1,5 +1,10 @@
 import { UniverSheetsImportRangeFormulaPlugin } from '@univer/importrange-formula'
-import { IImageIoService, IUniverInstanceService, UniverInstanceType } from '@univerjs/core'
+import {
+  IContextService,
+  IImageIoService,
+  IUniverInstanceService,
+  UniverInstanceType
+} from '@univerjs/core'
 import type { Univer } from '@univerjs/core'
 import { IAttachmentIoService } from '@univerjs-pro/collaboration-client'
 import { UniverProFormulaEnginePlugin } from '@univerjs-pro/engine-formula'
@@ -105,7 +110,7 @@ import {
 // import { UniverSheetsThreadCommentUIPlugin } from "@univerjs/sheets-thread-comment-ui";
 import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui'
 // import { UniverThreadCommentUIPlugin } from "@univerjs/thread-comment-ui";
-import { UniverUIPlugin, type RibbonType } from '@univerjs/ui'
+import { DISABLE_AUTO_FOCUS_KEY, UniverUIPlugin, type RibbonType } from '@univerjs/ui'
 import { createViewBaseResourceRefDataProviderRegistration } from './view-base-resource-ref-data-provider.js'
 import { CustomBasesImportExportPlugin } from './import-export/bases/plugin.js'
 import { CustomDocsImportExportPlugin } from './import-export/docs/plugin.js'
@@ -126,7 +131,7 @@ export { CONTENT_LOCALES, loadContentLocale, type ContentLocale } from './locale
 export { deepMerge, mergeLocalePacks } from './locales/merge.js'
 
 /**
- * Base plugins, registered in the same order as univer-pro's sheets example (`main.ts` top +
+ * Plugins shared by all Unit types, registered in the same order as univer-pro's sheets example (`main.ts` top +
  * registerBasicPlugins), minus product-only infra (worker RPC, telemetry, watermark, debugger).
  * Drawing goes first. Live collaboration views disable its local `IImageIoService` so
  * `@univerjs-pro/collaboration-client` owns remote image IO without a duplicate redi registration.
@@ -134,7 +139,7 @@ export { deepMerge, mergeLocalePacks } from './locales/merge.js'
  * has no formula worker.
  * `hideWorkbenchChrome` mirrors the Board example, whose own tools sit inside an outer host shell.
  */
-function registerBasePlugins(
+function registerSharedPlugins(
   univer: Univer,
   container: string,
   collaborationOwnsAssetIo: boolean,
@@ -150,6 +155,7 @@ function registerBasePlugins(
       ? { header: false, toolbar: false, headerMenu: false, footer: false }
       : {})
   })
+  bindIframeAutoFocus(univer)
   univer.registerPlugin(
     UniverDrawingPlugin,
     collaborationOwnsAssetIo ? { override: [[IImageIoService, null]] } : undefined
@@ -394,7 +400,7 @@ export interface ViewRenderingOptions {
  */
 export function registerViewRendering(univer: Univer, options: ViewRenderingOptions): void {
   const collaborationOwnsAssetIo = options.assetIoOwner === ViewAssetIoOwner.CollaborationClient
-  registerBasePlugins(
+  registerSharedPlugins(
     univer,
     options.container,
     collaborationOwnsAssetIo,
@@ -416,4 +422,20 @@ export function registerViewRendering(univer: Univer, options: ViewRenderingOpti
   registerEmbedCorePlugin(univer, options.resourceRefDataProviderRegistrations ?? [])
   options.registerAfterEmbedCore?.()
   registerEmbedUIPlugin(univer)
+}
+
+/** Sheet consults the same flag during startup and when typing into a selected cell. */
+function bindIframeAutoFocus(univer: Univer): void {
+  if (window.parent === window) return
+
+  const context = univer.__getInjector().get(IContextService)
+  const syncFocus = (): void =>
+    context.setContextValue(DISABLE_AUTO_FOCUS_KEY, !document.hasFocus())
+  syncFocus()
+  window.addEventListener('focus', syncFocus)
+  window.addEventListener('blur', syncFocus)
+  univer.onDispose(() => {
+    window.removeEventListener('focus', syncFocus)
+    window.removeEventListener('blur', syncFocus)
+  })
 }

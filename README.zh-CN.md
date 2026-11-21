@@ -231,7 +231,7 @@ dsh plugin --profile web remove dsh-univer-office
 
 ## 开发
 
-本项目是一个标准 [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md)。Host 组合 Univer Service Provider、Tools Consumer、webServer Consumer 和 Skill Provider；插件自带 Gateway、Viewer、池化 Collaboration Runtime Worker、无头 Unit Content Worker 与 Slide render machine。依赖方向和运行时边界见[架构文档](docs/architecture.md)。
+本项目是一个标准 [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md)。Host 组合 Univer Service Provider、Tools Consumer、webServer Consumer 和 Skill Provider；插件自带 Gateway、Viewer、池化 Collaboration Runtime Worker、无头 Unit Content Worker 与 Slide render machine。可以先读[架构总览与模块索引](docs/architecture.md)，了解各组件如何协作，再查阅对应的模块设计。
 
 项目要求 Node.js `>=22.19.0` 和 `pnpm@11.23.0`。
 

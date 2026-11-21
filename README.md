@@ -231,7 +231,7 @@ dsh plugin --profile web remove dsh-univer-office
 
 ## Development
 
-This project is a standard [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md). Its Host composes the Univer Service Provider, Tools Consumer, webServer Consumer, and Skill Provider. The bundle includes its Gateway, Viewer, pooled Collaboration Runtime Workers, headless Unit Content Worker, and Slide render machine. See the [architecture document](docs/architecture.md) for dependency directions and runtime boundaries.
+This project is a standard [DSH bundle](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.md). Its Host composes the Univer Service Provider, Tools Consumer, webServer Consumer, and Skill Provider. The bundle includes its Gateway, Viewer, pooled Collaboration Runtime Workers, headless Unit Content Worker, and Slide render machine. Start with the [architecture overview and module index](docs/architecture.md) to understand how these components work together.
 
 The project requires Node.js `>=22.19.0` and `pnpm@11.23.0`.
 

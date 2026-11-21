@@ -4,7 +4,9 @@ This file defines repository-specific instructions for `dsh-univer-office`, an i
 
 ## 1. Sources of truth
 
-- Read [`docs/architecture.md`](docs/architecture.md) before changing architecture, ownership, trust boundaries, cross-process protocols, tool flows, or deployment behavior.
+- Start with the [architecture overview](docs/architecture.md) to understand the system, module responsibilities, and their relationships. Before changing behavior, follow its index to the owning module or operations document, then inspect the linked implementation and tests.
+- Keep design documents and code in sync in the same change. Update the owning document when behavior, lifecycle, ownership, a protocol, a trust boundary, or deployment changes. Update the overview and its index when modules or their relationships change. Review the affected design before implementing changes to ownership, trust boundaries, cross-process contracts, review authority, telemetry, or deployment.
+- Define each contract in one place. Keep module details in `docs/modules/`, deployment and release details in `docs/operations/`, and package-specific formats and APIs in the package README. Link across boundaries. If an implementation diverges from the documented design, identify the discrepancy explicitly until it is resolved.
 - Keep standing development rules and commands in this file.
 - Keep user-visible capabilities, configuration, and limitations synchronized in both [`README.md`](README.md) and [`README.zh-CN.md`](README.zh-CN.md).
 - Keep model workflows in `skills/`. Do not duplicate tool schemas or step-by-step agent workflows elsewhere.
@@ -87,7 +89,7 @@ Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before ev
 - Concurrent Gateway starts share one startup operation. Failure, early exit, and unload must clear ownership and allow retry. Stop only subprocesses started by this plugin, skip occupied ports, and verify the health endpoint identity.
 - Cancellation and teardown must reach quiescence: reject new notifications, abort or kill owned work, and await Worker, browser, and subprocess exit. One clear owner manages settlement and cleanup for each asynchronous operation.
 - `univer_screenshot` may return model-visible PNG attachments only when the current model supports image input and every output path is authorized. Claim visual verification only for images actually inspected; structural readback and Slide lint are not pixel-level proof.
-- Product telemetry sends only the allowlisted anonymous events defined in `docs/architecture.md`, from the Host process and the package lifecycle entry, and must never alter install, activation, command, or uninstall behavior. An empty endpoint, `DO_NOT_TRACK`, or `telemetry: false` must silence every entry point; never add analytics SDKs, client keys, retries, or payload fields outside the allowlist.
+- Product telemetry sends only the allowlisted anonymous events defined in the [telemetry contract](docs/modules/telemetry.md), from the Host process and the package lifecycle entry, and must never alter install, activation, command, or uninstall behavior. An empty endpoint, `DO_NOT_TRACK`, or `telemetry: false` must silence every entry point; never add analytics SDKs, client keys, retries, or payload fields outside the allowlist.
 
 ## 6. TypeScript and error contracts
 
@@ -113,8 +115,9 @@ Run `pnpm run typecheck` for TypeScript changes and `git diff --check` before ev
 
 ## 8. Documentation, generated files, and workspace safety
 
-- Keep public README sections such as How it works, Built-in tools, and Development written for users or external contributors. Internal layering, trust boundaries, protocol details, and packaging decisions belong in `docs/architecture.md` or this file.
-- Update both READMEs for any user-visible capability, configuration, or limitation change. Update the relevant core or Unit skill when a model workflow changes.
+- Keep public README sections such as How it works, Built-in tools, and Development written for users or external contributors. Use the architecture overview to direct contributors to internal design and operations documents.
+- Update both READMEs when a change affects what users can do, what they need to configure, or a documented limitation. Keep internal behavior and bug-fix notes out of both READMEs. For fixes that restore expected behavior, capture the regression in the issue and test.
+- Update the relevant core or Unit skill when a model workflow changes.
 - Do not hand-edit or commit `lib/`, `artifacts/`, `dist/`, `*.tgz`, or `*.zip`. Run `scripts/build-dist.sh` only when explicitly producing release artifacts.
 - Exact Univer SDK, API Reference, and insiders versions form one cross-application compatibility contract. Upgrade them as one compatible family and run the full build and integration suite. Install and validate native dependencies on the target platform; never copy `node_modules` between platforms as a release artifact.
 - Inspect `git status` before editing. Preserve staged, unstaged, and untracked user work, including intentional manifest and lockfile versions. Run dependency installation only when the task requires dependency changes.

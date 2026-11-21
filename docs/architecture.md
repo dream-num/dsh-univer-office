@@ -1,511 +1,67 @@
-# DSH × Univer 插件架构
+# DSH × Univer 架构总览
 
-状态：已接受
-日期：2026-08-17
+本插件以单个 DSH bundle 交付。Agent 和用户通过不同入口操作同一份 `.univer` 文件：Host 提供会话服务，Gateway 管理文档与版本，Worker 处理 Unit 内容，浏览器中的 Viewer 展示文档。初次阅读可以先顺着下图走一遍，再从文末索引进入负责该行为的模块。
 
-本文档是本插件实现与重构的架构依据。原型代码只用于验证产品需求，不构成兼容性约束；重构可以删除、改名或重写任意原型实现，但必须保留本文列出的用户功能。
-
-## 1. 决策摘要
-
-本插件采用单 npm 包、多个 Cordis 插件角色的结构：
-
-- `service` 定义稳定的 Univer 领域接口；
-- `provider` 实现该接口并拥有状态缓存、文件操作和 worktree 操作；
-- `webServer` 把需要浏览器访问的服务能力映射为 Host HTTP API；
-- `settings` 在 DSH Settings 可用时注册浏览器展示偏好；
-- `tools` 把适合模型调用的内容创作能力映射为 DSH 工具；
-- `skills` 向 DSH Skill Registry 提供按需加载的 Univer 工作流与 Unit 专项知识；
-- `processes/gateway` 负责插件内置 Gateway 进程和 Viewer 资源；
-- `workers/unit-content` 是一次性 Unit Content Worker 的子进程入口；
-- `workers/collaboration-runtime` 是 runtime pool 导入到每个池化子进程的 Collaboration Runtime Worker 定义；
-- `client` 负责 DSH 浏览器端的预览、实时 worktree 窗口和用户审阅界面；
-- `shared/wire` 只存放 Host 与 Client 共享的纯 JSON 数据类型；
-- `telemetry` 提供 best-effort 的匿名产品遥测，只在 Host 与包卸载入口发送，发布包不声明 `postinstall`，任何失败都不影响启动与卸载。
-
-用户只安装本插件即可使用全部功能。全局 `univer` CLI 不属于运行依赖；Unit 的检查、执行和 render-source 读取复用插件内置的池化 Collaboration Runtime Worker，Office 导入与导出由一次性 Unit Content Worker 完成。
-
-代码、API 和界面使用具体名称 `Gateway`、`Viewer`、`Unit Content Worker`、`Collaboration Runtime Worker` 和 `artifacts`，不使用含义宽泛的 `runtime` 或 `daemon` 作为本插件领域名称。
-
-## 2. 必须保留的产品功能
-
-- 在 DSH 会话中发现 `.univer` 文件，并为每个文件显示采用统一审阅布局的回合尾部卡片；
-- 在 DSH 内以 Viewer 全屏预览文件；
-- 在 DSH 文件树中点击 `.univer` 文件即可按需打开 Viewer 预览，不需要任何 Agent 操作，也不要求安装 `dsh-better-sidebar`；该入口在关闭实时浮动窗口后仍然可用，并由 Viewer 提供主线与非终态 worktree 之间的切换；
-- worktree 创建或更新后显示实时浮动窗口；
-- 用户可在 DSH 插件设置中分别关闭实时浮动窗口与会话审阅卡片，且不影响另一者与文件树按需预览；
-- 一个 worktree 改动多个 unit 时，只列出有改动的 unit 并允许切换；
-- draft 或 ready worktree 的 Viewer 可在 View 与 Compare 间切换，把当前 worktree 与固定的 trunk 或另一个活跃 worktree 并排比较，并为 Sheet、Doc、Slide、Base 与 Board 提供语义差异列表、定位和显式刷新；
-- 会话结束后在最近一次操作各 worktree 的回合末尾为 `draft` 或 `ready` worktree 显示嵌入式审阅面板；
-- 只有会话中最近一个渲染卡片的回合默认展开，更早回合保留同一张完整卡片并默认折叠，不回退到旧文件预览卡片或单独历史 header；没有 Univer 文件的回合不会让已展开的卡片折叠；
-- 审阅卡片使用紧凑 header：首行显示 Univer 文件名和右侧的 worktree 名称，次行只显示完整文件路径，状态、折叠和全屏控制位于右侧；桌面端不同生命周期的展开卡片默认总高度约 650px，内嵌完整页面默认折叠左侧边栏；每个 Viewer 都是独立的协作客户端，因此折叠的卡片不挂载 Viewer，展开时重新加载；全屏时隐藏折叠按钮，Esc 退出全屏；
-- draft、ready 状态的提交确认、丢弃与合入当前版本只使用完整 Univer 页面内置操作，卡片外壳不重复提供 action footer；
-- worktree 进入 `merged` 或 `discarded` 终态后不再显示浮窗或修改操作，但保留审阅卡片并在完整页面中显示主线；
-- 插件按需启动并管理内置 Gateway 和 Viewer；
-- 多个 DSH 会话的预览目标与审阅状态相互隔离；
-- 中英文界面；
-- Univer 文件尚无 Unit 时，Viewer 使用现有空状态布局并显示“空文件”；
-- 模型可创建空 `.univer` 文件、管理 worktree 与 Unit、导入 Office 文件、查询 Univer API、修改、检查和导出内容；
-- 模型可对 Slide 执行不输出图片的真实布局检查，并把 workspace 内的 SVG 编译并应用到显式 Slide 页面；
-- 模型可从内置多 registry 资源库查找、读取并导出 SVG 资源，下载缓存由 Provider 持久管理；
-- 模型可把显式 Unit 渲染为 workspace 内 PNG，并在当前模型支持图片输入时以 DSH attachment 回读；Sheet 支持范围，Doc/Slide 支持页面，Slide 支持联系表，Board 支持区域与元素聚焦；
-- `ready` 与 `reopen` 属于模型工作流，`merge` 与 `discard` 只在用户明确要求且 DSH 审批通过后执行；
-
-原型的文件布局、类名、HTTP 路径、CSS 类名、bash 命令解析方式和内部数据格式均不需要保留。
-
-## 3. 进程与模块组成
+## 文档的两个入口
 
 ```mermaid
-flowchart LR
-    Model["Agent / Model"] --> Tools["Tools Consumer"]
-    Model --> SkillRegistry["DSH Skill Registry"]
-    Skills["Bundled Skill Provider"] --> SkillRegistry
-    Browser["DSH Client"] --> WebServer["Host webServer Consumer"]
-    Tools --> Service["Univer Service"]
-    WebServer --> Service
-    Provider["Univer Service Provider"] --> Service
-    Provider --> GatewayAdapter["Gateway Adapter"]
-    Provider --> UnitContentAdapter["Unit Content Adapter"]
-    Provider --> GatewaySupervisor["Gateway Supervisor"]
-    GatewaySupervisor --> Gateway["Bundled Gateway process"]
-    GatewayAdapter --> Gateway
-    UnitContentAdapter --> RuntimePool["Collaboration Runtime Pool"]
-    RuntimePool --> RuntimeWorker["Pooled Collaboration Runtime Worker"]
-    RuntimeWorker --> Gateway
-    UnitContentAdapter --> Worker["Bundled one-shot Unit Content Worker"]
-    Worker --> Gateway
-    Browser --> Viewer["Bundled Viewer served by Gateway"]
+flowchart TB
+    Model["DSH Agent"] -->|调用 univer_* 工具| Tools
+    subgraph Browser["用户浏览器"]
+        Client["DSH Client"] -->|用 Host 返回的 URL 打开| Viewer["Viewer · 文档编辑与比较"]
+    end
+    subgraph Host["DSH Host"]
+        Tools["Tools Consumer"] -->|ctx.univer| Service["UniverService 接口"]
+        API["webServer · 会话 API"] -->|ctx.univer| Service
+        Service -.->|由 Provider 实现| Provider["Service Provider"]
+        Proxy["webServer · Viewer 同源代理"]
+    end
+    Client -->|/univer-api 查询状态| API
+    Viewer -->|协作请求与实时订阅| Proxy
+    Proxy -->|转发 HTTP / WebSocket| Gateway["Gateway · 协作服务"]
+    Provider -->|管理文件与 worktree| Gateway
+    Gateway -->|读写| File[(".univer 文件 · SQLite")]
 ```
 
-根插件是组合入口。它必须由 DSH 配置以裸包名加载，使 DSH 能发现包清单中的 `dsh.client`；根插件再在独立 Cordis fiber 中挂载 Provider、webServer Consumer、Tools Consumer 和可配置的 Skill Provider。
+**Agent 修改文档。** 模型通过 DSH Skill Registry 加载随包工作流，调用工具，经 `ctx.univer` 进入 Provider。Provider 校验工作区与目标文件，调用 Worker 执行指定 Unit 的修改，Gateway 确认提交。工具把文件、worktree 和 Unit 标识写入可回放的会话事件。
 
-### Host 与 Client 的边界
+**用户打开预览。** DSH Client 从会话事件或文件树获得目标，向 Host 查询当前状态，用 Host 授权的 URL 打开 Viewer。Viewer 的 HTTP 请求和 WebSocket 通过 DSH 同源代理到达 Gateway，多个 Viewer 可以订阅同一文档。
 
-Host 是可信的 Node.js 进程，负责文件访问、进程管理、Gateway 通信、输入校验和工具执行。Client 是浏览器模块，只能通过 `/univer-api/*` 访问 Host，不读取本地文件、不启动进程，也不持有 Gateway 管理权限。
+## 进程与职责
 
-Viewer 可以直接连接 Gateway 的 HTTP/WebSocket 接口以获得实时内容，但 Viewer URL 必须由 Host 根据已验证的文件和 worktree 生成，Client 不自行拼接文件标识。Client 只可以在这个不透明 URL 上设置纯展示参数，例如把当前 DSH 语言映射为 Viewer 的 `lang` 参数。
-
-## 4. 目录结构
-
-```text
-src/
-  host/
-    index.ts                         # 根组合插件
-    config.ts                        # 插件配置及默认值解析
-    artifacts/
-      paths.ts                       # 随包 Gateway、Viewer、Worker 与原生产物路径
-    service/
-      univer-service.ts              # Service Definition
-      types.ts                       # 服务请求与返回类型
-      identifiers.ts                 # branded file/worktree/unit ids
-      workspace.ts                   # workspace 路径解析与 realpath 授权
-      errors.ts                      # 稳定的领域错误
-    provider/
-      plugin.ts                      # Service Provider
-      gateway-univer-service.ts      # 服务实现
-      unit-content-operations.ts     # Unit 内容操作
-      render-source-operations.ts    # 渲染主 Unit、引用 Unit 与图片资源装配
-      render-operations.ts           # browser-backed lint、SVG 编译、截图与 PDF 打印
-      resource-operations.ts         # 内置 SVG registry、缓存与安全导出
-      worktree-operations.ts         # worktree 领域操作
-      state-cache.ts                 # 有明确失效规则的缓存
-    webServer/
-      plugin.ts                      # Host HTTP Consumer
-      router.ts                      # HTTP 分发和 wire 校验
-      session-scope.ts               # 会话与 workspace 授权范围
-      routes/
-        status.ts
-        state.ts
-        gateway.ts
-        worktree-action.ts
-    tools/
-      plugin.ts                      # Tools Consumer
-      workspace.ts                   # 从 tool exec session 取得 workspace scope
-      presentation.ts                # 纯工具卡片呈现函数
-      definitions/
-        new.ts
-        status.ts
-        worktree.ts
-        unit.ts
-        import.ts
-        inspect.ts
-        execute.ts
-        export.ts
-        lint.ts
-        compile-svg.ts
-        screenshot.ts
-        print-pdf.ts
-        api.ts
-        resources.ts
-    skills/
-      plugin.ts                      # bundled lazy Skill Provider
-    settings/
-      plugin.ts                      # 可选 DSH Settings 命名空间
-    telemetry/
-      product-telemetry.ts           # 匿名产品遥测：state、去重与白名单发送
-      entry.ts                       # 打包为 lib/telemetry-entry.js 的卸载 hook 发送入口
-    adapters/
-      gateway/
-        client.ts
-        file-api.ts
-        worktree-api.ts
-        mapping.ts
-      unit-content/
-        protocol.ts                  # Unit Content Worker 进程协议
-        worker.ts                    # 一次性 worker 启动、取消与结果校验
-        runtime-pool.ts              # 池化 runtime 的 key、并发上限、取消、复用判定与驱逐
-    processes/
-      gateway/
-        supervisor.ts                # Gateway 生命周期与并发启动合并
-        gateway-process.ts           # spawn、ready、退出和清理
-        launcher.ts                  # Gateway 启动参数与环境组装
-        protocol.ts                  # 健康检查及进程状态
-  workers/
-    unit-content/
-      entry.ts                       # 一次性无头 Univer 子进程入口
-      runtime/content-runtime.ts     # 两类 Worker 共用的 runtime 初始化校验与加载
-    collaboration-runtime/
-      entry.ts                       # runtime pool 的 worker definition
-      runtime/                       # 本地 snapshot/reference adapters
-  render-machine/                    # 组装 SDK Render Page 的 machine-facing browser entry
-  gateway-app/
-    gateway-entry.ts                 # Gateway 子进程入口
-    transport/http.ts                # 文件、worktree 与 Unit HTTP 控制面
-    collab-service.ts                # Gateway 协作领域实现
-    comparison/                      # 固定版本物化与 Pro History 语义比较
-    contract/                        # Gateway wire types
-  viewer-app/                        # Viewer browser application
-  viewer-support/
-    render-preset/                   # Viewer 的 Univer 渲染组合
-      import-export/                 # Ribbon 与 Base 工具栏的导入导出 UI
-    importrange-formula/             # Viewer 的 IMPORTRANGE plugin
-  client/
-    index.tsx                        # dsh.client 入口
-    api/
-      univer-api.ts                  # 唯一 HTTP 访问层
-    conversation/
-      univer-turn-definition.ts      # 归约可回放的 Turn 操作与生命周期结果
-    hooks/
-      use-univer-state.ts
-    components/
-      preview-card.tsx
-      worktree-window.tsx
-      review-panel.tsx
-      unit-chips.tsx
-      univer-dock.tsx
-      settings-card.tsx
-    locales/
-      en.ts
-      zh.ts
-    settings/
-      univer-preferences.ts          # 新旧设置接口的展示偏好投影
-      settings-contract.ts           # SettingsScope / ConfigForm 的共享接口
-    styles/
-      settings.ts
-      worktree.ts
-  shared/
-    settings.ts                      # Host/Client 共用的纯设置契约与默认值
-    univer-license.ts                # Host、Gateway、Worker 共用的 Univer License 与 licenseKey
-    wire/
-      status.ts
-      state.ts
-      actions.ts
-packages/
-  unit-comparison-viewer/            # 五类 Unit 的只读双栏比较与差异导航
-  univerfile-sqlite/                 # `.univer` 持久化、schema 与升级
-lib/
-  index.js                           # gitignored 的 Host 生成入口
-  client.js                          # gitignored 的 ModuleLoader Client bundle
-  types/                             # gitignored 的类型声明
-artifacts/                            # gitignored 的发布运行产物
-  viewer/                            # 从 viewer-app 生成
-  render-machine/                    # 从 render-machine 生成
-  gateway.cjs                        # 从 gateway-app 生成
-  unit-content-worker.mjs           # 从 workers/unit-content 生成
-  collaboration-runtime-worker.mjs  # 从 workers/collaboration-runtime 生成
-  worker-chunks/                    # 两个 Worker 共享的 SDK chunk，同一次构建生成
-test/
-  unit/                              # Vitest unit project：直接加载源码，无需构建
-  integration/                       # Vitest integration project：加载 lib/ 与 artifacts/，自带 Gateway
-  e2e/                               # Vitest e2e project：真实渲染浏览器
-  support/                           # 共享 Gateway harness、端口、OOXML 与浏览器工具
-  fixtures/
-scripts/
-  build.mjs
-skills/
-  univer/SKILL.md                    # 核心工作流与安全规则
-  univer-sheet/SKILL.md
-  univer-doc/SKILL.md
-  univer-slide/SKILL.md
-  univer-base/SKILL.md
-  univer-board/SKILL.md
-  univer-embed/SKILL.md
-  univer-cross-unit-formula/SKILL.md
-  office/SKILL.md                    # 同名覆盖 DSH Office 路由，导向 Univer
-  office-docx/SKILL.md
-  office-xlsx/SKILL.md
-  office-pptx/SKILL.md
+```mermaid
+flowchart TB
+    Provider["Service Provider · 校验工作区与文件路径"]
+    Provider -->|按需启动与回收| Supervisor["Gateway Supervisor"]
+    Supervisor -->|管理进程| Gateway["Gateway · 确认提交与版本"]
+    Provider -->|文件与 worktree 操作| Adapter["Gateway Adapter"]
+    Adapter -->|HTTP| Gateway
+    Provider -->|检查、执行、读取渲染快照| Pool["Runtime Pool"]
+    Pool -->|按文件、分支与 Unit 复用| Runtime["Collaboration Runtime Worker"]
+    Provider -->|Office 导入与导出| Worker["Unit Content Worker · 一次性"]
+    Runtime -->|同步 Unit 内容| Gateway
+    Worker -->|导出时读取 Unit| Gateway
+    Provider -->|传入快照与资源，或 SVG| Render["Render Machine · 无头浏览器"]
 ```
 
-当前仍采用单包发布。只有当某一层具备独立版本、独立消费方或明显不同的发布节奏时才拆 npm 包；目录分层本身不是拆包理由。
-
-## 5. 依赖规则
-
-依赖只能沿下列方向发生：
-
-```text
-client components -> client hooks -> client api -> shared/wire
-webServer consumer -> service <----- tools consumer
-                         ^
-                         |
-                  provider -> adapters -> processes / workers / gateway-app
-bundled skill provider -> DSH skill registry
-```
-
-具体约束：
-
-1. webServer Consumer 和 Tools Consumer 只能调用 `ctx.univer`，不得直接调用 Gateway、Unit Content Worker、runtime pool、子进程或文件系统。
-2. Provider 是唯一可以组合 Gateway、Unit 内容操作和缓存的层。
-3. `host/processes/gateway` 只管理 Gateway 进程与资源，不包含 worktree、unit、merge 等业务规则。
-4. Client component 不直接 `fetch`；HTTP 访问集中在 `client/api`，轮询和 mutation 状态集中在 hooks。
-5. `shared/wire` 不依赖 Node.js、React、Cordis 或上游 Univer 包，且所有值必须可 JSON 序列化。
-6. Gateway 与 Worker 的应用源码分别属于 `src/gateway-app`、`src/workers/unit-content` 和 `src/workers/collaboration-runtime`。它们通过精确版本 SDK package 构建，不从外部 checkout 同步源码；生成 executable 不入库。
-7. Render Machine browser page 使用与 runtime 精确同版本的 `@univer-cli/univer-render-page` 提供页面协议与 render operations，并注入本仓库与 Viewer 共享的 Univer composition；Viewer、render preset 和 IMPORTRANGE plugin 是本仓库的普通源码。仓库不提交上游源码快照目录或预构建 Viewer。
-8. Skill Provider 只负责发现与加载包内 Markdown，不调用 Service，也不复制工具 schema。
-9. 所有 Cordis 注册通过 effect 生命周期撤销；插件卸载后不得遗留路由、工具、Skill provider、定时器或子进程。
-10. `@univerjs/`、`@univerjs-pro/`、`@univer-cli/` 前缀的 SDK 依赖是一个跨应用兼容契约，用 `pnpm update:univer-sdk --sdk_version <精确版本>` 统一升级为同一精确版本，升级后 pnpm-workspace.yaml `overrides` 不得残留任何 SDK 条目。`@univerjs/icons`、`@univerjs-pro/cli-assets`、`@univerjs-pro/doc-typst-native-binding` 按自身发布节奏声明精确版本。`@univerjs-pro/engine-formula-rust-binding` 与 `@univerjs-pro/exchange-node-binding` 是上游依赖树中的传递绑定包：本仓库任何 package.json 都不得声明它们，源码也不直接 import；bundle 内联两个 wrapper 的代码，绑定包保持 external。发布物以 dsh 的 pnpm 安装为前提（隔离布局下插件 bundle 无法解析传递依赖），因此打包时由 `scripts/inject-runtime-bindings.mjs` 把绑定包按安装树解析到的实际版本写入 dist manifest 的 dependencies，并与 pnpm store 中 wrapper 的声明交叉校验；该差异由打包生成，不入库。构建与发布脚本一律按包名操作、动态读取解析后的实际版本，不写死版本号。开发工作区用 pnpm `publicHoistPattern` 把绑定包提升到根 `node_modules`：bundle 内联了 wrapper 代码，运行时 `require(binding)` 从仓库根解析。`test/integration/gateway-lifecycle.test.ts` 对仓库 manifest 断言零绑定包声明，对已安装包断言绑定包已作为直接依赖注入。
-
-## 6. Service Definition
-
-`UniverService` 是 Host 内部唯一稳定的领域入口。Service Definition 只描述调用方依赖的行为，不暴露 HTTP、Gateway endpoint、worker 协议或子进程对象。
-
-服务能力分为六组：
-
-- File 与状态：创建空 `.univer` 容器，读取 trunk、worktree 与 Unit 状态；
-- Collaboration：创建 worktree，执行 ready、reopen、merge 与 discard 生命周期操作；
-- Unit Content：在 draft worktree 中创建、移除或导入 Unit，以及检查、执行、导出和读取 machine render snapshot；
-- Render：对 Slide snapshot 执行布局检查，把 SVG 编译为 Facade program 并提交到显式 draft worktree，以及为显式 Unit、依赖 Unit 和图片资源装配渲染源并生成 PNG 或 PDF；
-- API Reference：查找 API 候选并读取指定 Facade/方法的完整参考。
-- Resource Library：列出 registry、按语义搜索、读取 SVG、导出到显式 workspace 目录和清理 Provider-owned 缓存。
-
-所有文件操作都接收显式 workspace scope。Provider 必须将文件解析为绝对路径，并拒绝 scope 外路径。文件 ID、worktree ID 和 unit ID 在服务层使用 branded 类型，不能以无语义的裸字符串跨层传递。
-
-默认值在 Provider 的 `resolve(request)` 阶段产生；执行方法不使用隐藏的 `value ?? default`。可随部署变化的端口、启动超时、轮询间隔和自动启动策略必须来自已校验配置。
-
-## 7. Provider、Gateway、Runtime Pool 与 Unit Content Worker
-
-Provider 按规范化文件路径维护缓存；同一个插件实例只持有一个 Gateway 进程，多个 workspace 共享该协作进程，但浏览器文件请求必须先绑定 live DSH session 并通过该 session `cwd` 的 realpath 范围校验。Gateway 的进程复用不构成文件授权。并发的 `ensureGateway` 调用共享同一个启动 Promise；启动失败、进程提前退出和插件卸载都必须释放状态并允许安全重试。
-
-Gateway Supervisor 只负责：
-
-- 选择并验证监听端口；
-- 启动随包发布、由 `src/gateway-app` 构建的 Gateway；
-- 等待健康检查成功；
-- 提供 Gateway origin；
-- 在所属 Cordis fiber 结束时终止插件启动的进程。
-
-Provider 与 Worker 使用 Gateway Supervisor 返回的 loopback origin 访问 Gateway。浏览器可见的
-Viewer 面由插件挂载在 DSH WebServer origin 上：`/univer-viewer` 前缀承载 Viewer 文档与静态
-资源，`/uf` 前缀承载 Gateway 领域 API，`/univer-viewer/ws` 是 WebSocket 隧道（`?target=` 携带
-动态上游路径，因 DSH upgrade 注册只支持精确路径）。代理逐请求先通过 DSH `connection` 服务的
-信任门（Host/Origin fence 与浏览器鉴权）。Viewer 文档请求仍解码 fileKey 并验证其落在指定
-live session 的 `cwd` 内；后续 `/uf` 与隧道请求不设置或读取插件会话 cookie，也不重复 workspace
-范围校验，以兼容桌面壳删除 Set-Cookie、替换请求 cookie 的转发行为。已通过 DSH 鉴权的浏览器
-可直接调用 Gateway 文件 API，访问范围由 Host 进程的文件权限决定；该契约同样适用于远程部署。
-`/univer-api` 与模型工具保留 session/workspace 校验。`computeFileState` 投影同源相对路径
-`/univer-viewer/?file=<key>`，`/univer-api/state` 在路由层为每个投影 URL 追加 sessionId。
-桌面 Viewer 以 `location.protocol === 'dsh-app:'` 区分运行环境，启动时从受 connection 门保护的
-`/univer-viewer/runtime-config` 获取真实 Host 地址。该地址使用接收 HTTP 请求的 socket 实际监听
-端口生成，不采信客户端 Host/query；Viewer 验证它为 `http://127.0.0.1:<port>`，配置不可用时
-明确失败。协作与生命周期 WS 均连接该 Host 的固定隧道，由桌面壳注入 DSH 认证；普通浏览器
-沿用页面 origin（HTTPS 对应 WSS），不使用 loopback 配置。运行时配置禁止缓存，不包含凭据。
-Gateway 本身始终只监听 loopback，不对外暴露。完整契约见
-`docs/viewer-same-origin-deployment.md`。
-
-Unit 的检查、执行和 render-source 读取（lint、截图与 PDF 打印的数据来源）由 Unit Content Adapter 从 `@univer-cli/univer-collaboration-runtime-pool` 取得 keyed lease。Key 由 Gateway origin、文件路径、trunk/worktree scope、Unit ID 与 Unit type 组成；每个 key 对应一个由 pool fork 的 Collaboration Runtime Worker 子进程，加载 `artifacts/collaboration-runtime-worker.mjs` 并通过与一次性 Worker 相同的 server backend 连接 Gateway。Pool 的 bootstrap `worker-child.mjs` 按其模块位置查找，因此构建把它复制到 `lib/index.js` 旁。
-
-- 每次使用先 pull 再执行。Gateway 始终是内容与 revision 的唯一依据，缓存的 runtime 不构成授权或内容真相。
-- 常驻 Worker 数上限为 `unitContentRuntimeMaxEntries`（默认 20，与 cli-sdk 一致），满员时淘汰最久未用的空闲 runtime；全部忙碌时 pool 直接以 `COLLABORATION_POOL_CAPACITY_EXCEEDED` 拒绝，Host 不排队。空闲超过 `unitContentRuntimeIdleTtlMs`（默认 5 分钟）后退出。设为 `0` 时所有操作回到一次性 Worker。
-- 操作成功后 release 复用；任何失败（包括 pull 冲突、取消、超时、Worker 崩溃或协议错误）都销毁该 Worker，保证失败写入的部分 mutation 不会被后续操作提交，下一次使用重新加载。
-- Host 不主动驱逐 runtime：merge/discard 或 Unit remove 后不再使用的 runtime 由空闲超时或 LRU 回收。Provider 卸载时先关闭 pool，再停止 Gateway。
-- Pool 忽略子进程 stdio，因此池化 Worker 的失败只以结构化错误码与消息返回，不再附带 stderr 诊断。
-
-Office 导入与导出由一次性 Unit Content Worker 完成：导入不需要 runtime，导出加载 runtime 后直接写出目标文件，两者都在操作完成或取消后退出，不拥有独立持久状态。Gateway 的 worktree 控制面直接提供 Unit 创建与移除端点，并通过 collaboration service 与 lifecycle event 完成操作。写操作只能针对显式 draft worktree；Gateway 是提交结果和 revision 的唯一依据。
-
-Gateway 通过 SDK `register(router)` 注册 HTTP/WebSocket Endpoint，连接跟踪保留路由参数，并在打开失败或关闭时释放记录。Worktree Unit 删除保留应用现有流程；SDK 的可撤销移除接口 `setUnitRemoved` 在本地 Adapter 中明确返回 `INVALID_REQUEST`，不写入移除状态或改变文件格式。Gateway 为 SDK collaboration service 注入 `ILogger`：warn/error 始终写入 Gateway stderr，debug/info 仅在 `UNIVER_DSH_GATEWAY_DEBUG=1` 时输出；SDK 内部失败若没有该 logger 只会表现为不可诊断的通用 500。数据库 Adapter 遵循 SDK 的快照读取契约（`getChangesets`/`getDraftChangesets` 返回裸 changeset 数组，`null` 表示 Unit 不存在）。所有 payload 列（Adapter 与迁移）共用 `packages/univerfile-sqlite/src/codec/stored-json.ts`：二进制字段编码为与 SDK SQLite Adapter 相同标记的 base64，并在 JSON replacer 中读取 `toJSON` 之前的原值：SDK 的 Rust 物化把 Sheet block 的 `data` 作为 Node `Buffer` 交给 `saveSnapshot`，而 `Buffer#toJSON` 会先于 replacer 把它变成普通对象。
-
-Gateway 中的 Collaboration SDK runtime（trunk Service、Worktree Service、Unit Snapshot Materializer 与 `createUnitRuntime`）统一使用 `execution: { mode: 'in-process' }`。SDK 1.0.4 起默认改为 worker thread，并从 SDK 模块旁加载 `unit-runtime-worker.cjs`；Gateway 打包为单个 CJS，运行时旁边没有该文件，而且按请求创建的 materializer 会为每次调用启动和销毁整个 worker 池。
-
-Viewer Ribbon 的交互式导入导出使用 Gateway 中逐 `.univer` 隔离的 Universer exchange 协议：`source=1` 上传、异步 import/export task、sign-url 与 artifact content。该协议只挂在 trunk 路径；导入在当前 `.univer` trunk 创建新 Unit 并发布结构化 `unit_added` 事件，导出从 trunk head 物化快照。SDK 1.2.0 起 exchange-client 系列包只保留服务与 Facade，不再提供导入导出 UI；`render-preset/import-export` 按 Unit 类型保存 univer-pro `v1.2.0` 示例插件 `custom-import-export`（Sheet、Doc、Slide 的 Ribbon“文件”菜单与 Base 工具栏按钮），仅在传入 `exchangeClientConfig` 时注册在对应 exchange-client 插件之后。临时 artifact 和 task 有界、可过期，并随文件 runtime 一起释放。嵌入资源继续使用 `source=3` 且按 Unit/worktree 授权，两类文件协议不得混用。docx 导入的兼容模式由 import options 的 `doc.docType`（`traditional`/`modern`）决定：两个导入入口（Unit Content Worker 与该协议）在缺省时都显式解析为 `traditional` 以保留源页面几何，`modern` 是 pageless 语义、会重写页面版面，仅由调用方显式选择；上游 exchange binding 的 serde 缺省值不做兜底依据。
-
-Doc/DOCX、Sheet/XLSX 和 Slide/PPTX 的 Unit 导出共用 Exchange 的 `files.load` 解析当前 Unit 的 UUID 资源；URL 图片沿用 Collaboration Exchange Service 的透明占位图策略。Base 和 CSV/TSV 不传资源回调。Worker 从当前文件和 worktree（或 trunk）的 `universer-api/file/<id>/content?source=3&assign=<unitId>` 取回字节；Ribbon 的 trunk Unit 导出直接调用相同的 Gateway 资产读取逻辑。Gateway 按资产所属 Unit 和 worktree 可见性校验读取。上传的 JSON 快照不获得本地资产读取权限。
-
-Gateway 还为 trunk revision 组合 Collaboration SDK History Service 与 Endpoint。Gateway 自己在共享 `.univer` connection 上实现 History database adapter。`history@2` 不再按 revision 派生：每个 Unit 的每个分段保存一条**分段起始**记录（主键 `(unit_id, start_revision)`），`endRevision` 由下一段的起始 revision 计算、不入库，列表按 `startRevision` 降序并以排他的 `beforeRevision` 分页，`hasMore` 只表示页下方仍存在匹配记录。SDK 1.0.0 移除了旧的逐 revision History 读取与重建 API，因此文件 runtime 启动时不再 reconcile 到 trunk head，SDK transport 直接开放。Viewer 为 trunk 的 Sheet、Doc、Slide、Base 与 Board 分别注册官方 History UI；只读审阅可检查历史但不能恢复，可编辑 trunk 视图可显式恢复，worktree 与 merge preview 不呈现历史入口。
-
-Gateway 通过 `@univer/univerfile-sqlite` 的 `openUniverfile()` 打开或新建 `.univer`，得到共用一个连接的 `trunk`、`worktree`、`history`、`assets` 四个 store：前三个满足对应的 SDK 持久化契约并附带 Gateway 需要的查询，`assets` 保存内容寻址的嵌入资产；package 的接口、行为约定和目录职责见 `packages/univerfile-sqlite/README.zh-CN.md`。`.univer` 的整体格式由组件版本表与必要表结构共同识别；当前格式为 v3，对应 core=2、worktree=3、assets=1、history=2。v0 为旧表布局，v1/v2 对应升级前的组件组合；未知版本和混合组件组合拒绝打开。正常打开已有文件必须先通过统一升级入口，再构造当前 Adapter。升级对原文件加锁并备份，在同目录候选文件中完成转换、时间规范化、清理和完整性验证，确认源文件哈希未变后才替换原文件；失败清理候选文件，原文件与备份保持不变。再次打开同一份未变化的文件时复用已有的相同字节备份，不会再写一份新备份。持久化使用 Node 内置的 `node:sqlite`：关闭连接时先 finalize 该连接上的全部语句，再释放文件句柄，因此升级在同一进程内关闭候选连接后直接替换原文件，Windows 上也不需要 helper 进程。替换遇到 `EPERM`、`EBUSY`、`EACCES` 时短暂退避重试，覆盖杀毒或索引服务临时占用文件的情况。Node 22/24 首次加载 `node:sqlite` 时会在 Gateway stderr 打印一条 `ExperimentalWarning`，不影响功能，不做屏蔽。v2→v3 内部按 Core → Worktree → History 转换，前两步读取旧 History 创建信息后才能移除旧表；转换代码归属 `upgrade/`；当前结构（表、索引与组件版本）只在 `schema/v3.ts` 定义，新建文件和升级候选通过 `schema/install.ts` 建表，打开时由格式识别统一校验，Adapter 假定 schema 已就绪，不再建表或校验。Unit 与 Worktree Unit 的创建身份取自 SDK 的 `creatorID`/`createdAt`，trunk 接入的 Worktree Unit 继承其创建信息；旧记录缺失创建者时使用 `anonymous`，时间优先保留文件内已有信息。新提交的 changeset 由 Adapter 写入服务器提交时间，payload 的 `createTime` 使用 Unix 秒，数据库时间列使用 Unix 毫秒；迁移同步规范化旧 payload，History 读取无需猜测单位。History 迁移保留旧分段边界，并与 SDK 官方迁移有意不同：缺失的 revision 2 起点会补齐，超过 Core head 的起点会丢弃，某个 Unit 的旧 History 无法转换时只清空该 Unit 的 History，不让整个升级失败。
-
-worktree Compare 由 Gateway 创建有界的固定比较会话：右侧始终是路由指定的 draft 或 ready worktree，左侧默认是 trunk，也可选择同一文件中的另一个活跃 worktree。会话在创建时固定两侧 Unit heads，并为每个 Unit 记录 paired、left-only 或 right-only；后续读取只从这些固定 revision 物化最终 snapshot 与 changeset，不随 live head 漂移。Gateway 使用同版本 Univer Pro History 计算产品语义差异，并通过 `/diff` 返回带版本号、分页、筛选、稳定实体身份与产品定位信息的 JSON；新增或删除的整 Unit 使用镜像空侧的 snapshot 比较。任一 live head 变化只把结果标记为 stale，Viewer 必须由用户显式刷新以创建新会话。
-
-merge preview 只对 `ready` worktree 开放。Gateway 调用 Collaboration SDK `evaluateWorktreeUnitMerge`：主干已前进且 OT 成功时，返回把冻结 draft mutations 变到当前 trunk head 后的静态 snapshot；主干未前进，或 Unit 是 worktree 内新建时，改为物化该 worktree head。冲突、已合入和已删除的 Unit 返回错误，不用草稿冒充合并结果。HTTP 返回完整 snapshot；其中的 Sheet blocks 一并返回，Sheet 与 Base 会带上，Doc、Slide、Board 省略。Viewer 只还原引擎数据，并在 Sheet 加载后计算公式。计算超时或触发失败时仍展示已物化的 snapshot，不解析或重放协同 mutation。
-
-插件启动的内置 Gateway 不得复用或终止外部启动的 Gateway。它默认从 `9080` 启动，端口被占用时逐次加一；只有结构化确认端口占用时才能继续尝试下一端口，其他启动失败必须立即返回。健康检查需要验证 Viewer 身份，不能把任意返回 HTTP 200 的本地服务误认为 Gateway。
-
-## 8. webServer Consumer 与浏览器协议
-
-webServer Consumer 使用 DSH `webServer` 的 prefix route 注册 `/univer-api`。资源如下：
-
-- `GET /univer-api/status`：Gateway 与 Unit 内容能力状态；
-- `POST /univer-api/gateway/start`：按需启动插件持有的 Gateway；
-- `GET /univer-api/state`：按 `sessionId` 校验当前会话 `cwd` 后返回文件与 worktree 状态；
-- `POST /univer-api/worktree-action`：按请求体中的 `sessionId` 校验文件后执行用户发起的 ready、reopen、discard 或 merge。
-
-路径是浏览器协议，不等同于 Service 方法。Router 负责 HTTP method、请求体大小、JSON 和字段校验，route handler 只把已验证请求映射为服务调用。错误返回稳定的错误 code 和可显示消息，不把堆栈、绝对内部资源路径或子进程输出原样暴露给浏览器。
-
-`/univer-api/worktree-action` 必须绑定当前 DSH 会话及其 workspace scope，不能只凭浏览器提交的
-绝对路径授权。Viewer 内置操作走已通过 DSH 鉴权的 `/uf`，不额外绑定会话范围。
-
-## 9. Tools Consumer
-
-Tools Consumer 注册面向模型的领域工具，而不是一个透传 CLI 的通用工具：
-
-- `univer_new`
-- `univer_status`
-- `univer_worktree`
-- `univer_unit`
-- `univer_import`
-- `univer_inspect`
-- `univer_execute`
-- `univer_export`
-- `univer_lint`
-- `univer_compile_svg`
-- `univer_screenshot`
-- `univer_print_pdf`
-- `univer_api`
-- `univer_resources`
-
-这些工具默认不参与模型请求：Tools Consumer 以 `when` 条件注册全部 14 个工具，只有当本会话成功加载过 `activationSkills` 之一（默认是 `skills/` 下全部 12 个内置技能）或当前请求头已携带其中任一工具的声明时，该步才披露并允许调用。Tools Consumer 监听成功的 `skill` 工具结果，以及用户直接调用技能后提交的 `user/message`（`source.kind: skill-invocation`）事件。用户调用路径通过可选的 `agents` 注入取得会话当前 Agent，并验证其持有的 Session 与事件来源一致；Agent 销毁时清理内存标记，监听器随 fiber 卸载。技能加载的标记从下一步加入声明；恢复或分叉的会话由请求头中的既有声明兜底，PTC 请求头只含 `run_code`，因此 PTC 会话在内存标记丢失后需要重新加载技能。`skills: false` 或 `activationSkills: []` 表示无条件披露，保持全部工具常驻。
-
-每个工具有独立的参数 schema、结果 schema、超时/取消处理和纯 presentation。工具结果必须包含恢复 Client 预览目标所需的结构化文件、worktree 与 unit 标识，并进入 DSH 会话日志。领域失败使用 DSH 可持久化的稳定错误 code，并在模型可见文本中保留 `Error [CODE]`，使 Agent 不必解析自然语言即可选择恢复路径。Client 优先从 `tool/call` 与 `tool/result` 事件恢复目标，不依赖 bash 文本解析。
-
-`univer_status` 是发现文件状态与显式 Unit ID 的入口。所有内容工具要求显式 Unit ID，所有文件和输出路径都绑定当前 tool exec session 的 workspace，并在 Provider 边界再次验证。`univer_screenshot` 在读取文件前确认 attachment service、PNG 限制与当前模型图片输入能力，生成文件再次经过 workspace realpath 授权，再保存为持久 DSH image attachment；结构化文本保留恢复目标与图片元数据。`univer_print_pdf` 复用同一渲染源与 Render Machine，把 Sheet、Doc、Slide 或 Board 写入授权的 `.pdf` 路径，不支持 Base。`univer_resources` 的 cache root 只由 Provider 配置拥有，不向模型暴露；export 目录和每个实际输出文件都必须通过 workspace 授权。`ready` 提交修改等待审阅；同一任务需要继续修改时用 `reopen`。`merge` 与 `discard` 只有在用户明确要求时才可调用，并通过 `tools/pre-execute` 返回审批请求，不能由模型自行决定。
-
-包内 `univer` Skill 描述完整编排顺序，sheet、doc、slide、base 与 board Skill 只在对应 Unit 工作时按需加载，Embed 与跨 Unit 公式各有 Topic Skill。内容以同版本 Univer CLI runtime Skills 为基线：只移除插件未开放的 command，并把 CLI command 调用替换为结构化 DSH Tool 或 Client 自动预览。Slide Skill 要求新页面主动使用 `univer_compile_svg`，结构检查后对每个变更页运行 `univer_lint`，最终逐页运行 `univer_screenshot`；其他 Unit Skill 使用其范围、分页、工作台或画布截图目标。需要图标、Logo、Emoji 或插画时先通过 `univer_resources` 查找和导出。不确定或可能随 SDK 变化的 API 必须通过 `univer_api` 查询。
-
-DSH 自带的 `dsh-office` provider 以 `BUNDLED_SKILL_RANK` 注册 `office`、`office-docx`、`office-xlsx` 与 `office-pptx`，并把 Office 任务导向 python-docx、openpyxl 与 python-pptx。Skill Registry 只按名字去重，同一层内 rank 小者胜出，不同名技能会并列进入模型目录。因此 Skill Provider 以 `BUNDLED_SKILL_RANK - 1` 注册这四个同名路由 Skill，正文只把任务导向 `univer` 与对应 Unit Skill；`office-render`、`office-recalculate` 与 `office-export-pdf` 不覆盖。插件卸载后 DSH 原有技能自动恢复。
-
-Client 只解析结构化 `univer_*` 工具事件，不从 bash 命令或自由文本猜测文件与 worktree。
-
-## 10. Client
-
-Client 是状态投影，不拥有 worktree 真相。预览目标来自可回放的会话事件；实时状态来自 Host API；Viewer iframe 负责文档内容的实时展示。
-
-审阅卡片平时使用文档流中的非模态 dialog，全屏时通过 `showModal()` 进入浏览器 top layer，避免对话祖先的 containment、transform 或裁剪限制。切换不迁移 DOM 或重载 Viewer iframe，原位置保留等高占位；退出或卸载时撤销模态状态与键盘监听。Esc 同时监听 Host 与同源 Viewer，已被 Viewer 消费的按键不用于退出全屏。
-
-Viewer 内的 Compare 是 Gateway 的只读 Consumer，不扩大 Client 权限。DSH Client 仍只投影 Host 授权后的不透明 Viewer URL；Viewer 使用该 URL 已绑定的文件和 worktree 创建固定比较会话，并把同一个 `/diff` 语义结果交给差异列表、双栏渲染和定位行为。
-
-Client 通过 `univerTurnDefinition` 按 `callId` 配对结构化工具调用与结果，并分别归约生命周期、内容写入和读取操作；读取操作不能覆盖同一 Turn 已完成的 ready、reopen、merge 或 discard 转换。统一回合卡片把该投影与 Host `FileState` 组合，按权威状态打开 trunk、worktree 或 merge preview 完整页面；若 Host 明确确认投影中的文件已不存在，则不渲染该卡片，以覆盖 Agent 在同一 Turn 中创建并通过其他工具删除临时文件的场景。
-
-实时浮窗只由 `univer_new`、worktree create/reopen/ready 和内容写入主动拉起，纯 status、inspect、lint、screenshot、print-pdf 与 export 不主动打开窗口。用户保持打开的文件或非终态 worktree 会在下一 Turn 继续显示；用户关闭优先，merged 与 discarded 清除打开意图。
-
-展示配置按运行时能力兼容两种 DSH 契约：旧版 Host 使用 `settings.register` 注册 `univer-office` 命名空间，Client 通过 `settingsScope.bind` 订阅；0.1.7-alpha.1 起 Host 从根插件 `Config` 的 `volatile` 字段派生表单，Client 通过 `configForms.get` 读取 bundle patch 拥有的 `univer` entry。该 entry id 必须与 `cordis.patch.yml` 一致。Host schema 使用序列化的 `volatile` metadata，兼容没有 `.volatile()` builder 的旧 schemastery；新版 Host 不再调用已移除的 `settings.register`。Client 共享最小读写接口，处理新版写入返回 `false` 和网络异常，保存失败时保留 draft 并恢复保存按钮。旧版独立设置文档与新版 profile 存储不同，本插件不迁移旧配置；升级后可能需要重新设置偏好。
-
-两种契约均拥有两个相互独立的布尔偏好，默认均开启且实时生效：`autoOpenLivePreview` 控制实时浮窗及其轮询，`conversationReviewCards` 控制回合尾部审阅卡片是否渲染。Settings 服务或对应 Client 设置表面缺席时，Client 保持默认开启，不让可选设置能力阻塞预览与审阅注册；任一偏好关闭只移除它自己的表面，不影响另一者，也不影响文件树按需预览。偏好投影把 `loading` 解析为全关，避免被关闭的表面在持久值到达前闪现；而设置文档加载失败时保持产品默认，因为「读不到设置」不是用户的决定。设置卡片的一份 draft 按字段累计、一次保存提交，因此两个开关可以分别覆盖与恢复默认。
-
-文件树按需预览是浮窗之外的第二条入口：它不由任何 `univer_*` 操作触发，而是让 `.univer` 地址交给 Viewer 渲染。DSH 右栏按地址认领标签类型，排序规则是**档位（`extension` > `builtin` > `fallback`）→ 命中模式字符串长度 → 注册顺序**，因此本插件按宿主形态注册两条路径，任一时刻只有一条生效：
-
-- **DSH 原生右栏**：`ctx.sidebarRightTabs.register` 注册自己的 tab 类型（自有 kind、`patterns: ['*.univer']`、`extension` 档、`canOpen` 只接受 session 作用域地址），正文注册在 keyed seat `sidebar.right.pane.tab`，通过 `useTabInfo().tab.contentId` 取得资源地址。地址语法（`dsh-resource://file/…`）由本包镜像实现：客户端 bundle 的 purity gate 禁止 value-import 未列出的 `@deepseek-ai/*` 包，生态做法同样是本地镜像。
-- **`dsh-better-sidebar`（可选）**：该插件以自有 editor 类型在**同档**用整地址模式 `dsh-resource://file/**` 接管文件地址。同档比模式长度，它的模式更长，所以在它存在时永远赢下 claim，地址进入它的 `matchFileViewer` 注册表；本插件因此在那里注册文件预览器（`fetchStrategy: 'none'`，声明 `.univer` 扩展名）。若缺这条注册，`.univer` 会落到它的 catch-all code viewer，即二进制当文本渲染。
-
-两条路径互不依赖：没有 `sidebarRightTabs` 时原生注册被跳过，没有 `betterSidebar` 时预览器注册被跳过，两者都不阻塞其余 Client 表面。两条路径共用同一个预览正文组件，因此加载态、Host 明确确认文件不存在、Gateway 未运行、Viewer 目标解析只实现一次。预览器声明 `fetchStrategy: 'none'`，因为 `.univer` 是二进制容器：任何按字节读取的策略都会落到通用下载面板，而 Viewer URL 只能由 Host 授权后投影。它复用回合卡片的同一份 `FileState` 轮询解析 Viewer 目标，以主线 URL 打开完整 Viewer，版本切换与 worktree 审阅统一由 Viewer 管理，外层不再维护版本选择或重复提供切换控件。完整 Viewer 首次打开未指定 worktree 或 Unit 的文件链接时，若主线没有 Unit，则按 worktree 列表顺序进入第一个 draft 或 ready worktree；没有活跃 worktree 时保留空状态，显式目标与 embedded scope 不受此默认导航影响；`useGatewayStatus` 额外暴露 Gateway 阶段，使未运行的 Gateway 变成可操作的启动入口而不是永久加载态。
-
-Client 显式注入 `uiConversation` 后才注册回合定义；旧版 `settingsScope` 与新版 `configForms` 作为可选子 fiber 注入。缺少任一设置服务不得阻塞主 Client 激活，迟加载后订阅偏好，卸载时撤销订阅。
-
-Client 必须满足：
-
-- 会话 ID 与 workspace scope 是所有状态查询的组成部分；
-- 轮询在组件卸载、会话切换和页面隐藏时正确停止或降频；
-- 同一个文件/worktree 的浮窗状态可去重，但不能跨会话泄漏；
-- mutation 期间禁用重复操作，完成后重新获取 Host 状态；
-- Viewer URL 的文件、worktree、unit、mode 与 scope 参数视为不透明值；Client 只能设置不改变资源身份和授权范围的展示参数；
-- 终态 worktree 在原回合末尾保留审阅卡片，移除修改操作并显示主线完整页面；
-- 所有 Turn 使用同一种卡片布局；状态加载失败只显示该布局的不可用状态，不回退旧卡片；
-- 卡片不复制 Viewer 已提供的 ready、merge 或 discard 操作；
-- UI 文案来自 locale 模块。
-
-## 11. CLI 移除决策
-
-运行路径不包含 CLI adapter，也不探测全局 `univer` executable。`univer_*` 工具直接调用 `ctx.univer`，Provider 再调用 Gateway adapter 或 Unit Content adapter。
-
-当前实现满足以下约束：
-
-1. `univer_new` 只创建空 `.univer` 容器，Unit 由 `univer_unit` 或 `univer_import` 显式加入 draft worktree；
-2. `univer_execute` 只写入显式 draft worktree 与 Unit，并由 Gateway revision 确认提交；
-3. `univer_inspect` 可读取 trunk 或显式 worktree 中的 Sheet 范围、Doc/Slide 结构、Base 概览、Board 概览和单个 Board 元素详情；`univer_export` 可读取 trunk 或显式 worktree；
-4. `univer_api` 使用包依赖的精确版本 API Reference，不调用外部 CLI；
-5. `univer_lint` 只返回布局 coverage 与 findings，不生成或返回图片；
-6. `univer_compile_svg` 只读取 session workspace 内的 SVG 与引用资源，并把生成程序提交到显式 draft worktree；
-7. `univer_screenshot` 复用随包 Render Machine，显式装配目标 Unit、公式引用 Unit、Embed child Unit 与 Gateway 图片资源，PNG 同时落到授权 workspace 和 DSH attachment；
-8. `univer_print_pdf` 复用同一 Render Machine 与完整渲染源，把支持的 Unit 打印到授权 workspace PDF；
-9. `univer_resources` 复用随包 manifest 与 HTTPS-only resource library，不调用外部 CLI，缓存位置来自已校验配置；
-10. Client 只从结构化工具事件恢复预览目标；
-11. 全新环境仅安装本插件即可完成创建、导入、修改、检查、布局 lint、SVG 页面编译、截图、PDF 打印、资源查找/导出、Office 导出、预览和 worktree 修改审阅。
-
-## 12. 构建与发布
-
-`src` 包含插件发布的所有 application 源码；Viewer application、machine render page、render preset 和 IMPORTRANGE plugin 源码从 `univer-cli` 复制到本仓库后直接维护；`render-preset/import-export` 从 univer-pro `examples/src/*/custom-plugin/custom-import-export`（`v1.2.0`）复制，去掉移动端入口，依赖注入按本仓库约定改为 `setDependencies`/`DependentOn` 调用而非装饰器。`packages/unit-comparison-viewer` 与 `univer-workspace`、`univer-cli` 中的同名可复制组件保持行为同步，并针对本仓库的 React 18 Host 做兼容。`pnpm run build` 生成 Host/Client bundle、Unit Content Worker、Gateway、machine render page 和 Viewer；`lib` 与 `artifacts` 都被 gitignore，并在打包前重新生成。Host 构建为 Node ESM，Client 构建为 DSH ModuleLoader 可加载的浏览器 bundle，Gateway 构建为 Node CJS 子进程，Worker 构建为 Node ESM 子进程，machine render page 与 Viewer 构建为 Vite 静态资产。lib 构建同时生成 `lib/telemetry-entry.js`（卸载 hook 发送入口）与 `lib/build-info.json`（包版本、构建 commit 与遥测 endpoint）。
-
-发布包包含运行所需的 Gateway、Viewer、Unit Content Worker、Collaboration Runtime Worker、Office 转换器、平台依赖、Univer license 与 bundled Skills。Gateway、Worker、Viewer 和 Host 直接使用 manifest 中精确版本的 Univer SDK/API Reference packages；JavaScript SDK 被 bundle，平台原生 package 由包管理器为目标机器安装。发布时只打包从当前源码生成的运行产物。
-
-Univer 凭据分两处：浏览器侧（Viewer、machine render page）只需 License，放在 `render-preset/license.ts`；Node 侧放在 `src/shared/univer-license.ts`，Web SDK 渲染只取 License，Collaboration SDK（`UniverCollabService`）与 Exchange（`configureExchange`）同时需要 License 与 licenseKey。Gateway 与 Worker 子进程只继承固定的环境变量白名单，因此凭据显式传入 SDK，不依赖 SDK 自己读取 `UNIVER_LICENSE`/`UNIVER_LICENSE_KEY`；独立运行时可用这两个环境变量成对替换内置凭据。Gateway 在 `startServer` 时配置一次 Exchange，Worker 每个进程配置一次。轮换 License 时两个文件必须同步更新。
-
-原生公式引擎与 Office 转换器仍具有平台属性；`.univer` 使用 Node 内置的 `node:sqlite`，不再随包携带 SQLite 原生依赖。release workflow 必须在目标平台安装 lockfile 所指定的依赖后构建和测试，不能把一个平台的 `node_modules` 复制为通用发布物。
-
-## 13. 验证策略
-
-测试按边界组织：
-
-- `processes/gateway`：启动合并、ready 超时、提前退出、清理和外部 Gateway 不被终止；
-- `provider`：路径 scope、缓存失效、Gateway 映射、worktree 状态与错误；
-- `webServer`：method、JSON、字段、会话授权和错误响应；
-- `tools`：schema、取消、结构化结果和 presentation；
-- `render/resources`：截图/PDF 依赖装配、页数/像素/attachment 限制、资源下载取消、cache 隔离与 export 路径授权；
-- `skills`：发现顺序、按需加载、frontmatter 剥离和发布包收录；
-- `client`：事件恢复、轮询生命周期、浮窗交互、unit 切换和审阅 mutation；
-- `unit-comparison-viewer`：五类 Unit 的差异投影、双栏交互、稳定导航和只读边界；
-- `integration`：无全局 CLI 的全新环境中，仅安装插件完成端到端功能，包括固定 worktree 比较与语义 diff。
-
-发布前至少执行 typecheck、Host/Client build、分层测试、npm pack 内容检查，以及从 pack 产物安装后的集成冒烟。
-
-## 14. 明确不采用的方案
-
-- 不保留 `lib/index.js` 与 `lib/client.js` 的原型内部结构；
-- 不继续把 Service、HTTP、进程管理、CLI fallback 和缓存写在一个文件中；
-- 不使用 `capability` 作为目录名；DSH 架构中的 capability seam 由这里的 Service Definition、Provider 和 Consumer 共同实现；
-- 不使用 `daemon` 作为本插件领域名称；
-- 不让用户长期同时安装插件和 CLI；
-- 不把 Gateway 业务实现写进 Host Service/Provider；Gateway 保持独立 application 与进程；
-- 不在当前阶段仅为目录整齐拆成多个 npm 包；
-- 不让模型自行决定 merge 或 discard；显式用户请求仍必须经过 DSH 工具审批。
-
-## 15. 产品遥测
-
-产品遥测是 best-effort 的匿名活跃与卸载统计，只用于看趋势，不用于精确计量。发布包不声明 `postinstall`，以兼容 DSH profile 的依赖构建脚本审批策略。遥测绝不影响插件启动或卸载：所有失败静默吞掉，发送有 5 秒超时，无重试、无队列、无锁。
-
-- 事件共三个，统一经 `lib/build-info.json` 中写死的 Univer 代理 endpoint 上报（版本与 commit 也取自该文件），客户端不持有任何分析平台凭证。发送只发生在安装后的插件激活与卸载钩子，开发 checkout 不会触发任何发送；`test/integration/telemetry.test.ts` 断言构建产物中的 endpoint 等于写死地址，防止回归为静默构建。运行时显式设置 `UNIVER_TELEMETRY_ENDPOINT`（含空值）优先于写死值，用作测试重定向与应急开关。服务端 allowlist 必须先于带 endpoint 的构建部署，否则事件会被整包拒绝且因 at-most-once 永久丢失；
-- `dsh_plugin_activated`（Host 激活，每安装身份一次）、`dsh_plugin_daily_active`（Host 激活时检查，每安装身份每本地日一次）、`dsh_plugin_uninstall_hook`（包 uninstall，不去重，因为 state 跨重装存活，一次性标记会掩盖后续卸载）；
-- payload 只允许 `distinctId`（随机 UUID）、事件名与白名单属性（package name/version、build commit、platform、arch、Node major version、event source、state schema version），禁止路径、workspace、session、文件内容与环境变量。服务端代理对未知键整包拒绝；
-- 去重只在本机 state（`$DSH_HOME/telemetry/dsh-univer-office/state.json`，沿用 `config.ts` 的 `DSH_HOME` 约定）中做，先落盘标记再发送（at-most-once：崩溃宁可丢事件不重发，标记写失败时同样放弃发送）；并发启动的毫秒级竞态接受偶发双发；
-- `telemetry: false` 配置由 Host 同步写入 state 的 `disabled` 标记，使拿不到 Cordis 配置的卸载 hook 发送同样停用，这也是空 endpoint 下唯一会创建 state 的路径；`DO_NOT_TRACK` 非空在所有入口直接短路；
-- 发送只发生在 Host 进程（fire-and-forget，不注册资源、不阻塞激活与卸载）与 `scripts/telemetry-entry.mjs` 启动的 detached 子进程中；Client、Viewer、Gateway 与 Worker 不发送遥测。
-
-## 16. 变更规则
-
-后续实现若改变以下任一事项，必须先更新本文并重新评审：
-
-- Service 的责任范围或 Consumer 依赖方向；
-- Host、Client、Gateway、Unit Content Worker 与 Collaboration Runtime Worker 的信任边界；
-- 是否依赖外部 CLI 或外部 Gateway；
-- worktree 用户审阅权归属；
-- 工具能力与 bundled Skills 的对应关系；
-- 源码构建、Viewer 与许可证策略；
-- 单包与多包的发布决策；
-- 遥测事件集合、payload 白名单、去重语义或上报通道。
+Host 中的 Tools 与会话 API 都依赖 `UniverService`，由 Provider 实现。Provider 管理子进程的生命周期和工作区文件操作。Gateway 对文档内容、worktree 与 revision 负责，使用 SQLite 存储。Worker 经 Gateway 同步内容，Render Machine 接收 Provider 装配的渲染输入。Client 与 Host 通过可序列化的 wire 数据通信。
+
+Host 按会话工作区授权工具操作、状态查询和 Viewer 文档打开。后续 Viewer 文件 API 与 WebSocket 使用 DSH 连接鉴权，已认证浏览器可访问 Host 进程有权打开的文件。完整边界见 [Viewer 同源部署](operations/viewer-same-origin.md)。
+
+## 模块索引
+
+| 想了解的问题 | 阅读入口 |
+| --- | --- |
+| 谁授权文件访问、提供会话 API、维护缓存和启动 Gateway？ | [Host 服务](modules/host-service.md) |
+| 模型怎样获得工具，哪些操作需要审批？ | [Agent 工具与技能](modules/agent-integration.md) |
+| 浮窗何时打开或关闭？回合卡片和文件树如何选择目标？ | [Client 预览与审阅](modules/client-preview-and-review.md) |
+| 页面如何呈现 Unit、处理焦点并展示两个版本的差异？ | [Viewer](modules/viewer.md) |
+| 谁确认提交、持久化历史、处理 worktree 与比较会话？ | [Gateway](modules/gateway.md) |
+| 哪些任务复用 Worker？Office 文件如何导入导出？ | [Unit 内容与 Worker](modules/unit-content.md) |
+| 快照和引用资源如何生成布局检查结果、PNG 或 PDF？ | [渲染与输出](modules/rendering.md) |
+| SVG 资源如何查找、缓存和导出？ | [SVG 资源库](modules/resource-library.md) |
+| 采集哪些匿名事件，如何禁用？ | [产品遥测](modules/telemetry.md) |
+| 桌面壳和远程浏览器怎样访问本机 Gateway？ | [Viewer 同源部署](operations/viewer-same-origin.md) |
+| 应用如何构建和发布，SDK 版本如何配套？ | [构建与发布](operations/build-and-release.md) |
+
+文档与代码的同步规则、开发命令及验证范围见 [AGENTS.md](../AGENTS.md)。

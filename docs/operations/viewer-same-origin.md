@@ -1,22 +1,14 @@
-# Viewer 同源部署设计（spec）
+# Viewer 同源部署
 
-状态：已实现（本文档描述当前实现）。
-
-## 背景
-
-Gateway 固定监听 loopback 是刻意的进程隔离设计，但过去浏览器可见的 Viewer URL 直接复用这个
-loopback origin，导致浏览器与 DSH 不同机时预览全部失效（#61）。过渡方案 `viewerBaseUrl`（#68）
-把 Viewer origin 交给部署方反代投影，但要求部署方额外配置转发并自行承担访问控制。
-
-本设计把 Viewer 面整体搬进 DSH WebServer origin：浏览器流量统一走 DSH 已有入口，复用 DSH 的
-浏览器鉴权（`connection` 服务）与会话范围检查，`viewerBaseUrl` 随之删除。Gateway 保持只监听
-loopback，Host/Worker 内部流量不变。
+浏览器通过 DSH WebServer 打开 Viewer、加载文件和连接协作服务。Gateway 只监听 loopback，远程浏览器与桌面壳均使用 Host 提供的入口。
 
 ## 架构
 
 ```text
-浏览器 → DSH WebServer 插件路由 → connection 信任门 → 文档请求的会话范围检查 → loopback Gateway
-模型/Provider/Worker → loopback Gateway（不变）
+Viewer 文档 → DSH 连接鉴权 → 会话工作区校验 → loopback Gateway
+Viewer 文件 API 与 WebSocket → DSH 连接鉴权 → loopback Gateway
+模型 → Tools → Host Provider → loopback Gateway
+Worker → loopback Gateway
 ```
 
 DSH WebServer 上由本插件注册以下路由（运行时配置位于 Viewer prefix 内）：
@@ -74,14 +66,8 @@ session/workspace 校验。DSH 桌面壳会删除响应的 Set-Cookie，并把�
 同源相对路径 `/univer-viewer/?file=<key>`；`gateway` 字段继续返回 loopback origin（模型可见
 事实）。`/univer-api/state` 响应在路由层为所有投影 URL 追加 `&sessionId=<sid>`，用于 Viewer
 文档首次打开时的 workspace 校验。浏览器
-（review-panel、worktree-window 的 iframe）是该状态的唯一消费者；`univer_*` 工具不消费
+中的审阅卡片、实时浮窗和文件树预览使用这些 URL；`univer_*` 工具不消费
 这些 URL。Client 只把 URL 当 opaque，不追加任何非呈现参数。
-
-## `viewerBaseUrl` 移除
-
-同源方案落地后该配置失去指涉物：插件自己的转发缝就在 DSH origin 上，不存在第二个可达地址。
-配置项、schema、校验与文档全部删除；`#68` 的价值是过渡期解锁 #61，部署方升级后删除该配置行
-即可（保留不报错，仅被忽略）。
 
 ## 失败模式
 
@@ -104,3 +90,5 @@ session/workspace 校验。DSH 桌面壳会删除响应的 Set-Cookie，并把�
   的 WS 隧道收到真实生命周期事件，comb 的 sessionTicket + HELLO 往返成功，缺少 ticket
   仍被 Gateway 拒绝；HTTP 与 WS 保留 connection 门 401/403，dispose 后隧道客户端被关闭。
   connection 门以桩注入，真实 Host/Origin 与浏览器鉴权语义由 DSH 侧保证。
+
+实现与验证入口见 [webServer 插件](../../src/host/webServer/plugin.ts)、[Viewer 代理](../../src/host/webServer/viewer-proxy.ts)和[集成测试](../../test/integration/viewer-proxy.test.ts)。旧部署的 `viewerBaseUrl` 配置已移除，升级时可删除该项。

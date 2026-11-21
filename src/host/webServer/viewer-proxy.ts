@@ -36,7 +36,7 @@ function reject(res: ServerResponse, status: 401 | 403 | 404 | 502): void {
 /**
  * Same-origin proxy for the Viewer surface. Browser requests arrive on the DSH origin, pass the
  * `connection` trust fence, and are forwarded verbatim after document-only session scope checks
- * to the loopback Gateway. See docs/viewer-same-origin-deployment.md for the contract.
+ * to the loopback Gateway. See docs/operations/viewer-same-origin.md for the contract.
  */
 export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
   const { gatewayOrigin, sessions, connection } = options

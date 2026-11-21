@@ -1,0 +1,23 @@
+# Unit 内容与 Worker
+
+Provider 先确定文件、worktree、Unit 和类型，再把检查、执行、渲染快照读取或格式转换分派给 Worker。Worker 使用 Host 提供的 loopback Gateway 地址取得内容。参见[内容操作](../../src/host/provider/unit-content-operations.ts)和[进程适配器](../../src/host/adapters/unit-content)。
+
+## 池化执行
+
+Unit 的检查、执行和 render-source 读取（lint、截图与 PDF 打印的数据来源）由 Unit Content Adapter 从 `@univer-cli/univer-collaboration-runtime-pool` 取得 keyed lease。Key 由 Gateway origin、文件路径、trunk/worktree scope、Unit ID 与 Unit type 组成；每个 key 对应一个由 pool fork 的 Collaboration Runtime Worker 子进程，加载 `artifacts/collaboration-runtime-worker.mjs` 并通过与一次性 Worker 相同的 server backend 连接 Gateway。Pool 的 bootstrap `worker-child.mjs` 按其模块位置查找，因此构建把它复制到 `lib/index.js` 旁。
+
+- 每次使用先 pull 再执行。Gateway 始终是内容与 revision 的唯一依据，缓存的 runtime 不构成授权或内容真相。
+- 常驻 Worker 数上限为 `unitContentRuntimeMaxEntries`（默认 20，与 cli-sdk 一致），满员时淘汰最久未用的空闲 runtime；全部忙碌时 pool 直接以 `COLLABORATION_POOL_CAPACITY_EXCEEDED` 拒绝，Host 不排队。空闲超过 `unitContentRuntimeIdleTtlMs`（默认 5 分钟）后退出。将 `unitContentRuntimeMaxEntries` 设为 `0` 时所有操作回到一次性 Worker。
+- 操作成功后 release 复用；任何失败（包括 pull 冲突、取消、超时、Worker 崩溃或协议错误）都销毁该 Worker，保证失败写入的部分 mutation 不会被后续操作提交，下一次使用重新加载。
+- Host 不主动驱逐 runtime：merge/discard 或 Unit remove 后不再使用的 runtime 由空闲超时或 LRU 回收。Provider 卸载时先关闭 pool，再停止 Gateway。
+- Pool 忽略子进程 stdio，因此池化 Worker 的失败只以结构化错误码与消息返回，不再附带 stderr 诊断。
+
+`univer_inspect` 支持主线或显式 worktree，可读取 Sheet 范围、Doc/Slide 结构、Base 概览和 Board 元素详情。`univer_execute` 只向显式 draft worktree 中的 Unit 写入，以 Gateway 确认的 revision 判断提交结果。
+
+## Office 导入与导出
+
+工具导入时，一次性 Unit Content Worker 将源文件转换为快照，Provider 再通过 Gateway 在目标 draft worktree 创建 Unit。导出时，Worker 加载指定主线或 worktree 的 Unit 并写出目标文件。Worker 在完成或取消后退出。
+
+Doc/DOCX、Sheet/XLSX 和 Slide/PPTX 的 Unit 导出共用 Exchange 的 `files.load` 解析当前 Unit 的 UUID 资源；URL 图片沿用 Collaboration Exchange Service 的透明占位图策略。Base 和 CSV/TSV 不传资源回调。Worker 从当前文件和 worktree（或 trunk）的 `universer-api/file/<id>/content?source=3&assign=<unitId>` 取回字节；Ribbon 的 trunk Unit 导出直接调用相同的 Gateway 资产读取逻辑。Gateway 按资产所属 Unit 和 worktree 可见性校验读取。上传的 JSON 快照不获得本地资产读取权限。
+
+Viewer 内交互式导入导出使用 [Gateway 的 trunk exchange 协议](gateway.md)。工具路径的行为验证见 [Unit 内容测试](../../test/integration/unit-content.test.ts)和[格式往返测试](../../test/integration/exchange.test.ts)。
