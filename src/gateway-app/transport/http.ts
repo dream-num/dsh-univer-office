@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import Busboy from 'busboy'
-import type { ISnapshot } from '@univerjs/protocol'
+import { FileSource, type ISnapshot } from '@univerjs/protocol'
 import {
   GATEWAY_CAPABILITIES,
   GATEWAY_DESCRIPTOR_CONTENT_TYPE,
@@ -318,7 +318,7 @@ async function handleExchangeApi(
     path[1] === 'stream' &&
     path[2] === 'file' &&
     path[3] === 'upload' &&
-    Number(url.searchParams.get('source')) === 1
+    Number(url.searchParams.get('source')) === FileSource.HttpImport
   const autoImport =
     method === 'POST' && path.length === 3 && path[1] === 'exchange' && path[2] === 'import'
   const typedImport =
@@ -340,6 +340,7 @@ async function handleExchangeApi(
     path[2] === 'task' &&
     path[3] !== undefined
   const file =
+    url.searchParams.get('source') !== String(FileSource.UnitEmbedded) &&
     method === 'GET' &&
     path.length === 4 &&
     path[1] === 'file' &&
@@ -750,7 +751,11 @@ async function handleAssetApi(
     }
 
     const assetId = decodeURIComponent(path[2] ?? '')
-    const opened = univerfile.collab.openAsset(assetId, worktreeId)
+    const opened = univerfile.collab.openAsset(
+      assetId,
+      worktreeId,
+      url.searchParams.get('assign') ?? undefined
+    )
     if (opened === null) throw new AssetHttpError(404, 'The resource was not found')
     if (path[3] === 'sign-url') {
       res.setHeader('cache-control', 'private, no-store')
@@ -993,8 +998,8 @@ function validateAssetUploadIntent(query: URLSearchParams): {
   readonly size: number
   readonly unitId: string
 } {
-  if (query.get('source') !== '3') {
-    throw new AssetHttpError(400, 'source must be UnitEmbedded (3)')
+  if (query.get('source') !== String(FileSource.UnitEmbedded)) {
+    throw new AssetHttpError(400, `source must be UnitEmbedded (${FileSource.UnitEmbedded})`)
   }
   const rawSize = query.get('size')
   const size = rawSize === null || rawSize.trim() === '' ? Number.NaN : Number(rawSize)

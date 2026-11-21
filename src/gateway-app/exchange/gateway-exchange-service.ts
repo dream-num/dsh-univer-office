@@ -18,6 +18,7 @@ import {
   type ISnapshotWithBlocks
 } from '@univerjs-pro/exchange-node'
 import { ErrorCode, UniverType, type ISheetBlock, type ISnapshot } from '@univerjs/protocol'
+import { withOfficeExportFiles } from '../../shared/office-export-files.ts'
 import type { CollabService } from '../collab-service.js'
 
 export const MAX_EXCHANGE_FILE_BYTES = 50 * 1024 * 1024
@@ -169,10 +170,17 @@ export class GatewayExchangeService {
         aggregate = snapshotFromJson(JSON.parse(artifact.bytes.toString('utf8')) as unknown)
         name = stripExtension(artifact.filename)
       }
-      const output = await exportSnapshotToBuffer(
-        aggregate,
-        exchangeExportOptions(unitType, input.format, input.options)
-      )
+      const options = exchangeExportOptions(unitType, input.format, input.options)
+      const unitId = input.unitID
+      const scopedOptions =
+        unitId === null
+          ? options
+          : withOfficeExportFiles(
+              options,
+              unitId,
+              (assetId) => this._collab.openAsset(assetId, undefined, unitId)?.bytes
+            )
+      const output = await exportSnapshotToBuffer(aggregate, scopedOptions)
       const artifact = this._saveArtifact({
         filename: `${safeFilename(name)}.${input.format}`,
         mediaType: mediaType(input.format),

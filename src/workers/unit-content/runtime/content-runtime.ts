@@ -68,13 +68,16 @@ export async function loadUnitContentRuntime(
   }).load(init.unitId, init.unitType)
 }
 
-function gatewayUrls(init: UnitContentRuntimeInit) {
+export function unitGatewayBase(init: UnitContentRuntimeInit): string {
   const root = `${init.gatewayOrigin.replace(/\/$/u, '')}/uf/${init.fileKey}`
-  const wsRoot = root.replace(/^http/u, 'ws')
   const worktree =
     init.worktreeId === undefined ? '' : `/worktrees/${encodeURIComponent(init.worktreeId)}`
-  const base = `${root}${worktree}`
-  const wsBase = `${wsRoot}${worktree}`
+  return `${root}${worktree}`
+}
+
+function gatewayUrls(init: UnitContentRuntimeInit) {
+  const base = unitGatewayBase(init)
+  const wsBase = base.replace(/^http/u, 'ws')
   return {
     snapshotServerUrl: `${base}/universer-api/snapshot`,
     collabSubmitChangesetUrl: `${base}/universer-api/comb`,

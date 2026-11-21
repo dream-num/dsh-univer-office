@@ -1,9 +1,18 @@
 import { readFile, stat, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { createServer } from 'node:http'
+import { join, posix } from 'node:path'
+import { FileSource } from '@univerjs/protocol'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { startGateway, type GatewayHarness } from '../support/gateway.ts'
-import { postJson } from '../support/net.ts'
-import { buildDocx, complexField, countMatches, readOoxmlParts, run } from '../support/ooxml.ts'
+import { closeServer, listen, postJson } from '../support/net.ts'
+import {
+  buildDocx,
+  complexField,
+  countMatches,
+  readOoxmlParts,
+  readZip,
+  run
+} from '../support/ooxml.ts'
 import { repoPath } from '../support/paths.ts'
 
 /** A4 landscape one-paragraph document with the page setup imports must preserve. */
@@ -34,11 +43,11 @@ describe('import and export through the bundled exchange', () => {
     })
     return imported.result
   }
-  const exportUnit = async (unitId: string, name: string) => {
+  const exportUnit = async (unitId: string, name: string, draft = worktreeId) => {
     const output = join(gateway.workspace, name)
     await gateway.service.exportUnitContent({
       ...gateway.scoped,
-      worktreeId,
+      worktreeId: draft,
       unitId,
       output,
       outputWorkspace: gateway.workspace
@@ -53,6 +62,65 @@ describe('import and export through the bundled exchange', () => {
 
   afterAll(async () => {
     await gateway?.dispose()
+  })
+
+  it.each([
+    ['slide-picture', 'ppt/slides'],
+    ['layout-picture', 'ppt/slideLayouts']
+  ])('preserves the embedded image when exporting %s from a draft (#122)', async (name, folder) => {
+    const source = await readFile(repoPath('test', 'fixtures', 'exchange', `${name}.pptx`))
+    const imported = await importFile(`${name}.pptx`, source)
+    const output = await readFile(await exportUnit(imported.unitId, `${name}-out.pptx`))
+    expectPicture(output, folder, readZip(source).get('ppt/media/image1.png')!)
+  })
+
+  it('uses a transparent placeholder for an external image without fetching it on export (#122)', async () => {
+    let requests = 0
+    const server = createServer((_request, response) => {
+      requests++
+      response.writeHead(404).end()
+    })
+    const port = await listen(server)
+    try {
+      const unitId = await gateway.createUnit(worktreeId, 'doc', 'Linked image')
+      const code = `return !!(await doc.insertImage({source: 'http://127.0.0.1:${port}/linked.png',
+        imageSourceType: api.Enum.ImageSourceType.URL, width: 32, height: 32, textRange: {startOffset: 0}}));`
+      expect(await gateway.execute(worktreeId, unitId, code)).toMatchObject({
+        committed: true,
+        value: true
+      })
+      const beforeExport = requests
+      const output = await readFile(await exportUnit(unitId, 'external.docx'))
+      expect(requests).toBe(beforeExport)
+      expectPicture(
+        output,
+        'word',
+        Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+          'base64'
+        )
+      )
+    } finally {
+      await closeServer(server)
+    }
+  })
+
+  it('rejects an embedded picture owned by another Unit in the same draft (#122)', async () => {
+    const source = await readFile(repoPath('test', 'fixtures', 'exchange', 'slide-picture.pptx'))
+    const owner = await importFile('picture-owner.pptx', source)
+    const snapshot = await gateway.execute(worktreeId, owner.unitId, 'return presentation.save()')
+    const copy = await postJson(
+      `${gateway.origin}/uf/${gateway.fileKey}/worktrees/${worktreeId}/units`,
+      {
+        type: 3,
+        name: 'Copied image reference',
+        snapshot: snapshot.value
+      }
+    )
+    expect(copy.unitId).toEqual(expect.any(String))
+    await expect(exportUnit(copy.unitId, 'foreign-picture.pptx')).rejects.toThrow(
+      'The embedded Office file was not found'
+    )
   })
 
   describe('docx page setup', () => {
@@ -124,7 +192,7 @@ describe('import and export through the bundled exchange', () => {
       const form = new FormData()
       form.append('file', new Blob([new Uint8Array(bytes)], { type }), name)
       const response = await fetch(
-        `${exchangeBase()}/stream/file/upload?size=${bytes.byteLength}&source=1&flate=false`,
+        `${exchangeBase()}/stream/file/upload?size=${bytes.byteLength}&source=${FileSource.HttpImport}&flate=false`,
         { method: 'POST', body: form }
       )
       expect(response.status, await response.clone().text()).toBe(201)
@@ -134,6 +202,84 @@ describe('import and export through the bundled exchange', () => {
       const signed = await (await fetch(`${exchangeBase()}/file/${fileId}/sign-url`)).json()
       return fetch(`${gateway.origin}${signed.url}`)
     }
+
+    const exportFromRibbon = async (unitId: string, type: number, format: string) => {
+      const exporting = await postJson(`${exchangeBase()}/exchange/${type}/export`, {
+        unitID: unitId,
+        format
+      })
+      const exported = await waitForExchangeTask(exchangeBase(), exporting.taskID)
+      expect(exported.status, exported.error?.message).toBe('done')
+      const response = await download(exported.export.fileID)
+      expect(response.ok).toBe(true)
+      return Buffer.from(await response.arrayBuffer())
+    }
+
+    it.each([
+      { kind: 'doc', type: 1, format: 'docx', folder: 'word' },
+      { kind: 'sheet', type: 2, format: 'xlsx', folder: 'xl/drawings' }
+    ] as const)(
+      'embeds the uploaded $kind image in both draft and trunk exports (#122)',
+      async ({ kind, type, format, folder }) => {
+        const source = await readFile(
+          repoPath('test', 'fixtures', 'exchange', 'slide-picture.pptx')
+        )
+        const png = readZip(source).get('ppt/media/image1.png')!
+        const draft = await gateway.createWorktree(`embedded-${kind}`)
+        const unitId = await gateway.createUnit(draft, kind, 'Picture')
+        const form = new FormData()
+        form.append('file', new Blob([new Uint8Array(png)], { type: 'image/png' }), 'picture.png')
+        const uploaded = await fetch(
+          `${gateway.origin}/uf/${gateway.fileKey}/worktrees/${draft}/universer-api/stream/file/upload?source=${FileSource.UnitEmbedded}&assign=${unitId}&size=${png.length}`,
+          { method: 'POST', body: form }
+        )
+        expect(uploaded.status).toBe(201)
+        const { FileId } = await uploaded.json()
+        const image = JSON.stringify(FileId)
+        const code =
+          kind === 'doc'
+            ? `const paragraph = doc.getParagraphs()[0];
+           const offset = paragraph.getRange().startOffset;
+           return !!(await doc.insertImage({source: ${image}, imageSourceType: api.Enum.ImageSourceType.UUID,
+             width: 32, height: 32, textRange: {startOffset: offset, endOffset: offset, collapsed: true, segmentId: paragraph.getSegmentId()}}));`
+            : `const sheet = workbook.getActiveSheet();
+           const picture = await sheet.newOverGridImage().setSource(${image}, api.Enum.ImageSourceType.UUID)
+             .setColumn(1).setRow(1).setWidth(32).setHeight(32).buildAsync();
+           sheet.insertImages([picture]); return true;`
+        expect(await gateway.execute(draft, unitId, code)).toMatchObject({
+          committed: true,
+          value: true
+        })
+        expectPicture(
+          await readFile(await exportUnit(unitId, `draft.${format}`, draft)),
+          folder,
+          png
+        )
+        await gateway.transition(draft, 'ready', 'ready')
+        await gateway.transition(draft, 'merge', 'merged')
+        expectPicture(await exportFromRibbon(unitId, type, format), folder, png)
+      }
+    )
+
+    it('preserves the embedded picture when exporting a trunk Slide from the ribbon (#122)', async () => {
+      const source = await readFile(repoPath('test', 'fixtures', 'exchange', 'slide-picture.pptx'))
+      const fileID = await upload(
+        source,
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'slide-picture.pptx'
+      )
+      const importing = await postJson(`${exchangeBase()}/exchange/3/import`, {
+        fileID,
+        outputType: 1
+      })
+      const imported = await waitForExchangeTask(exchangeBase(), importing.taskID)
+      expect(imported.status).toBe('done')
+      expectPicture(
+        await exportFromRibbon(imported.import.unitID, 3, 'pptx'),
+        'ppt/slides',
+        readZip(source).get('ppt/media/image1.png')!
+      )
+    })
 
     it('imports an uploaded CSV and exports it back to xlsx', async () => {
       const csv = Buffer.from('name,value\nserver,7\n', 'utf8')
@@ -245,7 +391,6 @@ describe('import and export through the bundled exchange', () => {
   describe('known exchange issues', () => {
     let csvSheet: string
     let headingDoc: string
-    const pptx = new Map<string, string>()
 
     beforeAll(async () => {
       csvSheet = await gateway.createUnit(worktreeId, 'sheet', 'CSV')
@@ -267,13 +412,6 @@ describe('import and export through the bundled exchange', () => {
          return updated;`
       )
       expect(headingWrite).toMatchObject({ committed: true, value: true })
-
-      for (const name of ['slide-picture', 'layout-picture']) {
-        const source = await readFile(repoPath('test', 'fixtures', 'exchange', `${name}.pptx`))
-        const imported = await importFile(`${name}.pptx`, source)
-        expect(imported.kind).toBe('slide')
-        pptx.set(name, imported.unitId)
-      }
     })
 
     it.fails('exports a Sheet Unit to CSV (#103)', async () => {
@@ -286,14 +424,6 @@ describe('import and export through the bundled exchange', () => {
       expect(parts.get('word/document.xml')).toMatch(/<w:pStyle w:val="Heading1"\/>/)
       expect(parts.get('word/styles.xml')).toMatch(/w:styleId="Heading1"/)
     })
-
-    it.fails.each(['slide-picture', 'layout-picture'])(
-      'exports an imported PPTX with a picture (%s, #122)',
-      async (name) => {
-        const output = await exportUnit(pptx.get(name)!, `${name}-out.pptx`)
-        expect((await readOoxmlParts(output)).has('ppt/presentation.xml')).toBe(true)
-      }
-    )
 
     describe('Base to xlsx', () => {
       let workbook: Map<string, string>
@@ -348,6 +478,26 @@ describe('import and export through the bundled exchange', () => {
     })
   })
 })
+
+// Follow the picture's relationship on its original kind of page so an orphaned media file
+// or a layout picture flattened onto a slide cannot pass the round-trip check.
+function expectPicture(output: Buffer, folder: string, expectedImage: Buffer): void {
+  const parts = readZip(output)
+  const pictures: Buffer[] = []
+  for (const [path, xml] of parts) {
+    if (posix.dirname(path) !== folder || !path.endsWith('.xml')) continue
+    for (const [, id] of xml.toString('utf8').matchAll(/<a:blip\b[^>]*\br:embed="([^"]+)"/g)) {
+      const rels = parts.get(`${folder}/_rels/${posix.basename(path)}.rels`)?.toString('utf8')
+      const rel = rels?.match(/<Relationship\s[^>]+>/g)?.find((tag) => tag.includes(` Id="${id}"`))
+      const target = rel?.match(/ Target="([^"]+)"/)?.[1]
+      expect(target).toBeDefined()
+      const image = parts.get(posix.join(folder, target!))
+      expect(image).toBeDefined()
+      pictures.push(image!)
+    }
+  }
+  expect(pictures).toEqual([expectedImage])
+}
 
 async function waitForExchangeTask(exchangeBase: string, taskId: string): Promise<any> {
   for (let attempt = 0; attempt < 100; attempt += 1) {
