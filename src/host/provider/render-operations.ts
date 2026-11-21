@@ -1,7 +1,9 @@
+import type { FileScope } from '../service/session-file-scope.ts'
+import { assertAuthorizedPath, canReadPath } from '../service/workspace.ts'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
-import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import {
   compileSvgToFacade,
   isSvgFacadeError,
@@ -72,6 +74,7 @@ export class RenderOperations {
   /** Print one Unit snapshot to an authorized PDF output path. */
   async printPdf(input: {
     readonly source: UniverRenderUnit
+    readonly outputWorkspace: FileScope
     readonly output: string
     readonly signal?: AbortSignal
   }): Promise<{
@@ -95,6 +98,7 @@ export class RenderOperations {
         ...input.source,
         ...(input.signal === undefined ? {} : { signal: input.signal })
       } as UnitPdfPrintInput)
+      await assertAuthorizedPath(input.outputWorkspace, input.output, false, 'write')
       await writePdf(input.output, result.bytes, input.signal)
       return {
         output: input.output,
@@ -141,6 +145,7 @@ export class RenderOperations {
   async screenshot(input: {
     readonly source: UniverRenderUnit
     readonly output: string
+    readonly outputWorkspace: FileScope
     readonly maxPages: number
     readonly maxPixels: number
     readonly target?: ScreenshotTarget
@@ -159,7 +164,12 @@ export class RenderOperations {
       const result = await screenshot.capture(
         captureInput(input.source, input.target, input.signal)
       )
-      const images = await writeScreenshotImages(result.images, input.output, input.signal)
+      const images = await writeScreenshotImages(
+        result.images,
+        input.output,
+        input.outputWorkspace,
+        input.signal
+      )
       return { unitId: result.unitId, unitType: result.unitType, images }
     } catch (error) {
       throw renderError(error)
@@ -171,7 +181,7 @@ export class RenderOperations {
   /** Compile an authorized SVG into a program for one explicit Slide page. */
   async compileSvg(input: {
     readonly source: string
-    readonly workspace: string
+    readonly workspace: FileScope
     readonly page: number
     readonly mode?: 'replace' | 'add'
     readonly signal?: AbortSignal
@@ -348,10 +358,12 @@ function isNumericPages(
 async function writeScreenshotImages(
   images: readonly ScreenshotImage[],
   output: string,
+  scope: FileScope,
   signal?: AbortSignal
 ): Promise<readonly ScreenshotServiceImage[]> {
   try {
     signal?.throwIfAborted()
+    await assertAuthorizedPath(scope, output, false, 'write')
     await mkdir(output, { recursive: true })
     return await Promise.all(
       images.map(async (image) => {
@@ -363,6 +375,7 @@ async function writeScreenshotImages(
           )
         }
         const path = resolve(output, image.name)
+        await assertAuthorizedPath(scope, path, false, 'write')
         await writeFile(path, image.bytes, signal === undefined ? undefined : { signal })
         signal?.throwIfAborted()
         return {
@@ -431,7 +444,7 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 }
 
 function assetResolver(
-  workspace: string,
+  workspace: FileScope,
   source: string
 ): (href: string) => { readonly bytes: Uint8Array } {
   return (href) => {
@@ -445,12 +458,7 @@ function assetResolver(
         { cause: error }
       )
     }
-    const fromWorkspace = relative(workspace, path)
-    if (
-      fromWorkspace === '..' ||
-      fromWorkspace.startsWith(`..${sep}`) ||
-      isAbsolute(fromWorkspace)
-    ) {
+    if (!canReadPath(workspace, path)) {
       throw new UniverError(
         `SVG asset ${JSON.stringify(href)} is outside the session workspace.`,
         'SESSION_SCOPE_DENIED'
