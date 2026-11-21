@@ -12,6 +12,7 @@ import {
   type ImportOptions
 } from '@univerjs-pro/exchange-node'
 import { UniverInstanceType } from '@univerjs/core'
+import { FileSource } from '@univerjs/protocol'
 import { withOfficeExportFiles } from '../../shared/office-export-files.ts'
 import { univerServerCredentials } from '../../shared/univer-license.ts'
 import {
@@ -167,7 +168,7 @@ async function exportUnit(
     const url = new URL(
       `${unitGatewayBase(request)}/universer-api/file/${encodeURIComponent(assetId)}/content`
     )
-    url.searchParams.set('source', '3')
+    url.searchParams.set('source', String(FileSource.UnitEmbedded))
     url.searchParams.set('assign', request.unitId)
     const response = await fetch(url, { redirect: 'error' })
     if (!response.ok) {

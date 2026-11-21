@@ -1,6 +1,7 @@
 import { readFile, stat, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { join, posix } from 'node:path'
+import { FileSource } from '@univerjs/protocol'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { startGateway, type GatewayHarness } from '../support/gateway.ts'
 import { closeServer, listen, postJson } from '../support/net.ts'
@@ -191,7 +192,7 @@ describe('import and export through the bundled exchange', () => {
       const form = new FormData()
       form.append('file', new Blob([new Uint8Array(bytes)], { type }), name)
       const response = await fetch(
-        `${exchangeBase()}/stream/file/upload?size=${bytes.byteLength}&source=1&flate=false`,
+        `${exchangeBase()}/stream/file/upload?size=${bytes.byteLength}&source=${FileSource.HttpImport}&flate=false`,
         { method: 'POST', body: form }
       )
       expect(response.status, await response.clone().text()).toBe(201)
@@ -229,7 +230,7 @@ describe('import and export through the bundled exchange', () => {
         const form = new FormData()
         form.append('file', new Blob([new Uint8Array(png)], { type: 'image/png' }), 'picture.png')
         const uploaded = await fetch(
-          `${gateway.origin}/uf/${gateway.fileKey}/worktrees/${draft}/universer-api/stream/file/upload?source=3&assign=${unitId}&size=${png.length}`,
+          `${gateway.origin}/uf/${gateway.fileKey}/worktrees/${draft}/universer-api/stream/file/upload?source=${FileSource.UnitEmbedded}&assign=${unitId}&size=${png.length}`,
           { method: 'POST', body: form }
         )
         expect(uploaded.status).toBe(201)
