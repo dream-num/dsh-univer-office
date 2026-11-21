@@ -892,9 +892,13 @@ export class CollabService {
     return this.runtime.assetStore.store(input)
   }
 
-  public openAsset(assetId: string, worktreeId?: string): UniverfileOpenedAsset | null {
+  public openAsset(
+    assetId: string,
+    worktreeId?: string,
+    unitId?: string
+  ): UniverfileOpenedAsset | null {
     const opened = this.runtime.assetStore.open(assetId)
-    if (opened === null) return null
+    if (opened === null || (unitId !== undefined && opened.record.unitId !== unitId)) return null
     if (worktreeId === undefined) {
       if (opened.record.worktreeId !== null || !this.hasUnit(opened.record.unitId)) return null
       return opened

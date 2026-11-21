@@ -340,6 +340,7 @@ async function handleExchangeApi(
     path[2] === 'task' &&
     path[3] !== undefined
   const file =
+    url.searchParams.get('source') !== '3' &&
     method === 'GET' &&
     path.length === 4 &&
     path[1] === 'file' &&
@@ -750,7 +751,11 @@ async function handleAssetApi(
     }
 
     const assetId = decodeURIComponent(path[2] ?? '')
-    const opened = univerfile.collab.openAsset(assetId, worktreeId)
+    const opened = univerfile.collab.openAsset(
+      assetId,
+      worktreeId,
+      url.searchParams.get('assign') ?? undefined
+    )
     if (opened === null) throw new AssetHttpError(404, 'The resource was not found')
     if (path[3] === 'sign-url') {
       res.setHeader('cache-control', 'private, no-store')

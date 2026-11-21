@@ -73,7 +73,7 @@ Give the agent a topic, audience, page count, content outline, and visual direct
 - **Build lightweight databases** — create Base tables, fields, records, and views with formula fields, filters, sorting, grouping, and Sheet-backed references.
 - **Draw editable canvases** — create shapes, text, connectors, images, native charts, and diagrams, with connector and layout analysis.
 - **Compose several content types** — one `.univer` file can contain Sheets, Docs, Slides, Bases, and Boards. Formulas and embedded content can reference other content in the same file.
-- **Work with Office files** — import `.xlsx`, `.csv`, `.tsv`, `.docx`, and `.pptx`, then export the edited content in the matching format.
+- **Work with Office files** — import `.xlsx`, `.csv`, `.tsv`, `.docx`, and `.pptx`, then export the edited content in the matching format. Word, Excel, and PowerPoint exports include embedded pictures. Pictures linked by an external URL export as transparent placeholders.
 - **Review agent changes safely** — every write starts in an isolated draft. Watch changes live, then approve or discard them instead of letting the agent overwrite the current version.
 - **Compare worktree changes semantically** — switch a draft or submitted worktree from View to Compare to inspect Sheet, Doc, Slide, Base, or Board changes side by side against a pinned trunk version or another active worktree.
 

@@ -12,6 +12,7 @@ import {
   type ImportOptions
 } from '@univerjs-pro/exchange-node'
 import { UniverInstanceType } from '@univerjs/core'
+import { withOfficeExportFiles } from '../../shared/office-export-files.ts'
 import { univerServerCredentials } from '../../shared/univer-license.ts'
 import {
   executeUnitContent,
@@ -26,6 +27,7 @@ import {
   loadUnitContentRuntime,
   parseUnitContentRuntimeInit,
   requiredString,
+  unitGatewayBase,
   type UnitContentRuntimeInit
 } from './runtime/content-runtime.ts'
 
@@ -160,39 +162,48 @@ async function exportUnit(
   request: ExportRequest,
   unitData: Awaited<ReturnType<UniverCollaborationRuntime['exportUnitData']>>
 ): Promise<void> {
-  const extension = extname(request.outputPath).toLowerCase()
-  switch (request.unitType) {
+  const options = unitExportOptions(request.unitType, extname(request.outputPath).toLowerCase())
+  const scopedOptions = withOfficeExportFiles(options, request.unitId, async (assetId) => {
+    const url = new URL(
+      `${unitGatewayBase(request)}/universer-api/file/${encodeURIComponent(assetId)}/content`
+    )
+    url.searchParams.set('source', '3')
+    url.searchParams.set('assign', request.unitId)
+    const response = await fetch(url, { redirect: 'error' })
+    if (!response.ok) {
+      await response.body?.cancel()
+      if (response.status === 404) return undefined
+      throw new Error('Could not read the embedded Office file from the Gateway.')
+    }
+    return new Uint8Array(await response.arrayBuffer())
+  })
+  await exportOfficeFile(
+    unitData as Readonly<Record<string, unknown>>,
+    request.outputPath,
+    scopedOptions
+  )
+}
+
+function unitExportOptions(unitType: UniverInstanceType, extension: string): ExportOptions {
+  switch (unitType) {
     case UniverInstanceType.UNIVER_SHEET:
-      await exportOfficeFile(unitData as Readonly<Record<string, unknown>>, request.outputPath, {
+      return {
         format: sheetLikeFormat(extension, 'Sheet'),
         formulaCalculation: FormulaCalculationMode.FORCED,
-        type: UniverInstanceType.UNIVER_SHEET
-      } as ExportOptions)
-      return
+        type: unitType
+      } as ExportOptions
     case UniverInstanceType.UNIVER_BASE:
-      await exportOfficeFile(unitData as Readonly<Record<string, unknown>>, request.outputPath, {
-        format: sheetLikeFormat(extension, 'Base'),
-        type: UniverInstanceType.UNIVER_BASE
-      } as ExportOptions)
-      return
+      return { format: sheetLikeFormat(extension, 'Base'), type: unitType } as ExportOptions
     case UniverInstanceType.UNIVER_DOC:
       requireExtension(extension, '.docx', 'Doc')
-      await exportOfficeFile(unitData as Readonly<Record<string, unknown>>, request.outputPath, {
-        format: ExchangeFormat.DOCX,
-        type: UniverInstanceType.UNIVER_DOC
-      })
-      return
+      return { format: ExchangeFormat.DOCX, type: unitType }
     case UniverInstanceType.UNIVER_SLIDE:
       requireExtension(extension, '.pptx', 'Slide')
-      await exportOfficeFile(unitData as Readonly<Record<string, unknown>>, request.outputPath, {
-        format: ExchangeFormat.PPTX,
-        type: UniverInstanceType.UNIVER_SLIDE
-      })
-      return
+      return { format: ExchangeFormat.PPTX, type: unitType }
     default:
       throw codedError(
         'EXPORT_UNIT_TYPE_UNSUPPORTED',
-        `Unit type ${String(request.unitType)} cannot be exported`
+        `Unit type ${String(unitType)} cannot be exported`
       )
   }
 }
