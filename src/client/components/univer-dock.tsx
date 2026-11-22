@@ -16,10 +16,13 @@ import type { ViewerLocaleInjected } from '../viewer-locale.ts'
 import { WorktreeWindow } from './worktree-window.tsx'
 
 interface UniverDockShared extends PropsLocale<'univer'>, ViewerLocaleInjected {
+  readonly dismissedFiles: Map<SessionId, Set<string>>
   readonly preferences: UniverPreferences
 }
 
 export type UniverDockProps = PropsRuntime<'conversation.input.dock'> & UniverDockShared
+
+const MAX_WINDOWS = 3
 
 interface OpenWindow {
   readonly file: string
@@ -63,10 +66,13 @@ function UniverSessionDock(
     () => props.preferences.getSnapshot().livePreview
   )
 
+  const { dismissedFiles, sessionId } = props
+
   React.useEffect(() => {
     if (!livePreviewEnabled) return
     const additions: OpenWindow[] = []
     for (const file of turnFiles) {
+      if (dismissedFiles.get(sessionId)?.has(file.file)) continue
       for (const operation of file.operations) {
         if (operation.phase === 'failed' || !opensFloatingWindow(operation)) continue
         const candidate = openWindowOf(operation, file.file)
@@ -78,10 +84,13 @@ function UniverSessionDock(
     if (additions.length === 0) return
     setOpen((previous) => {
       const next = { ...previous }
-      for (const addition of additions) next[addition.file] = addition
+      for (const addition of additions) {
+        if (Object.hasOwn(next, addition.file) || Object.keys(next).length < MAX_WINDOWS)
+          next[addition.file] = addition
+      }
       return next
     })
-  }, [turnFiles, livePreviewEnabled])
+  }, [turnFiles, livePreviewEnabled, dismissedFiles, sessionId])
 
   const files = Object.keys(open)
   const { states } = useUniverStates(
@@ -124,13 +133,16 @@ function UniverSessionDock(
           stackIndex={stackIndex}
           t={props.t}
           viewerLocale={props.getViewerLocale()}
-          onDismiss={() =>
+          onDismiss={() => {
+            const closed = dismissedFiles.get(sessionId) ?? new Set<string>()
+            closed.add(target.file)
+            dismissedFiles.set(sessionId, closed)
             setOpen((previous) => {
               const next = { ...previous }
               delete next[target.file]
               return next
             })
-          }
+          }}
         />
       ))}
     </div>,

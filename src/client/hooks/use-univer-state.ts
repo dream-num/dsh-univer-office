@@ -21,15 +21,25 @@ export function useUniverStates(
   const [states, setStates] = React.useState<Record<string, FileState>>({})
   const [missing, setMissing] = React.useState<Record<string, true>>({})
   const key = files.join('\u0000')
+  const previousQuery = React.useRef({ sessionId, files: new Set<string>() })
   React.useEffect(() => {
-    if (key === '') {
+    const trackedFiles = key === '' ? [] : key.split('\u0000')
+    const previous = previousQuery.current
+    previousQuery.current = { sessionId, files: new Set(trackedFiles) }
+    // Closing one window must not unmount the Viewers for files that are still open.
+    if (
+      previous.sessionId === sessionId &&
+      trackedFiles.length < previous.files.size &&
+      trackedFiles.every((file) => previous.files.has(file))
+    ) {
+      setStates((current) =>
+        Object.fromEntries(Object.entries(current).filter(([file]) => trackedFiles.includes(file)))
+      )
+    } else {
       setStates({})
-      setMissing({})
-      return
     }
-    const trackedFiles = key.split('\u0000')
-    setStates({})
     setMissing({})
+    if (trackedFiles.length === 0) return
     let active = true
     const poll = async (): Promise<void> => {
       for (const file of trackedFiles) {

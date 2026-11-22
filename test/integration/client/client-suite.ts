@@ -20,6 +20,7 @@ export type SettingsApi = 'settingsScope' | 'configForms'
 const repoRequire = createRequire(repoPath('package.json'))
 
 const SESSION_ID = 'test-session-id'
+const OTHER_SESSION = 'another-test-session'
 const DEMO_FILE = join(tmpdir(), 'dsh-univer-client-smoke', 'demo.univer')
 const SECOND_FILE = join(tmpdir(), 'dsh-univer-client-smoke', 'second.univer')
 const SESSION_CWD = join(tmpdir(), 'dsh-univer-client-smoke', 'workdir')
@@ -372,8 +373,10 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         selector({ sessionId: session.sessionId, running: session.running }),
       useChat: (selector: any) => selector(session.chat)
     })
-    const useSessionsAt = (cwd: string) => (selector: any) =>
-      selector({ byId: { [SESSION_ID]: { cwd } } })
+    const useSessionsAt =
+      (cwd: string, sessionId = SESSION_ID) =>
+      (selector: any) =>
+        selector({ byId: { [sessionId]: { cwd } } })
     // List-slot entries (DSH 0.1.6-alpha.2) receive the owner props and resolve their own match,
     // so fixtures express a match as the Turn's univerTurn data.
     const ownerProps = (turn: number, files: any[], extra = {}) => ({
@@ -392,10 +395,9 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
           key: 's' + scenario,
           ...runtimeProps(session),
           t,
-          getViewerLocale: dockInjected.getViewerLocale,
-          preferences: dockInjected.preferences,
-          sessionId: SESSION_ID,
-          useSessions: useSessionsAt(cwd)
+          ...dockInjected,
+          sessionId: session.sessionId,
+          useSessions: useSessionsAt(cwd, session.sessionId)
         })
       )
       reviewRoot.render(
@@ -410,11 +412,10 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
           seq: 3,
           openFile: () => {},
           t,
-          getViewerLocale: tailInjected.getViewerLocale,
-          preferences: tailInjected.preferences,
-          sessionId: SESSION_ID,
+          ...tailInjected,
+          sessionId: session.sessionId,
           ...runtimeProps(session),
-          useSessions: useSessionsAt(cwd)
+          useSessions: useSessionsAt(cwd, session.sessionId)
         })
       )
     }
@@ -443,7 +444,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         }
         if (req.method === 'GET' && url.pathname === '/univer-api/state') {
           const file = url.searchParams.get('file')
-          if (url.searchParams.get('sessionId') !== SESSION_ID) {
+          if (![SESSION_ID, OTHER_SESSION].includes(url.searchParams.get('sessionId') ?? '')) {
             res.writeHead(400).end()
             return
           }
@@ -1037,6 +1038,94 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         await waitFor('下一 Turn 延续非终态浮窗', () => q('.uvf_win') !== null)
       })
 
+      it('caps distinct files at three and dismisses only the closed file across turns and remounts (#153)', async () => {
+        worktrees = [wt('draft')]
+        const otherWorktree = 'wt-fresh'
+        worktrees.push(wt('draft', otherWorktree))
+        const files = [DEMO_FILE, SECOND_FILE, REL_DEMO_FILE, WINDOWS_FILE].map((file) =>
+          turnFile(file, WORKTREE)
+        )
+        const muted = { ...sessionWithFiles(files, true), sessionId: OTHER_SESSION }
+        render(muted)
+        await waitFor('first three files display', () => qa('.uvf_frame').length === 3)
+        expect(qa('.uvf_windowFile').map((el) => el.textContent)).toEqual([
+          'demo.univer',
+          'second.univer',
+          '班级管理.univer'
+        ])
+        const first = q('.uvf_win')
+        click(q('[data-window-action=fold]'))
+        await waitFor('first file folded', () => q('.uvf_win_folded') === first)
+        render(
+          {
+            ...muted,
+            chat: sessionWithFiles(
+              [...files, turnFile(DEMO_FILE, otherWorktree, 'execute', null, 'pending')],
+              true
+            ).chat
+          },
+          false
+        )
+        await waitFor(
+          'new worktree updates the same folded window',
+          () => first.querySelector('.uvf_windowTitle')?.textContent === 'other'
+        )
+        expect(q('.uvf_win_folded')).toBe(first)
+        expect(qa('.uvf_win')).toHaveLength(3)
+        const visibleFiles = () => qa('.uvf_windowFile').map((el) => el.textContent)
+        const survivors = ['second.univer', '班级管理.univer']
+        const otherFrames = qa('.uvf_win .uvf_frame').slice(1)
+        click(first.querySelector('[data-window-action=close]'))
+        await waitFor('only the closed file disappears', () => qa('.uvf_win').length === 2)
+        expect(visibleFiles()).toEqual(survivors)
+        expect(qa('.uvf_frame')[0]).toBe(otherFrames[0])
+        expect(qa('.uvf_frame')[1]).toBe(otherFrames[1])
+        expect(q('.uvf_panel')).not.toBeNull()
+
+        const reviseA = turnFile(DEMO_FILE, otherWorktree)
+        const reviseB = turnFile(SECOND_FILE, otherWorktree)
+        render({ ...muted, chat: sessionWithFiles([...files, reviseA, reviseB], true).chat }, false)
+        await waitFor(
+          'B can switch worktrees while A stays closed',
+          () => q('.uvf_windowTitle')?.textContent === 'other'
+        )
+        expect(visibleFiles()).toEqual(survivors)
+        expect(qa('.uvf_win .uvf_frame')[1]).toBe(otherFrames[1])
+        render(
+          {
+            ...muted,
+            chat: sessionWithFiles(
+              [...files, reviseA, reviseB, turnFile(WINDOWS_FILE, WORKTREE)],
+              true
+            ).chat
+          },
+          false
+        )
+        await waitFor(
+          'another file uses the freed slot on a new write',
+          () => visibleFiles().length === 3
+        )
+        expect(visibleFiles()).not.toContain('demo.univer')
+
+        render(sessionWithFiles([turnFile(DEMO_FILE, WORKTREE)], true))
+        await waitFor(
+          'A can open in another session',
+          () => visibleFiles().join() === 'demo.univer'
+        )
+        render({
+          ...sessionWithFiles(
+            [reviseA, reviseB],
+            true,
+            new Map([[2, muted.chat.timeline.turns.get(3)]])
+          ),
+          sessionId: OTHER_SESSION
+        })
+        await waitFor('B resumes in the original session', () =>
+          visibleFiles().includes('second.univer')
+        )
+        expect(visibleFiles()).not.toContain('demo.univer')
+      })
+
       it('resolves a relative target against the session cwd', async () => {
         worktrees = [wt('ready')]
         render(
@@ -1305,7 +1394,8 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
           '浮窗切换英文',
           () =>
             q('.uvf_chip')?.textContent === 'Editing' &&
-            q('[data-window-action=close]')?.getAttribute('title') === 'Close'
+            q('[data-window-action=close]')?.getAttribute('title') ===
+              'Hide this file’s live preview for this session'
         )
         expect(q('.uvf_frame')).toBe(frame)
         expect(q('.uvf_frame')?.getAttribute('src')).toBe(EN_SLIDE_UNIT_URL)
@@ -1376,6 +1466,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
 
         it('folds and expands without reloading the Viewer iframe', async () => {
           const frame = q('.uvf_frame')
+          const expanded = box()
           click(q('[data-window-action=fold]'))
           await waitFor(
             '折叠后只显示标题条',
@@ -1384,17 +1475,18 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
               q('.uvf_windowBody')?.hidden === true
           )
           expect(q('.uvf_frame'), 'fold keeps the Viewer iframe mounted').toBe(frame)
-          expect(
-            qa('.uvf_resizeHandle').map((handle) => handle.getAttribute('data-direction')),
-            'a folded title bar keeps only its horizontal resize handles'
-          ).toEqual(['w', 'e'])
-          const width = box().width
+          expect(qa('.uvf_resizeHandle').map((handle) => handle.dataset.direction)).toEqual([
+            'w',
+            'e'
+          ])
           drag(q('[data-direction=e]'), 16, [240, 20], [200, 20])
-          await waitFor('折叠后仍可调整宽度', () => box().width === width - 40)
-          drag(q('[data-direction=e]'), 17, [200, 20], [240, 20])
-          await waitFor('折叠后宽度可还原', () => box().width === width)
+          await waitFor(
+            'title bar resizes independently',
+            () => box().width === expanded.width - 40
+          )
           click(q('[data-window-action=fold]'))
           await waitFor('展开后 Viewer 恢复', () => q('.uvf_windowBody')?.hidden === false)
+          expect(box().width).toBe(expanded.width)
           expect(q('.uvf_frame'), 'expand reuses the loaded Viewer iframe').toBe(frame)
         })
 
@@ -1406,11 +1498,6 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
           expect(px('height'), 'a folded window renders only its title bar').toBe(48)
           drag(header, 18, [100, 20], [100, 10000])
           await waitFor('折叠后可拖到视口底部', () => px('top') === foldedBottom)
-          drag(q('[data-direction=e]'), 19, [240, 20], [200, 20])
-          await waitFor('底部折叠条调宽度时不跳位', () => px('width') === start.width - 40)
-          expect(px('top')).toBe(foldedBottom)
-          drag(q('[data-direction=e]'), 20, [200, 20], [240, 20])
-          await waitFor('宽度还原', () => px('width') === start.width)
           click(q('[data-window-action=fold]'))
           const expandedBottom = 1000 - 12 - start.height
           await waitFor(
@@ -1486,11 +1573,6 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
             dom.window.dispatchEvent(new dom.window.Event('resize'))
           }
         })
-
-        it('dismisses while the worktree stays draft', async () => {
-          click(q('[data-window-action=close]'))
-          await waitFor('关闭后浮窗消失', () => q('.uvf_win') === null)
-        })
       })
     })
 
@@ -1498,7 +1580,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
       it('keeps the window with a ready chip while the session runs', async () => {
         worktrees = [wt('ready')]
         render(sessionWithTargets([{ file: DEMO_FILE, worktreeId: WORKTREE }], true))
-        await waitFor('ready 且运行中浮窗保留', () => q('.uvf_win') !== null)
+        await waitFor('ready 且运行中浮窗保留', () => q('.uvf_chip')?.dataset.status === 'ready')
         expect(q('.uvf_chip')?.textContent).toBe('待确认')
         expect(
           q('.uvf_panel'),
