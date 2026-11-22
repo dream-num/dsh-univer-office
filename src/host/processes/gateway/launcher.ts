@@ -30,7 +30,7 @@ export function gatewayLaunch(port: number): {
     args: [GATEWAY_ENTRY],
     options: {
       env: spawnEnvironment(env),
-      stdio: ['ignore', 'ignore', 'pipe'],
+      stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
       windowsHide: true
     }
   }

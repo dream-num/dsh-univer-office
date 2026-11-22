@@ -1,5 +1,8 @@
 import process from 'node:process'
-import { GATEWAY_PORT_IN_USE_EXIT_CODE } from '../shared/gateway-process-protocol.js'
+import {
+  GATEWAY_LISTENING,
+  GATEWAY_PORT_IN_USE_EXIT_CODE
+} from '../shared/gateway-process-protocol.js'
 import { startServer } from './server.js'
 
 // DSH plugin gateway entry: bridges the plugin launcher environment
@@ -15,6 +18,16 @@ async function main(): Promise<void> {
     ...(viewAssetsRoot === undefined ? {} : { viewAssetsRoot }),
     ...(allowedRoot === undefined ? {} : { allowedRoot })
   })
+
+  if (process.send !== undefined) {
+    // The Host may have exited while the SDK was initializing.
+    if (!process.connected) {
+      await server.close()
+      return
+    }
+    process.once('disconnect', () => void server.close())
+    process.send({ type: GATEWAY_LISTENING, port: server.port })
+  }
 
   process.stdout.write(`[dsh-univer-gateway] listening on http://127.0.0.1:${server.port}\n`)
 }
