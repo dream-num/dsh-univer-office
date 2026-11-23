@@ -4,11 +4,11 @@ Provider 先确定文件、worktree、Unit 和类型，再把检查、执行、�
 
 ## 池化执行
 
-Unit 的检查、执行和 render-source 读取（lint、截图与 PDF 打印的数据来源）由 Unit Content Adapter 从 `@univer-cli/univer-collaboration-runtime-pool` 取得 keyed lease。Key 由 Gateway origin、文件路径、trunk/worktree scope、Unit ID 与 Unit type 组成；每个 key 对应一个由 pool fork 的 Collaboration Runtime Worker 子进程，加载 `artifacts/collaboration-runtime-worker.mjs` 并通过与一次性 Worker 相同的 server backend 连接 Gateway。Pool 的 bootstrap `worker-child.mjs` 按其模块位置查找，因此构建把它复制到 `lib/index.js` 旁。
+Unit 的检查、执行和 render-source 读取（lint、截图与 PDF 打印的数据来源）由 Unit Content Adapter 从 `@univer-cli/univer-collaboration-runtime-pool` 取得 keyed lease。Key 由 Gateway origin、文件路径、trunk/worktree scope、Unit ID 与 Unit type 组成；每个 key 对应独立的 Unit runtime 和 Univer 实例。Pool 按 SDK 默认值在每个 Worker 子进程中承载最多 10 个 runtime。Worker 加载 `artifacts/collaboration-runtime-worker.mjs` 并通过与一次性 Worker 相同的 server backend 连接 Gateway。Pool 的 bootstrap `worker-child.mjs` 按其模块位置查找，因此构建把它复制到 `lib/index.js` 旁。
 
 - 每次使用先 pull 再执行。Gateway 始终是内容与 revision 的唯一依据，缓存的 runtime 不构成授权或内容真相。
-- 常驻 Worker 数上限为 `unitContentRuntimeMaxEntries`（默认 20，与 cli-sdk 一致），满员时淘汰最久未用的空闲 runtime；全部忙碌时 pool 直接以 `COLLABORATION_POOL_CAPACITY_EXCEEDED` 拒绝，Host 不排队。空闲超过 `unitContentRuntimeIdleTtlMs`（默认 5 分钟）后退出。将 `unitContentRuntimeMaxEntries` 设为 `0` 时所有操作回到一次性 Worker。
-- 操作成功后 release 复用；任何失败（包括 pull 冲突、取消、超时、Worker 崩溃或协议错误）都销毁该 Worker，保证失败写入的部分 mutation 不会被后续操作提交，下一次使用重新加载。
+- 缓存容量由 `unitContentRuntimeMaxEntries` 控制（默认 50），按 Unit runtime 计数。满员时淘汰最久未用的空闲 runtime；全部忙碌时，获取新 key 会返回 `COLLABORATION_POOL_CAPACITY_EXCEEDED`。runtime 空闲超过 `unitContentRuntimeIdleTtlMs`（默认 5 分钟）后回收，Worker 的最后一个 runtime 关闭后进程退出。将容量设为 `0` 时所有操作回到一次性 Worker。
+- 操作成功后释放 lease 供复用；操作失败或取消时，Host 使该 Unit 的 lease 失效，下次操作从 Gateway 重新加载。Worker 崩溃或请求超时导致进程终止时，同进程的其他 runtime 也会丢失尚未提交的修改，已确认的 revision 保存在 Gateway 中。
 - Host 不主动驱逐 runtime：merge/discard 或 Unit remove 后不再使用的 runtime 由空闲超时或 LRU 回收。Provider 卸载时先关闭 pool，再停止 Gateway。
 - Pool 忽略子进程 stdio，因此池化 Worker 的失败只以结构化错误码与消息返回，不再附带 stderr 诊断。
 

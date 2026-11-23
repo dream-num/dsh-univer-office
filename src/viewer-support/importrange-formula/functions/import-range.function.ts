@@ -1,4 +1,5 @@
-import type { IReferencedUnitManagerService, IResourceRef } from '@univerjs-pro/embed'
+import type { IReferencedUnitManagerService } from '@univerjs-pro/embed'
+import type { IResourceRef } from '@univerjs-pro/resources'
 import type {
   FormulaFunctionResultValueType,
   FormulaFunctionValueType
@@ -10,7 +11,8 @@ import {
   type PrimitiveValueType,
   serializeRange
 } from '@univerjs/engine-formula'
-import { EmbedError, EmbedErrorCode, parseResourceRef } from '@univerjs-pro/embed'
+import { EmbedError, EmbedErrorCode } from '@univerjs-pro/embed'
+import { parseResourceRef } from '@univerjs-pro/resources'
 
 export const IMPORT_RANGE_FORMULA_NAME = 'IMPORTRANGE'
 
