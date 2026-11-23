@@ -3,7 +3,7 @@ import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { UniverError } from '../../service/errors.ts'
 import type { UniverResourceResult } from '../../service/types.ts'
-import { resolveNewWorkspacePath } from '../../service/workspace.ts'
+import { resolveWritableOutput } from '../../service/workspace.ts'
 import { toolFileScope } from '../workspace.ts'
 
 const resourceOutput = {
@@ -84,7 +84,7 @@ export function resourcesTool(ctx: Context, timeoutMs: number) {
       const handles = nonEmptyList(args.handles, 'handles', 'export')
       const outputArg = nonEmpty(args.output, 'export requires a non-empty output directory.')
       const scope = toolFileScope(ctx, exec)
-      const output = await resolveNewWorkspacePath(scope, outputArg)
+      const output = await resolveWritableOutput(scope, outputArg)
       return ctx.univer.resources(
         {
           action: 'export',

@@ -35,7 +35,12 @@ import type {
 } from '../service/types.ts'
 import { UniverError } from '../service/errors.ts'
 import { UniverService } from '../service/univer-service.ts'
-import { assertAuthorizedPath, canWritePath } from '../service/workspace.ts'
+import {
+  assertReadableFile,
+  assertWritableFile,
+  assertWritableOutput,
+  canWritePath
+} from '../service/workspace.ts'
 import { GatewaySupervisor } from '../processes/gateway/supervisor.ts'
 import { UnitContentOperations } from './unit-content-operations.ts'
 import { StateCache } from './state-cache.ts'
@@ -102,7 +107,7 @@ export class GatewayUniverService extends UniverService {
 
   /** Return cached collaboration state for one authorized file. */
   async fileState(request: FileStateRequest): Promise<FileState> {
-    await assertAuthorizedPath(request.workspace, request.file, true, 'read')
+    await assertReadableFile(request.workspace, request.file)
     if (!canWritePath(request.workspace, request.file))
       return this.computeFileState(request.file, false)
     return this.stateCache.get(request.file, () => this.computeFileState(request.file, true))
@@ -110,7 +115,7 @@ export class GatewayUniverService extends UniverService {
 
   /** Apply a browser review decision and return the refreshed state. */
   async worktreeAction(request: WorktreeActionRequest): Promise<WorktreeActionResult> {
-    await assertAuthorizedPath(request.workspace, request.file, true, 'write')
+    await assertWritableFile(request.workspace, request.file)
     const available = await this.ensureGateway()
     if (!available.ok) return { ok: false, reason: available.reason }
     try {
@@ -146,7 +151,7 @@ export class GatewayUniverService extends UniverService {
     request: NewUniverFileRequest,
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
-    await assertAuthorizedPath(request.workspace, request.file, false, 'write')
+    await assertWritableOutput(request.workspace, request.file)
     signal?.throwIfAborted()
     const gateway = await this.requireGateway()
     const result = await new GatewayFileApi(
@@ -165,7 +170,7 @@ export class GatewayUniverService extends UniverService {
 
   /** Return trunk and worktree identities needed before model edits. */
   async status(request: FileStatusRequest, signal?: AbortSignal): Promise<UniverOperationResult> {
-    await assertAuthorizedPath(request.workspace, request.file, true, 'read')
+    await assertReadableFile(request.workspace, request.file)
     signal?.throwIfAborted()
     const gateway = await this.requireGateway()
     const client = new GatewayClient(gateway, this.config.gatewayRequestTimeoutMs)
@@ -217,7 +222,7 @@ export class GatewayUniverService extends UniverService {
     request: WorktreeOperationRequest,
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
-    await assertAuthorizedPath(request.workspace, request.file, true, 'write')
+    await assertWritableFile(request.workspace, request.file)
     signal?.throwIfAborted()
     const gateway = await this.requireGateway()
     const api = new GatewayWorktreeApi(
@@ -241,7 +246,7 @@ export class GatewayUniverService extends UniverService {
 
   /** Create or remove one Unit inside a draft worktree. */
   async unit(request: UnitOperationRequest, signal?: AbortSignal): Promise<UniverOperationResult> {
-    await assertAuthorizedPath(request.workspace, request.file, true, 'write')
+    await assertWritableFile(request.workspace, request.file)
     signal?.throwIfAborted()
     const gateway = await this.requireGateway()
     await this.requireWorktreeStatus(gateway, request.file, request.worktreeId, 'draft')
@@ -268,7 +273,7 @@ export class GatewayUniverService extends UniverService {
     request: InspectUnitContentRequest,
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
-    await assertAuthorizedPath(request.workspace, request.file, true, 'read')
+    await assertReadableFile(request.workspace, request.file)
     const gateway = await this.requireGateway()
     return this.unitContent.inspect(gateway, request, signal)
   }
@@ -278,12 +283,12 @@ export class GatewayUniverService extends UniverService {
     request: ExecuteUnitContentRequest,
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
-    await assertAuthorizedPath(request.workspace, request.file, true, 'write')
+    await assertWritableFile(request.workspace, request.file)
     let code: string
     if ('code' in request) {
       code = request.code
     } else {
-      await assertAuthorizedPath(request.workspace, request.codeFile, true, 'read')
+      await assertReadableFile(request.workspace, request.codeFile)
       try {
         code = await readFile(request.codeFile, { encoding: 'utf8', signal })
       } catch (cause) {
@@ -314,8 +319,8 @@ export class GatewayUniverService extends UniverService {
   ): Promise<UniverOperationResult> {
     const sourceWorkspace = request.sourceWorkspace ?? request.workspace
     await Promise.all([
-      assertAuthorizedPath(request.workspace, request.file, true, 'write'),
-      assertAuthorizedPath(sourceWorkspace, request.source, true, 'read')
+      assertWritableFile(request.workspace, request.file),
+      assertReadableFile(sourceWorkspace, request.source)
     ])
     const gateway = await this.requireGateway()
     await this.requireWorktreeStatus(gateway, request.file, request.worktreeId, 'draft')
@@ -341,8 +346,8 @@ export class GatewayUniverService extends UniverService {
   ): Promise<UniverOperationResult> {
     const outputWorkspace = request.outputWorkspace ?? request.workspace
     await Promise.all([
-      assertAuthorizedPath(request.workspace, request.file, true, 'read'),
-      assertAuthorizedPath(outputWorkspace, request.output, false, 'write')
+      assertReadableFile(request.workspace, request.file),
+      assertWritableOutput(outputWorkspace, request.output)
     ])
     const gateway = await this.requireGateway()
     return this.unitContent.export(gateway, request, signal)
@@ -353,7 +358,7 @@ export class GatewayUniverService extends UniverService {
     request: LintUnitLayoutRequest,
     signal?: AbortSignal
   ): Promise<UniverOperationResult> {
-    await assertAuthorizedPath(request.workspace, request.file, true, 'read')
+    await assertReadableFile(request.workspace, request.file)
     const gateway = await this.requireGateway()
     const source = await this.unitContent.renderSource(
       gateway,
@@ -373,8 +378,8 @@ export class GatewayUniverService extends UniverService {
   ): Promise<ScreenshotServiceResult> {
     const outputWorkspace = request.outputWorkspace ?? request.workspace
     await Promise.all([
-      assertAuthorizedPath(request.workspace, request.file, true, 'read'),
-      assertAuthorizedPath(outputWorkspace, request.output, false, 'write')
+      assertReadableFile(request.workspace, request.file),
+      assertWritableOutput(outputWorkspace, request.output)
     ])
     const gateway = await this.requireGateway()
     const source = await this.renderSources.load(
@@ -395,7 +400,7 @@ export class GatewayUniverService extends UniverService {
     })
     await Promise.all(
       result.images.map(async (image) => {
-        await assertAuthorizedPath(outputWorkspace, image.path, true, 'write')
+        await assertWritableFile(outputWorkspace, image.path)
       })
     )
     return { ok: true, operation: 'screenshot', file: request.file, result }
@@ -408,8 +413,8 @@ export class GatewayUniverService extends UniverService {
   ): Promise<UniverOperationResult> {
     const outputWorkspace = request.outputWorkspace ?? request.workspace
     await Promise.all([
-      assertAuthorizedPath(request.workspace, request.file, true, 'read'),
-      assertAuthorizedPath(outputWorkspace, request.output, false, 'write')
+      assertReadableFile(request.workspace, request.file),
+      assertWritableOutput(outputWorkspace, request.output)
     ])
     const gateway = await this.requireGateway()
     const source = await this.renderSources.load(
@@ -425,7 +430,7 @@ export class GatewayUniverService extends UniverService {
       outputWorkspace,
       ...(signal === undefined ? {} : { signal })
     })
-    await assertAuthorizedPath(outputWorkspace, result.output, true, 'write')
+    await assertWritableFile(outputWorkspace, result.output)
     return { ok: true, operation: 'print-pdf', file: request.file, result }
   }
 
@@ -436,8 +441,8 @@ export class GatewayUniverService extends UniverService {
   ): Promise<UniverOperationResult> {
     const sourceWorkspace = request.sourceWorkspace ?? request.workspace
     await Promise.all([
-      assertAuthorizedPath(request.workspace, request.file, true, 'write'),
-      assertAuthorizedPath(sourceWorkspace, request.source, true, 'read')
+      assertWritableFile(request.workspace, request.file),
+      assertReadableFile(sourceWorkspace, request.source)
     ])
     if (!Number.isSafeInteger(request.page) || request.page < 1) {
       throw new UniverError('SVG target page must be a positive integer.', 'INVALID_REQUEST')

@@ -12,7 +12,7 @@ import type { JsonValue, ScreenshotTarget } from '../../service/types.ts'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { UniverError } from '../../service/errors.ts'
 import { operationTitle } from '../presentation.ts'
-import { resolveExistingUniverPath, resolveNewWorkspacePath } from '../../service/workspace.ts'
+import { resolveReadableUniverPath, resolveWritableOutput } from '../../service/workspace.ts'
 import { toolFileScope } from '../workspace.ts'
 
 // The outer layer carries the renderer's declared PNG facts; the inner `image`
@@ -147,8 +147,8 @@ export function screenshotTool(ctx: Context, timeoutMs: number) {
       await assertImageCapableRoute(ctx, exec, args.file)
       const scope = toolFileScope(ctx, exec)
       const [target, output] = await Promise.all([
-        resolveExistingUniverPath(scope, args.file, 'read'),
-        resolveNewWorkspacePath(scope, args.output)
+        resolveReadableUniverPath(scope, args.file),
+        resolveWritableOutput(scope, args.output)
       ])
       const captured = await ctx.univer.screenshotUnit(
         {

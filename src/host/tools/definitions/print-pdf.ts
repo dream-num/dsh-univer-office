@@ -2,7 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
-import { resolveExistingUniverPath, resolveNewWorkspacePath } from '../../service/workspace.ts'
+import { resolveReadableUniverPath, resolveWritableOutput } from '../../service/workspace.ts'
 import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_print_pdf` tool definition. */
@@ -37,8 +37,8 @@ export function printPdfTool(ctx: Context, timeoutMs: number) {
     async execute(args, exec) {
       const scope = toolFileScope(ctx, exec)
       const [target, output] = await Promise.all([
-        resolveExistingUniverPath(scope, args.file, 'read'),
-        resolveNewWorkspacePath(scope, args.output)
+        resolveReadableUniverPath(scope, args.file),
+        resolveWritableOutput(scope, args.output)
       ])
       return ctx.univer.printUnitPdf(
         {

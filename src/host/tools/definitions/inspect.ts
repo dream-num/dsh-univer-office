@@ -3,7 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { UniverError } from '../../service/errors.ts'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
-import { resolveExistingUniverPath } from '../../service/workspace.ts'
+import { resolveReadableUniverPath } from '../../service/workspace.ts'
 import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_inspect` tool definition. */
@@ -50,7 +50,7 @@ export function inspectTool(ctx: Context, timeoutMs: number) {
         )
       }
       const scope = toolFileScope(ctx, exec)
-      const target = await resolveExistingUniverPath(scope, args.file, 'read')
+      const target = await resolveReadableUniverPath(scope, args.file)
       return ctx.univer.inspectUnitContent(
         {
           workspace: target.workspace,

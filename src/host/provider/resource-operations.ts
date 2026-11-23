@@ -12,7 +12,7 @@ import {
 } from '@univer-cli/resource-library'
 import { UniverError } from '../service/errors.ts'
 import type { JsonValue, ResourceOperationRequest, UniverResourceResult } from '../service/types.ts'
-import { assertAuthorizedPath } from '../service/workspace.ts'
+import { assertWritableFile, assertWritableOutput } from '../service/workspace.ts'
 
 const require = createRequire(import.meta.url)
 
@@ -62,7 +62,7 @@ export class ResourceOperations {
         return result({ resourceCount: cleared.resourceCount, byteCount: cleared.byteCount })
       }
 
-      await assertAuthorizedPath(request.outputWorkspace, request.output, false, 'write')
+      await assertWritableOutput(request.outputWorkspace, request.output)
       const exported = await library.export({
         handles: request.handles,
         destination: request.output
@@ -70,7 +70,7 @@ export class ResourceOperations {
       signal?.throwIfAborted()
       await Promise.all(
         exported.exported.map(async (item) => {
-          await assertAuthorizedPath(request.outputWorkspace, item.path, true, 'write')
+          await assertWritableFile(request.outputWorkspace, item.path)
         })
       )
       return result(exported as unknown as JsonValue)
@@ -100,7 +100,7 @@ export class ResourceOperations {
         write: async (destination, filename, svg) => {
           if (scope === undefined)
             throw new UniverError('Missing resource export scope.', 'SESSION_SCOPE_UNAVAILABLE')
-          await assertAuthorizedPath(scope, resolve(destination, filename), false, 'write')
+          await assertWritableOutput(scope, resolve(destination, filename))
           return this.output.write(destination, filename, svg)
         }
       },

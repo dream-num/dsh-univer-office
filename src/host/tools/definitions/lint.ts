@@ -3,7 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { UniverError } from '../../service/errors.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
-import { resolveExistingUniverPath } from '../../service/workspace.ts'
+import { resolveReadableUniverPath } from '../../service/workspace.ts'
 import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_lint` tool definition. */
@@ -34,7 +34,7 @@ export function lintTool(ctx: Context, timeoutMs: number) {
     output: operationOutput,
     async execute(args, exec) {
       const scope = toolFileScope(ctx, exec)
-      const target = await resolveExistingUniverPath(scope, args.file, 'read')
+      const target = await resolveReadableUniverPath(scope, args.file)
       const pages = args.pages?.map((selector) => {
         if (typeof selector === 'number') return selector
         const value = selector.trim()

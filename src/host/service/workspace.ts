@@ -12,49 +12,46 @@ export interface AuthorizedPath {
   readonly path: string
 }
 
-/** Resolve an existing `.univer` file under the session file policy. */
-export async function resolveExistingUniverPath(
-  scope: FileScope,
-  value: string,
-  access: FileAccess
-): Promise<AuthorizedPath & { readonly path: UniverFilePath }> {
-  const resolved = await resolveAuthorizedPath(scope, value, true, access)
-  requireUniverExtension(resolved.path)
-  return { ...resolved, path: univerFilePath(resolved.path) }
+export async function resolveReadableUniverPath(scope: FileScope, value: string) {
+  return asUniverPath(await resolveReadableFile(scope, value))
 }
 
-/** Resolve a new `.univer` target under the session file policy without requiring it to exist. */
-export async function resolveNewUniverPath(
-  scope: FileScope,
-  value: string
-): Promise<AuthorizedPath & { readonly path: UniverFilePath }> {
-  const resolved = await resolveAuthorizedPath(scope, value, false, 'write')
-  requireUniverExtension(resolved.path)
-  return { ...resolved, path: univerFilePath(resolved.path) }
+export async function resolveWritableUniverPath(scope: FileScope, value: string) {
+  return asUniverPath(await resolveWritableFile(scope, value))
 }
 
-/** Resolve an existing import source under the session file policy. */
-export function resolveExistingWorkspacePath(
-  scope: FileScope,
-  value: string
-): Promise<AuthorizedPath> {
-  return resolveAuthorizedPath(scope, value, true, 'read')
+export async function resolveNewUniverPath(scope: FileScope, value: string) {
+  return asUniverPath(await resolveWritableOutput(scope, value))
 }
 
-/** Resolve an output target under the session file policy without requiring it to exist. */
-export function resolveNewWorkspacePath(scope: FileScope, value: string): Promise<AuthorizedPath> {
-  return resolveAuthorizedPath(scope, value, false, 'write')
+export function resolveReadableFile(scope: FileScope, value: string): Promise<AuthorizedPath> {
+  return resolveAuthorizedPath(scope, value, true, canReadPath)
 }
 
-/** Revalidate a branded service request at the provider boundary. */
-export async function assertAuthorizedPath(
-  workspace: FileScope,
-  value: string,
-  mustExist: boolean,
-  access: FileAccess
-): Promise<void> {
-  const resolved = await resolveAuthorizedPath(workspace, value, mustExist, access)
-  if (resolved.path !== value || scopeCwd(resolved.workspace) !== scopeCwd(workspace)) {
+function resolveWritableFile(scope: FileScope, value: string): Promise<AuthorizedPath> {
+  return resolveAuthorizedPath(scope, value, true, canWritePath)
+}
+
+/** An output file or directory may already exist or have missing parents. */
+export function resolveWritableOutput(scope: FileScope, value: string): Promise<AuthorizedPath> {
+  return resolveAuthorizedPath(scope, value, false, canWritePath)
+}
+
+export async function assertReadableFile(scope: FileScope, value: string): Promise<void> {
+  assertSamePath(scope, value, await resolveReadableFile(scope, value))
+}
+
+export async function assertWritableFile(scope: FileScope, value: string): Promise<void> {
+  assertSamePath(scope, value, await resolveWritableFile(scope, value))
+}
+
+export async function assertWritableOutput(scope: FileScope, value: string): Promise<void> {
+  assertSamePath(scope, value, await resolveWritableOutput(scope, value))
+}
+
+/** Reject a different real path on the Provider's second resolution. */
+function assertSamePath(scope: FileScope, value: string, resolved: AuthorizedPath): void {
+  if (resolved.path !== value || scopeCwd(resolved.workspace) !== scopeCwd(scope)) {
     throw new UniverError('path changed after workspace authorization', 'SESSION_SCOPE_DENIED')
   }
 }
@@ -63,7 +60,7 @@ async function resolveAuthorizedPath(
   scope: FileScope,
   value: string,
   mustExist: boolean,
-  access: FileAccess
+  allowed: (scope: FileScope, canonical: string) => boolean
 ): Promise<AuthorizedPath> {
   if (value.trim().length === 0) throw new UniverError('path is required', 'INVALID_FILE_PATH')
   let workspace: string
@@ -102,15 +99,11 @@ async function resolveAuthorizedPath(
     typeof scope === 'string'
       ? workspacePath(workspace)
       : { cwd: workspacePath(workspace), policy: scope.policy }
-  const allowed =
-    access === 'write' ? canWritePath(authorized, canonical) : canReadPath(authorized, canonical)
-  if (!allowed) {
+  if (!allowed(authorized, canonical)) {
     throw new UniverError('Path is outside the session file permissions.', 'SESSION_SCOPE_DENIED')
   }
   return { workspace: authorized, path: canonical }
 }
-
-export type FileAccess = 'read' | 'write'
 
 export function canReadPath(scope: FileScope, canonical: string): boolean {
   return typeof scope !== 'string' || contains(scope, canonical)
@@ -197,8 +190,11 @@ function nodeErrorCode(error: unknown): string | undefined {
   return typeof error.code === 'string' ? error.code : undefined
 }
 
-function requireUniverExtension(value: string): void {
-  if (extname(value).toLowerCase() !== '.univer') {
+function asUniverPath(
+  resolved: AuthorizedPath
+): AuthorizedPath & { readonly path: UniverFilePath } {
+  if (extname(resolved.path).toLowerCase() !== '.univer') {
     throw new UniverError('Univer file path must end in .univer.', 'INVALID_FILE_PATH')
   }
+  return { ...resolved, path: univerFilePath(resolved.path) }
 }

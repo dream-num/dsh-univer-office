@@ -1,3 +1,4 @@
+import { resolveReadableUniverPath } from '../../service/workspace.ts'
 import type { SessionPolicy } from '../../service/session-file-scope.ts'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
 import type { FileState } from '../../../shared/wire/state.ts'
@@ -12,7 +13,13 @@ export async function stateRoute(
   sessionId: unknown,
   sandbox?: () => SessionPolicy | undefined
 ) {
-  const authorized = await resolveAuthorizedFile(file, sessionId, sessions, 'read', sandbox)
+  const authorized = await resolveAuthorizedFile(
+    file,
+    sessionId,
+    sessions,
+    resolveReadableUniverPath,
+    sandbox
+  )
   const state = await service.fileState({ workspace: authorized.workspace, file: authorized.path })
   // Viewer document opens are authorized against the named session, so the Host must place
   // that session in every projected URL; subsequent Gateway requests use DSH authentication.

@@ -2,7 +2,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { Context } from '@deepseek-ai/cordis'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
-import { resolveExistingUniverPath } from '../../service/workspace.ts'
+import { resolveReadableUniverPath } from '../../service/workspace.ts'
 import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_status` tool definition. */
@@ -27,7 +27,7 @@ export function statusTool(ctx: Context, timeoutMs: number) {
     output: operationOutput,
     async execute(args, exec) {
       const scope = toolFileScope(ctx, exec)
-      const target = await resolveExistingUniverPath(scope, args.file, 'read')
+      const target = await resolveReadableUniverPath(scope, args.file)
       return ctx.univer.status(
         {
           workspace: target.workspace,

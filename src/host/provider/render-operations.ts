@@ -1,5 +1,5 @@
 import type { FileScope } from '../service/session-file-scope.ts'
-import { assertAuthorizedPath, canReadPath } from '../service/workspace.ts'
+import { assertWritableOutput, canReadPath } from '../service/workspace.ts'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
@@ -98,7 +98,7 @@ export class RenderOperations {
         ...input.source,
         ...(input.signal === undefined ? {} : { signal: input.signal })
       } as UnitPdfPrintInput)
-      await assertAuthorizedPath(input.outputWorkspace, input.output, false, 'write')
+      await assertWritableOutput(input.outputWorkspace, input.output)
       await writePdf(input.output, result.bytes, input.signal)
       return {
         output: input.output,
@@ -363,7 +363,7 @@ async function writeScreenshotImages(
 ): Promise<readonly ScreenshotServiceImage[]> {
   try {
     signal?.throwIfAborted()
-    await assertAuthorizedPath(scope, output, false, 'write')
+    await assertWritableOutput(scope, output)
     await mkdir(output, { recursive: true })
     return await Promise.all(
       images.map(async (image) => {
@@ -375,7 +375,7 @@ async function writeScreenshotImages(
           )
         }
         const path = resolve(output, image.name)
-        await assertAuthorizedPath(scope, path, false, 'write')
+        await assertWritableOutput(scope, path)
         await writeFile(path, image.bytes, signal === undefined ? undefined : { signal })
         signal?.throwIfAborted()
         return {

@@ -1,3 +1,4 @@
+import { resolveWritableUniverPath } from '../../service/workspace.ts'
 import type { SessionPolicy } from '../../service/session-file-scope.ts'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
 import type { WorktreeReviewAction } from '../../../shared/wire/actions.ts'
@@ -33,7 +34,7 @@ export async function worktreeActionRoute(
     body.file,
     body.sessionId,
     sessions,
-    'write',
+    resolveWritableUniverPath,
     sandbox
   )
   return service.worktreeAction({

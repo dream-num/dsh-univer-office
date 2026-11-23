@@ -4,7 +4,7 @@ import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { UniverError } from '../../service/errors.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
 import { stripGatewaySuccessEnvelope } from '../normalize.ts'
-import { resolveExistingUniverPath } from '../../service/workspace.ts'
+import { resolveWritableUniverPath } from '../../service/workspace.ts'
 import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_unit` tool definition. */
@@ -38,7 +38,7 @@ export function unitTool(ctx: Context, timeoutMs: number) {
     output: operationOutput,
     async execute(args, exec) {
       const scope = toolFileScope(ctx, exec)
-      const target = await resolveExistingUniverPath(scope, args.file, 'write')
+      const target = await resolveWritableUniverPath(scope, args.file)
       if (args.action === 'create') {
         if (args.kind === undefined || args.name === undefined || args.name.length === 0) {
           throw new UniverError(

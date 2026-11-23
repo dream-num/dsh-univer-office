@@ -1,3 +1,4 @@
+import { resolveWritableUniverPath } from '../service/workspace.ts'
 import type { SessionPolicy } from '../service/session-file-scope.ts'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import http from 'node:http'
@@ -311,7 +312,7 @@ async function isFileInSessionScope(
   sandbox?: () => SessionPolicy | undefined
 ): Promise<boolean> {
   try {
-    await resolveAuthorizedFile(path, sessionId, sessions, 'write', sandbox)
+    await resolveAuthorizedFile(path, sessionId, sessions, resolveWritableUniverPath, sandbox)
     return true
   } catch {
     return false

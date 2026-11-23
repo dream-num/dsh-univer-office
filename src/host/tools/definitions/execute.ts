@@ -5,7 +5,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { UniverError } from '../../service/errors.ts'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
-import { resolveExistingUniverPath, resolveExistingWorkspacePath } from '../../service/workspace.ts'
+import { resolveWritableUniverPath, resolveReadableFile } from '../../service/workspace.ts'
 import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_execute` tool definition. */
@@ -37,7 +37,7 @@ export function executeTool(ctx: Context, timeoutMs: number) {
     output: operationOutput,
     async execute(args, exec) {
       const scope = toolFileScope(ctx, exec)
-      const target = await resolveExistingUniverPath(scope, args.file, 'write')
+      const target = await resolveWritableUniverPath(scope, args.file)
       const source = await resolveExecutionCode(scope, args.code, args.codeFile)
       return ctx.univer.executeUnitContent(
         {
@@ -70,6 +70,6 @@ async function resolveExecutionCode(
   if (codeFile === undefined) {
     throw new UniverError('codeFile is required when code is omitted.', 'INVALID_EXECUTION_SOURCE')
   }
-  const source = await resolveExistingWorkspacePath(scope, codeFile)
+  const source = await resolveReadableFile(scope, codeFile)
   return { codeFile: source.path }
 }
