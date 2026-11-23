@@ -58,7 +58,7 @@ import {
   decodeBaseSnapshotData,
   decodeBoardSnapshotData
 } from '../../shared/base-board-snapshot.ts'
-import { isProxyServedViewer, resolveWebSocketUrl } from './config'
+import { isFloatingPreview, isProxyServedViewer, resolveWebSocketUrl } from './config'
 import { startPreviewSheetFormulaCalculation } from './preview-formula'
 import {
   blockLocalEditingCommands,
@@ -172,7 +172,7 @@ export async function createViewer(opts: ViewerOptions): Promise<ViewerHandle> {
     assetIoOwner: ViewAssetIoOwner.CollaborationClient,
     license: TEST_LICENSE,
     workbenchChrome: resolveViewerWorkbenchChrome(opts.unitType, editable),
-    ribbonType: 'grid',
+    ribbonType: isFloatingPreview() ? 'hidden' : 'grid',
     unitType: toUniverInstanceType(opts.unitType),
     ...(opts.worktreeId === undefined && opts.unitType !== UNIT_TYPE_BOARD
       ? {

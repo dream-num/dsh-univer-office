@@ -145,12 +145,16 @@ function registerSharedPlugins(
   collaborationOwnsAssetIo: boolean,
   license: string,
   hideWorkbenchChrome = false,
-  ribbonType?: RibbonType
+  ribbonType?: ViewRenderingOptions['ribbonType']
 ): void {
   univer.registerPlugin(UniverRenderEnginePlugin)
   univer.registerPlugin(UniverUIPlugin, {
     container,
-    ...(ribbonType === undefined ? {} : { ribbonType }),
+    ...(ribbonType === undefined
+      ? {}
+      : ribbonType === 'hidden'
+        ? { toolbar: false }
+        : { ribbonType }),
     ...(hideWorkbenchChrome
       ? { header: false, toolbar: false, headerMenu: false, footer: false }
       : {})
@@ -381,7 +385,7 @@ export interface ViewRenderingOptions {
   assetIoOwner: ViewAssetIoOwner
   license: string
   workbenchChrome: 'hidden' | 'visible'
-  ribbonType?: RibbonType
+  ribbonType?: RibbonType | 'hidden'
   /** Hide native table editing anchors in comparison panes without removing table rendering. */
   sheetTableUI?: Pick<IUniverSheetsTableUIConfig, 'hideAnchor'>
   /** Browser Viewer Unit type. Omit only for the headless multi-Unit render page. */

@@ -47,16 +47,19 @@ describe('built Viewer', () => {
     'preserves host typing when a %s worktree preview opens automatically (#153)',
     async (kind) => {
       await withPage(browser, async (page) => {
-        await openPreviewWhileTyping(
+        const frame = await openPreviewWhileTyping(
           page,
           new URLSearchParams({
             file: gateway.fileKey,
             worktree: worktreeId,
             unit: trunk[kind],
             mode: 'embedded',
-            scope: 'worktree'
+            scope: 'worktree',
+            surface: 'floating'
           })
         )
+        expect(await frame.$('[data-u-comp="headerbar"]')).toBeNull()
+        expect(new URL(frame.url()).searchParams.get('surface')).toBe('floating')
       })
     }
   )
@@ -70,9 +73,11 @@ describe('built Viewer', () => {
           unit: trunk.sheet,
           mode: 'embedded',
           scope: 'trunk',
-          editable: 'true'
+          editable: 'true',
+          surface: 'floating'
         })
       )
+      expect(await frame.$('[data-u-comp="headerbar"]')).toBeNull()
       const canvas = await frame.waitForSelector(`canvas[data-u-unit-id="${trunk.sheet}"]`, {
         visible: true
       })
@@ -90,6 +95,24 @@ describe('built Viewer', () => {
         {},
         selected
       )
+    })
+  })
+
+  it('shows the Sheet Ribbon in the review card and standalone Viewer (#153)', async () => {
+    await withPage(browser, async (page) => {
+      const card = await openPreviewWhileTyping(
+        page,
+        new URLSearchParams({
+          file: gateway.fileKey,
+          worktree: worktreeId,
+          unit: trunk.sheet,
+          sidebar: 'collapsed'
+        })
+      )
+      const ribbon = '[data-u-comp="ribbon-grid-menu"]'
+      await card.waitForSelector(ribbon, { visible: true })
+      await openWorktree(page)
+      await page.waitForSelector(ribbon, { visible: true })
     })
   })
 

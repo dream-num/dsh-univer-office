@@ -133,7 +133,7 @@ Create a monthly expense spreadsheet with dates, categories, amounts, a total, a
 
 ### 3. Review it in the conversation
 
-- While the agent works, up to three files can each have a live preview window. Minimize a window to keep it handy, or close a window to hide that file’s live preview for the rest of the session. Floating windows and fullscreen review cards stay below the desktop title bar.
+- While the agent works, up to three files can each have a live preview window with the editing ribbon hidden. Minimize a window to keep it handy, or close a window to hide that file’s live preview for the rest of the session. Floating windows and fullscreen review cards stay below the desktop title bar.
 - Review cards remain in the conversation and can be folded or opened fullscreen later. Fullscreen escapes conversation layout constraints, preserves the card's space without reloading the Viewer, and supports Esc to exit.
 - Continue editing, approve, or discard changes from the Univer page embedded in the card.
 

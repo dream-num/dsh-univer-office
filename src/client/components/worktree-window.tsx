@@ -103,7 +103,8 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
             selectedUnit,
             worktree.status === 'ready' ? 'merge' : 'worktree'
           )
-  const url = target === undefined ? undefined : localizeViewerUrl(target, props.viewerLocale)
+  const url =
+    target === undefined ? undefined : localizeViewerUrl(target, props.viewerLocale, 'floating')
   const title =
     worktree?.name || worktree?.worktreeId || props.worktreeId || props.t('dock.currentVersion')
   const status: WorktreeStatus | 'trunk' | 'loading' | 'unavailable' =

@@ -74,14 +74,14 @@ const UNITS = [
 const DEFAULT_UNIT_URL = VIEW_URL + '&unit=' + encodeURIComponent(UNITS[0]!.unitId)
 const SLIDE_UNIT_URL = VIEW_URL + '&unit=' + encodeURIComponent(UNITS[1]!.unitId)
 const DEFAULT_MERGE_URL = MERGE_URL + '&unit=' + encodeURIComponent(UNITS[0]!.unitId)
-const ZH_DEFAULT_UNIT_URL = withLang(DEFAULT_UNIT_URL, 'zh-CN')
-const ZH_SLIDE_UNIT_URL = withLang(SLIDE_UNIT_URL, 'zh-CN')
-const EN_SLIDE_UNIT_URL = withLang(SLIDE_UNIT_URL, 'en-US')
+const ZH_DEFAULT_UNIT_URL = withLang(DEFAULT_UNIT_URL, 'zh-CN') + '&surface=floating'
+const ZH_SLIDE_UNIT_URL = withLang(SLIDE_UNIT_URL, 'zh-CN') + '&surface=floating'
+const EN_SLIDE_UNIT_URL = withLang(SLIDE_UNIT_URL, 'en-US') + '&surface=floating'
 const ZH_FULL_DEFAULT_UNIT_URL = withLang(asReviewPage(DEFAULT_UNIT_URL), 'zh-CN')
 const EN_FULL_DEFAULT_UNIT_URL = withLang(asReviewPage(DEFAULT_UNIT_URL), 'en-US')
 const ZH_FULL_DEFAULT_MERGE_URL = withLang(asReviewPage(DEFAULT_MERGE_URL), 'zh-CN')
 const ZH_TRUNK_URL = withLang(asReviewPage(TRUNK_URL), 'zh-CN')
-const ZH_LIVE_TRUNK_URL = withLang(TRUNK_URL, 'zh-CN')
+const ZH_LIVE_TRUNK_URL = withLang(TRUNK_URL, 'zh-CN') + '&surface=floating'
 const SETTINGS_DEFAULTS = { autoOpenLivePreview: true, conversationReviewCards: true }
 const SESSION_ADDRESS = 'dsh-resource://file/session/test-session-id/预览演示/月度支出表.univer'
 
