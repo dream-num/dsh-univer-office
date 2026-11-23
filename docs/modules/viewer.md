@@ -8,6 +8,8 @@ Viewer 是在浏览器中运行的协作客户端。DSH Client 将 Host 授权�
 
 ## 比较、历史与文件操作
 
+Viewer 与 `IMPORTRANGE` 公式通过 `@univerjs-pro/resources` 解析资源引用并识别 Sheet 区域和 Base 表选择器。共享渲染预设使用同一包的 `IAttachmentIoService` 配置 Base 附件读写。
+
 Viewer 内的 Compare 是 Gateway 的只读 Consumer，不扩大 Client 权限。DSH Client 仍只投影 Host 授权后的不透明 Viewer URL；Viewer 使用该 URL 已绑定的文件和 worktree 创建固定比较会话，并把同一个 `/diff` 语义结果交给差异列表、双栏渲染和定位行为。
 
 比较页展示 Sheet、Doc、Slide、Base、Board 的语义差异和定位。源版本变更时用户可显式刷新比较会话。比较会话与 History 数据由 [Gateway](gateway.md) 提供，双栏展示由[比较组件](../../packages/unit-comparison-viewer/README.zh-CN.md)维护。主线支持查看 Unit 历史，恢复操作依赖可编辑视图。主线 Ribbon 的 Office 导入导出和 Base 工具栏操作使用 Gateway 的 exchange 服务。

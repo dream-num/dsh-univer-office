@@ -7,9 +7,9 @@ import type {
 } from '@univerjs/core'
 import type {
   IEmbedResourceRefDataProviderRegistration,
-  IReferencedUnitManagerService,
-  IResourceRef
+  IReferencedUnitManagerService
 } from '@univerjs-pro/embed'
+import type { IResourceRef } from '@univerjs-pro/resources'
 import type { ISetFormulaCalculationResultMutation } from '@univerjs/engine-formula'
 import type {
   IInsertColMutationParams,
@@ -20,7 +20,8 @@ import type {
   ISetRangeValuesMutationParams
 } from '@univerjs/sheets'
 import { getOriginCellValue, ObjectMatrix, Rectangle, UniverInstanceType } from '@univerjs/core'
-import { isResourceRefRangePart, ReferencedUnitDataType } from '@univerjs-pro/embed'
+import { ReferencedUnitDataType } from '@univerjs-pro/embed'
+import { isResourceRefRangePart } from '@univerjs-pro/resources'
 import { deserializeRangeWithSheet } from '@univerjs/engine-formula'
 import {
   InsertColMutation,

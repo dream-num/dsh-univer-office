@@ -27,7 +27,7 @@ describe('resolved configuration', () => {
       screenshotMaxPages: 30,
       screenshotMaxPixels: 16_777_216,
       printPdfOperationTimeoutMs: 120_000,
-      unitContentRuntimeMaxEntries: 20,
+      unitContentRuntimeMaxEntries: 50,
       unitContentRuntimeIdleTtlMs: 300_000
     })
     expect(config.resourceCacheRoot.endsWith(join('cache', 'dsh-univer-office', 'resources'))).toBe(

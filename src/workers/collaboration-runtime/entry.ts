@@ -6,7 +6,7 @@ import {
 
 /**
  * Worker definition the Host's runtime pool imports in each pooled child process. The pool
- * owns the process and IPC; this module only binds one Unit through the Gateway. A plain
+ * owns the process and IPC; each createRuntime call binds its own Unit through the Gateway. A plain
  * object keeps the pool package itself out of this bundle.
  */
 const worker: UniverCollaborationRuntimeWorkerDefinition = {

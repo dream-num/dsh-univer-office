@@ -4,7 +4,8 @@ import type {
   IReferencedUnitManagerService
 } from '@univerjs-pro/embed'
 import { ensureBaseTableCellLayout, getBaseCellFormulaValue } from '@univerjs-pro/bases'
-import { isResourceRefTablePart, ReferencedUnitDataType } from '@univerjs-pro/embed'
+import { ReferencedUnitDataType } from '@univerjs-pro/embed'
+import { isResourceRefTablePart } from '@univerjs-pro/resources'
 import { createBaseFormulaTableNameMap, Tools, UniverInstanceType } from '@univerjs/core'
 
 const VIEW_BASE_RESOURCE_REF_DATA_PROVIDER_ID = 'univer-view-base-resource-ref-data-provider'

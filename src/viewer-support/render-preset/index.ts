@@ -6,7 +6,7 @@ import {
   UniverInstanceType
 } from '@univerjs/core'
 import type { Univer } from '@univerjs/core'
-import { IAttachmentIoService } from '@univerjs-pro/collaboration-client'
+import { IAttachmentIoService } from '@univerjs-pro/resources'
 import { UniverProFormulaEnginePlugin } from '@univerjs-pro/engine-formula'
 import { UniverLicensePlugin } from '@univerjs-pro/license'
 import { UniverBasesPlugin } from '@univerjs-pro/bases'

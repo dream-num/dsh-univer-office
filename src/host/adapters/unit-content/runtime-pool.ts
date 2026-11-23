@@ -93,7 +93,7 @@ export class UnitContentRuntimePool {
     }
   }
 
-  /** Race `operation` with cancellation; cancelling kills the worker that runs it. */
+  /** Invalidate the Unit's lease when cancellation interrupts an operation. */
   private async abortable<T>(
     lease: UniverCollaborationRuntimeLease,
     signal: AbortSignal | undefined,
