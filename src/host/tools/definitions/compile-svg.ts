@@ -2,7 +2,8 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { Context } from '@deepseek-ai/cordis'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
-import { existingToolFile, existingToolPath } from '../workspace.ts'
+import { resolveWritableUniverPath, resolveReadableFile } from '../../service/workspace.ts'
+import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_compile_svg` tool definition. */
 export function compileSvgTool(ctx: Context, timeoutMs: number) {
@@ -37,16 +38,16 @@ export function compileSvgTool(ctx: Context, timeoutMs: number) {
     },
     output: operationOutput,
     async execute(args, exec) {
+      const scope = toolFileScope(ctx, exec)
       const [target, source] = await Promise.all([
-        existingToolFile(exec, args.file),
-        existingToolPath(exec, args.source)
+        resolveWritableUniverPath(scope, args.file),
+        resolveReadableFile(scope, args.source)
       ])
       return ctx.univer.compileSvg(
         {
           workspace: target.workspace,
           file: target.path,
           source: source.path,
-          sourceWorkspace: source.workspace,
           worktreeId: worktreeId(args.worktreeId),
           unitId: unitId(args.unitId),
           page: args.page,

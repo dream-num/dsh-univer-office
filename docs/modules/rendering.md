@@ -9,9 +9,9 @@ Provider 授权目标文件和输出路径，通过 [Unit 内容模块](unit-con
 | 操作 | 输入与可验证的结果 |
 | --- | --- |
 | Slide 布局检查 | 对指定页面执行真实布局，返回覆盖情况和发现的问题。 |
-| Slide SVG 编译 | 读取工作区内的 SVG 及引用资源，编译成 Facade 程序，再由 Provider 对显式 draft worktree 的目标页面提交修改。 |
-| PNG 截图 | 支持 Sheet 范围、Doc/Slide 页面、Slide 联系表及 Board 区域与元素聚焦。限制页数和像素，PNG 写入授权工作区。 |
-| PDF 打印 | 对 Sheet、Doc、Slide 或 Board 生成 PDF，输出到授权工作区。 |
+| Slide SVG 编译 | 按会话读权限读取 SVG 及引用资源，编译成 Facade 程序，再由 Provider 对显式 draft worktree 的目标页面提交修改。 |
+| PNG 截图 | 支持 Sheet 范围、Doc/Slide 页面、Slide 联系表及 Board 区域与元素聚焦。限制页数和像素，PNG 写入会话可写目录。 |
+| PDF 打印 | 对 Sheet、Doc、Slide 或 Board 生成 PDF，输出到会话可写路径。 |
 
 ## 附件与验证
 

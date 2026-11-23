@@ -10,7 +10,7 @@ DSH 的 Tools Consumer 通过 `ctx.univer` 执行领域操作。Skill Provider �
 
 每个工具有独立的参数 schema、结果 schema、超时/取消处理和纯 presentation。工具结果必须包含恢复 Client 预览目标所需的结构化文件、worktree 与 unit 标识，并进入 DSH 会话日志。领域失败使用 DSH 可持久化的稳定错误 code，并在模型可见文本中保留 `Error [CODE]`，使 Agent 不必解析自然语言即可选择恢复路径。Client 优先从 `tool/call` 与 `tool/result` 事件恢复目标，不依赖 bash 文本解析。
 
-模型用 `univer_new` 创建空文件，通过 `univer_unit` 或 `univer_import` 在显式 draft worktree 中加入 Unit。`univer_status` 提供文件状态与 Unit 标识，`univer_api` 从随包精确版本的 API Reference 查找 Facade 与方法。涉及已有 Unit 的内容操作使用显式 Unit 标识，Provider 校验工作区及文件路径。各工具契约见[工具定义](../../src/host/tools/definitions)。
+模型用 `univer_new` 创建空文件，通过 `univer_unit` 或 `univer_import` 在显式 draft worktree 中加入 Unit。`univer_status` 提供文件状态与 Unit 标识，`univer_api` 从随包精确版本的 API Reference 查找 Facade 与方法。涉及已有 Unit 的内容操作使用显式 Unit 标识，Provider 按会话文件策略校验各路径的读写权限。各工具契约见[工具定义](../../src/host/tools/definitions)。
 
 `ready` 表示提交审阅，`reopen` 允许继续修改。模型发起 `merge` 或 `discard` 需要用户明确要求，并由 DSH 的 `tools/pre-execute` 流程审批。文件写入、导出、截图和附件的权限在相应操作边界再次验证。
 

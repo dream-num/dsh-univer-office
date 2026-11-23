@@ -2,7 +2,8 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { Context } from '@deepseek-ai/cordis'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
-import { existingToolFile, newToolPath } from '../workspace.ts'
+import { resolveReadableUniverPath, resolveWritableOutput } from '../../service/workspace.ts'
+import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_export` tool definition. */
 export function exportTool(ctx: Context, timeoutMs: number) {
@@ -30,15 +31,15 @@ export function exportTool(ctx: Context, timeoutMs: number) {
     },
     output: operationOutput,
     async execute(args, exec) {
+      const scope = toolFileScope(ctx, exec)
       const [target, output] = await Promise.all([
-        existingToolFile(exec, args.file),
-        newToolPath(exec, args.output)
+        resolveReadableUniverPath(scope, args.file),
+        resolveWritableOutput(scope, args.output)
       ])
       return ctx.univer.exportUnitContent(
         {
           workspace: target.workspace,
           file: target.path,
-          outputWorkspace: output.workspace,
           output: output.path,
           unitId: unitId(args.unitId),
           ...(args.worktreeId === undefined ? {} : { worktreeId: worktreeId(args.worktreeId) })

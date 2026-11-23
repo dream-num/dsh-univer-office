@@ -4,7 +4,8 @@ import { UniverError } from '../../service/errors.ts'
 import { worktreeId } from '../../service/identifiers.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
 import { stripGatewaySuccessEnvelope } from '../normalize.ts'
-import { existingToolFile, existingToolPath } from '../workspace.ts'
+import { resolveWritableUniverPath, resolveReadableFile } from '../../service/workspace.ts'
+import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_import` tool definition. */
 export function importTool(ctx: Context, timeoutMs: number) {
@@ -38,16 +39,16 @@ export function importTool(ctx: Context, timeoutMs: number) {
       if (args.name.trim().length === 0) {
         throw new UniverError('univer_import requires a non-empty Unit name.', 'INVALID_REQUEST')
       }
+      const scope = toolFileScope(ctx, exec)
       const [target, source] = await Promise.all([
-        existingToolFile(exec, args.file),
-        existingToolPath(exec, args.source)
+        resolveWritableUniverPath(scope, args.file),
+        resolveReadableFile(scope, args.source)
       ])
       return stripGatewaySuccessEnvelope(
         await ctx.univer.importUnitContent(
           {
             workspace: target.workspace,
             file: target.path,
-            sourceWorkspace: source.workspace,
             source: source.path,
             worktreeId: worktreeId(args.worktreeId),
             name: args.name,

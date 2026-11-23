@@ -1,3 +1,5 @@
+import { resolveWritableUniverPath } from '../../service/workspace.ts'
+import type { SessionPolicy } from '../../service/session-file-scope.ts'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
 import type { WorktreeReviewAction } from '../../../shared/wire/actions.ts'
 import type { UniverService } from '../../service/univer-service.ts'
@@ -17,7 +19,8 @@ export interface WorktreeActionBody {
 export async function worktreeActionRoute(
   service: UniverService,
   sessions: SessionStore,
-  body: unknown
+  body: unknown,
+  sandbox?: () => SessionPolicy | undefined
 ) {
   if (!isObject(body)) throw new UniverError('JSON object body is required', 'INVALID_REQUEST')
   const action = body.action
@@ -27,7 +30,13 @@ export async function worktreeActionRoute(
   if (typeof body.worktreeId !== 'string' || body.worktreeId.length === 0) {
     throw new UniverError('worktreeId is required', 'INVALID_REQUEST')
   }
-  const authorized = await resolveAuthorizedFile(body.file, body.sessionId, sessions)
+  const authorized = await resolveAuthorizedFile(
+    body.file,
+    body.sessionId,
+    sessions,
+    resolveWritableUniverPath,
+    sandbox
+  )
   return service.worktreeAction({
     action,
     workspace: authorized.workspace,

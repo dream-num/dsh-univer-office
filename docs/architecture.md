@@ -46,7 +46,7 @@ flowchart TB
 
 Host 中的 Tools 与会话 API 都依赖 `UniverService`，由 Provider 实现。Provider 管理子进程的生命周期和工作区文件操作。Gateway 对文档内容、worktree 与 revision 负责，使用 SQLite 存储。Worker 经 Gateway 同步内容，Render Machine 接收 Provider 装配的渲染输入。Client 与 Host 通过可序列化的 wire 数据通信。
 
-Host 按会话工作区授权工具操作、状态查询和 Viewer 文档打开。后续 Viewer 文件 API 与 WebSocket 使用 DSH 连接鉴权，已认证浏览器可访问 Host 进程有权打开的文件。完整边界见 [Viewer 同源部署](operations/viewer-same-origin.md)。
+Host 按会话文件策略授权工具操作、状态查询和 Viewer 文档打开。后续 Viewer 文件 API 与 WebSocket 使用 DSH 连接鉴权，已认证浏览器可访问 Host 进程有权打开的文件。完整边界见 [Viewer 同源部署](operations/viewer-same-origin.md)。
 
 ## 模块索引
 

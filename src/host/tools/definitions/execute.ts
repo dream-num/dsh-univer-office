@@ -1,10 +1,12 @@
-import { readFile } from 'node:fs/promises'
+import type { FileScope } from '../../service/session-file-scope.ts'
+import type { ExecutionSource } from '../../service/types.ts'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { Context } from '@deepseek-ai/cordis'
 import { UniverError } from '../../service/errors.ts'
 import { unitId, worktreeId } from '../../service/identifiers.ts'
 import { operationOutput, operationTitle } from '../presentation.ts'
-import { existingToolFile, existingToolPath } from '../workspace.ts'
+import { resolveWritableUniverPath, resolveReadableFile } from '../../service/workspace.ts'
+import { toolFileScope } from '../workspace.ts'
 
 /** Create the `univer_execute` tool definition. */
 export function executeTool(ctx: Context, timeoutMs: number) {
@@ -34,13 +36,14 @@ export function executeTool(ctx: Context, timeoutMs: number) {
     },
     output: operationOutput,
     async execute(args, exec) {
-      const target = await existingToolFile(exec, args.file)
-      const code = await resolveExecutionCode(exec, args.code, args.codeFile)
+      const scope = toolFileScope(ctx, exec)
+      const target = await resolveWritableUniverPath(scope, args.file)
+      const source = await resolveExecutionCode(scope, args.code, args.codeFile)
       return ctx.univer.executeUnitContent(
         {
           workspace: target.workspace,
           file: target.path,
-          code,
+          ...source,
           worktreeId: worktreeId(args.worktreeId),
           unitId: unitId(args.unitId)
         },
@@ -56,25 +59,17 @@ export function executeTool(ctx: Context, timeoutMs: number) {
 }
 
 async function resolveExecutionCode(
-  exec: Parameters<typeof existingToolPath>[0],
+  scope: FileScope,
   code: string | undefined,
   codeFile: string | undefined
-): Promise<string> {
+): Promise<ExecutionSource> {
   if ((code === undefined) === (codeFile === undefined)) {
     throw new UniverError('Provide exactly one of code or codeFile.', 'INVALID_EXECUTION_SOURCE')
   }
-  if (code !== undefined) return code
+  if (code !== undefined) return { code }
   if (codeFile === undefined) {
     throw new UniverError('codeFile is required when code is omitted.', 'INVALID_EXECUTION_SOURCE')
   }
-  const source = await existingToolPath(exec, codeFile)
-  try {
-    return await readFile(source.path, 'utf8')
-  } catch (error) {
-    throw new UniverError(
-      `Cannot read codeFile ${JSON.stringify(codeFile)}.`,
-      'CODE_FILE_READ_FAILED',
-      { cause: error }
-    )
-  }
+  const source = await resolveReadableFile(scope, codeFile)
+  return { codeFile: source.path }
 }
