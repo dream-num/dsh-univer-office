@@ -107,7 +107,7 @@ Every content type supports isolated draft editing, side-by-side semantic compar
 
 ### 1. Install the plugin
 
-Supported DSH versions are `0.1.5-rc.3`, `0.1.7-rc.1`, `0.2.0-rc.1`, and `0.2.1-rc.3`.
+Supported DSH versions follow the peer dependency ranges in [package.json](package.json), starting at `0.2.0-rc.1`.
 
 If DSH is running, first press **Ctrl+C** in the terminal that started it. You can run the installation command while DSH is running, but the current DSH process will not load the new plugin automatically.
 
@@ -170,7 +170,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 ## Preview and review experience
 
 - **On-demand preview from the file tree** — click a `.univer` file in the DSH file tree and it opens in the right sidebar, alongside the built-in previews for `.docx`, `.xlsx`, and `.pptx`. No agent operation is involved: this is the entry point that still works when automatic live previews are off. Version navigation and worktree review are handled inside the Viewer. Opening a file without a specific target defaults to the first active worktree when trunk has no documents. It registers on DSH's own right sidebar; when the `dsh-better-sidebar` plugin is installed instead, it is registered as one of that plugin's file viewers, because that plugin takes over file addresses.
-- **Live Univer window** — changes open automatically in a window you can drag, resize, fold, or maximize. Disable automatic opening in the plugin's settings — the **dsh-univer-office** detail page under the sidebar **Plugins** page (or **Settings → Plugins → Plugin configuration** on DSH releases before 0.1.6-alpha.2) — without removing conversation review cards or the file-tree preview above.
+- **Live Univer window** — changes open automatically in a window you can drag, resize, fold, or maximize. Disable automatic opening in the plugin's settings — the **dsh-univer-office** detail page under the sidebar **Plugins** page — without removing conversation review cards or the file-tree preview above.
 - **Conversation review cards** — each edited `.univer` file has its own full preview card, while deleted temporary files leave no stale cards behind. Turn them off with **Show review cards in the conversation** in the plugin's settings for a more compact conversation; the file-tree preview and the live window are controlled by their own switches.
 - **Pinned worktree comparison** — use **Compare** in a draft or submitted worktree to compare it with trunk or another active worktree. Both sides are pinned when the comparison opens, changed entities can be navigated, and a refresh control appears if either side advances.
 - **Responsive review Header** — View/Compare stays centered when space permits; controls share a compact row and wrap in order as the window narrows. The title shows the selected document name; long names truncate, and merge-status messages remain visible.

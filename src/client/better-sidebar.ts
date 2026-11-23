@@ -8,8 +8,7 @@ import type { ReactNode } from 'react'
  * depend on it: a dependency would pull the sidebar's whole peer tree into
  * every consumer's install, and the only seam used here is the file-viewer
  * registration. The consumed shape is therefore declared structurally and
- * resolved at runtime — the same erasure `legacySlots` in `index.tsx` applies
- * to host surfaces the installed slot types do not declare.
+ * resolved at runtime.
  *
  * A host without the plugin simply never provides `ctx.betterSidebar`; the
  * registration below is then skipped and every other Univer surface is

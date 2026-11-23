@@ -103,41 +103,6 @@ describe('built Host bundle', () => {
       readFile(repoPath('artifacts', 'collaboration-runtime-worker.mjs'), 'utf8')
     ).resolves.toBeTruthy()
   })
-
-  it('does not import the settingsNamespace export removed in DSH 0.1.2-alpha.2', async () => {
-    expect(await readFile(repoPath('lib', 'index.js'), 'utf8')).not.toContain('settingsNamespace')
-  })
-})
-
-// DSH 0.1.7+ derives settings forms from the root plugin's live Config; a real Profile covers that
-// path in host-settings-profile.test.ts. The registry below stands in for DSH 0.1.6 and earlier,
-// whose Settings provider no longer ships in the current DSH dev cohort.
-describe('Settings', () => {
-  it('registers live defaults with a legacy Settings registry', async () => {
-    const context = new Context()
-    const registrations: unknown[][] = []
-    try {
-      context.provide('settings', {
-        register: (...args: unknown[]) => {
-          registrations.push(args)
-        }
-      })
-      await context.plugin(plugin, { tools: false, skills: false })
-      expect(registrations).toHaveLength(1)
-      const [namespace, schema, options] = registrations[0]!
-      expect(namespace).toBe('univer-office')
-      expect((schema as (value: unknown) => unknown)({})).toEqual({
-        autoOpenLivePreview: true,
-        conversationReviewCards: true
-      })
-      expect(options).toEqual({
-        base: { autoOpenLivePreview: true, conversationReviewCards: true },
-        applies: 'live'
-      })
-    } finally {
-      await context.fiber.dispose()
-    }
-  })
 })
 
 describe('browser routes and tools', () => {

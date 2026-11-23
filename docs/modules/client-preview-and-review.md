@@ -113,9 +113,9 @@ Viewer 选择由投影 scope 与权威状态共同决定：
 
 ## 设置与文件树
 
-展示配置按运行时能力兼容两种 DSH 契约：旧版 Host 使用 `settings.register` 注册 `univer-office` 命名空间，Client 通过 `settingsScope.bind` 订阅；0.1.7-alpha.1 起 Host 从根插件 `Config` 的 `volatile` 字段派生表单，Client 通过 `configForms.get` 读取 bundle patch 拥有的 `univer` entry。该 entry id 必须与 `cordis.patch.yml` 一致。Host schema 使用序列化的 `volatile` metadata，兼容没有 `.volatile()` builder 的旧 schemastery；新版 Host 不再调用已移除的 `settings.register`。Client 共享最小读写接口，处理新版写入返回 `false` 和网络异常，保存失败时保留 draft 并恢复保存按钮。旧版独立设置文档与新版 profile 存储不同，本插件不迁移旧配置；升级后可能需要重新设置偏好。
+Host 从根插件 `Config` 的 `volatile` 字段派生设置表单。Client 通过 `configForms.get` 读取 [bundle patch](../../cordis.patch.yml) 声明的 `univer` entry，并在插件详情页展示设置。写入返回 `false` 或发生网络异常时，表单保留草稿并允许重试。
 
-两种契约均拥有两个相互独立的布尔偏好，默认均开启且实时生效：`autoOpenLivePreview` 控制实时浮窗及其轮询，`conversationReviewCards` 控制回合尾部审阅卡片是否渲染。Settings 服务或对应 Client 设置表面缺席时，Client 保持默认开启，不让可选设置能力阻塞预览与审阅注册；任一偏好关闭只移除它自己的表面，不影响另一者，也不影响文件树按需预览。偏好投影把 `loading` 解析为全关，避免被关闭的表面在持久值到达前闪现；而设置文档加载失败时保持产品默认，因为「读不到设置」不是用户的决定。设置卡片的一份 draft 按字段累计、一次保存提交，因此两个开关可以分别覆盖与恢复默认。
+表单包含两个相互独立的布尔偏好，默认均开启且实时生效：`autoOpenLivePreview` 控制实时浮窗及其轮询，`conversationReviewCards` 控制回合尾部审阅卡片是否渲染。Settings 服务或对应 Client 设置表面缺席时，Client 保持默认开启，不让可选设置能力阻塞预览与审阅注册；任一偏好关闭只移除它自己的表面，不影响另一者，也不影响文件树按需预览。偏好投影把 `loading` 解析为全关，避免被关闭的表面在持久值到达前闪现；而设置文档加载失败时保持产品默认，因为「读不到设置」不是用户的决定。设置卡片的一份 draft 按字段累计、一次保存提交，因此两个开关可以分别覆盖与恢复默认。
 
 文件树按需预览是浮窗之外的第二条入口：它不由任何 `univer_*` 操作触发，而是让 `.univer` 地址交给 Viewer 渲染。DSH 右栏按地址认领标签类型，排序规则是**档位（`extension` > `builtin` > `fallback`）→ 命中模式字符串长度 → 注册顺序**，因此本插件按宿主形态注册两条路径，任一时刻只有一条生效：
 
@@ -124,7 +124,7 @@ Viewer 选择由投影 scope 与权威状态共同决定：
 
 两条路径互不依赖：没有 `sidebarRightTabs` 时原生注册被跳过，没有 `betterSidebar` 时预览器注册被跳过，两者都不阻塞其余 Client 表面。两条路径共用同一个预览正文组件，因此加载态、Host 明确确认文件不存在、Gateway 未运行、Viewer 目标解析只实现一次。预览器声明 `fetchStrategy: 'none'`，因为 `.univer` 是二进制容器：任何按字节读取的策略都会落到通用下载面板，而 Viewer URL 只能由 Host 授权后投影。它复用回合卡片的同一份 `FileState` 轮询解析 Viewer 目标，以主线 URL 打开完整 Viewer，版本切换与 worktree 审阅统一由 Viewer 管理，外层不再维护版本选择或重复提供切换控件。完整 Viewer 首次打开未指定 worktree 或 Unit 的文件链接时，若主线没有 Unit，则按 worktree 列表顺序进入第一个 draft 或 ready worktree；没有活跃 worktree 时保留空状态，显式目标与 embedded scope 不受此默认导航影响；`useGatewayStatus` 额外暴露 Gateway 阶段，使未运行的 Gateway 变成可操作的启动入口而不是永久加载态。
 
-Client 显式注入 `uiConversation` 后才注册回合定义；旧版 `settingsScope` 与新版 `configForms` 作为可选子 fiber 注入。缺少任一设置服务不得阻塞主 Client 激活，迟加载后订阅偏好，卸载时撤销订阅。
+Client 显式注入 `uiConversation` 后才注册回合定义；`configForms` 作为可选子 fiber 注入。缺少设置服务不得阻塞主 Client 激活，迟加载后订阅偏好，卸载时撤销订阅。
 
 ## 验证
 

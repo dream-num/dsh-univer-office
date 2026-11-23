@@ -1,8 +1,8 @@
 // Built Client half in jsdom: real React, a mock DSH ctx, and a fake /univer-api HTTP server.
 // Covers target discovery from the conversation snapshot → polling → draft floating window (live
 // iframe deep link) → maximize / fold / drag / resize / dismiss → ready + session end closes the
-// window and embeds the merge panel → terminal cards, plus file-tree and Sidebar previews, legacy
-// hosts, and the real Cordis lifecycle. Shared by one test file per Settings API generation.
+// window and embeds the merge panel → terminal cards, plus file-tree and Sidebar previews and the
+// real Cordis lifecycle.
 //
 // Scenarios run in order and share the mounted DOM, like a user session.
 import { readFileSync } from 'node:fs'
@@ -14,8 +14,6 @@ import { pathToFileURL } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { closeServer, listen } from '../../support/net.ts'
 import { pluginRoot, repoPath } from '../../support/paths.ts'
-
-export type SettingsApi = 'settingsScope' | 'configForms'
 
 const repoRequire = createRequire(repoPath('package.json'))
 
@@ -101,10 +99,8 @@ const encodeAddressPath = (path: string) =>
     .map((segment) => encodeURIComponent(segment))
     .join('/')
 
-export function defineClientSuite(settingsApi: SettingsApi): void {
-  const modernSettings = settingsApi === 'configForms'
-
-  describe(`built Client with the ${settingsApi} Settings API`, () => {
+export function defineClientSuite(): void {
+  describe('built Client with DSH configuration forms', () => {
     // ---- fake Host state ----
     let worktrees: any[] = []
     const missingFiles = new Set<string>()
@@ -143,20 +139,19 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
       base: { ...SETTINGS_DEFAULTS },
       user: settingsUser,
       revision: settingsRevision,
-      writable: true,
-      mode: 'host'
+      writable: true
     })
     let settingsSnapshot: any = makeSettingsSnapshot()
     const notifySettings = () => {
       for (const listener of settingsListeners) listener()
     }
-    const settingsScope = {
+    const configForm = {
       getSnapshot(this: unknown) {
-        if (this !== settingsScope) throw new Error('SettingsScope.getSnapshot lost its receiver')
+        if (this !== configForm) throw new Error('ConfigForm.getSnapshot lost its receiver')
         return settingsSnapshot
       },
       subscribe(this: unknown, listener: () => void) {
-        if (this !== settingsScope) throw new Error('SettingsScope.subscribe lost its receiver')
+        if (this !== configForm) throw new Error('ConfigForm.subscribe lost its receiver')
         settingsListeners.add(listener)
         return () => settingsListeners.delete(listener)
       },
@@ -170,7 +165,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         settingsRevision += 1
         settingsSnapshot = makeSettingsSnapshot()
         notifySettings()
-        return modernSettings ? true : undefined
+        return true
       },
       async unset(field: string) {
         if (!Object.hasOwn(SETTINGS_DEFAULTS, field))
@@ -185,6 +180,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         settingsRevision += 1
         settingsSnapshot = makeSettingsSnapshot()
         notifySettings()
+        return true
       }
     }
     const conversationEventRegistry = {
@@ -202,8 +198,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
     const fakeCtx: any = {
       inject(services: string[], callback: (ctx: any) => unknown) {
         const key = services.join(',')
-        if (key === (modernSettings ? 'settingsScope' : 'configForms')) return () => {}
-        if (!['settingsScope', 'configForms', 'betterSidebar', 'sidebarRightTabs'].includes(key))
+        if (!['configForms', 'betterSidebar', 'sidebarRightTabs'].includes(key))
           throw new Error(`unexpected ctx.inject(${JSON.stringify(services)})`)
         return callback(fakeCtx)
       },
@@ -224,18 +219,16 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
             key !== 'conversation.input.dock' &&
             key !== 'conversation.chat.turnTail' &&
             key !== 'plugins.bundle.config' &&
-            key !== 'settings.plugin.item' &&
             key !== 'sidebar.right.pane.tab'
           )
             throw new Error(`unexpected slots.inject("${key}")`)
           return callback()
         }
       },
-      settingsScope: {
-        bind(spec: { namespace: string }) {
-          if (spec.namespace !== 'univer-office')
-            throw new Error(`unexpected settings namespace ${spec.namespace}`)
-          return settingsScope
+      configForms: {
+        get(entryId: string) {
+          if (entryId !== 'univer') throw new Error(`unexpected config entry ${entryId}`)
+          return configForm
         }
       },
       locale: {
@@ -255,14 +248,6 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         }
       },
       get(name: string) {
-        if (name === 'settingsScope') return fakeCtx.settingsScope
-        if (name === 'configForms')
-          return {
-            get(entryId: string) {
-              if (entryId !== 'univer') throw new Error(`unexpected config entry ${entryId}`)
-              return settingsScope
-            }
-          }
         if (name === 'uiConversation') return { events: conversationEventRegistry }
         if (name === 'sidebarRightTabs')
           return {
@@ -378,7 +363,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
       (cwd: string, sessionId = SESSION_ID) =>
       (selector: any) =>
         selector({ byId: { [sessionId]: { cwd } } })
-    // List-slot entries (DSH 0.1.6-alpha.2) receive the owner props and resolve their own match,
+    // List-slot entries receive the owner props and resolve their own match,
     // so fixtures express a match as the Turn's univerTurn data.
     const ownerProps = (turn: number, files: any[], extra = {}) => ({
       turn: {
@@ -609,8 +594,6 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
             entry.options.key === 'dsh-univer-office'
         )
         expect(dockEntry, 'dock entry').toBeDefined()
-        // turnTail is a list slot since DSH 0.1.6-alpha.2: entries declare a stable id and no
-        // chain selector.
         expect(tailEntry, 'turn-tail entry').toBeDefined()
         expect(tailEntry.options.select).toBeUndefined()
         expect(settingsEntry, 'Univer settings card').toBeDefined()
@@ -625,7 +608,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         expect(dockInjected.getViewerLocale).toEqual(expect.any(Function))
         expect(tailInjected.getViewerLocale).toEqual(expect.any(Function))
         expect(dockInjected.preferences).toBeDefined()
-        expect(settingsInjected.settings).toBe(settingsScope)
+        expect(settingsInjected.settings).toBe(configForm)
       })
 
       // A click on the file in the DSH file tree must reach the Viewer with no agent write, so
@@ -739,7 +722,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         expect(start()).toMatchObject({ turn: 7, files: [] })
       })
 
-      // Session format v4 (DSH 0.1.7): the tool result is a first-class tool-role message —
+      // Session format v4: the tool result is a first-class tool-role message —
       // `toolCallId` / `isError` sit on the message and `content` holds the text blocks directly.
       // 0.3.2 threw "reading 'flatMap'" on this shape and took the whole timeline down with it.
       it('applies a v4 tool-role result and ignores a foreign one', () => {
@@ -782,7 +765,8 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         state = update(
           state,
           toolResult({
-            content: [{ type: 'tool-result', toolCallId: 'call-ready', content: [readyText] }]
+            toolCallId: 'call-ready',
+            content: [readyText]
           })
         )
         state = update(
@@ -801,22 +785,17 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
         state = update(
           state,
           toolResult({
+            toolCallId: 'call-screenshot',
             content: [
               {
-                type: 'tool-result',
-                toolCallId: 'call-screenshot',
-                content: [
-                  {
-                    type: 'text',
-                    text: JSON.stringify({
-                      operation: 'screenshot',
-                      file: '/x/proj/notes/demo.univer',
-                      result: { unitId: 'unit-1', images: [{ name: 'page-1.png' }] }
-                    })
-                  },
-                  { type: 'image', attachment: { attachmentId: 'fixture-image' } }
-                ]
-              }
+                type: 'text',
+                text: JSON.stringify({
+                  operation: 'screenshot',
+                  file: '/x/proj/notes/demo.univer',
+                  result: { unitId: 'unit-1', images: [{ name: 'page-1.png' }] }
+                })
+              },
+              { type: 'image', attachment: { attachmentId: 'fixture-image' } }
             ]
           })
         )
@@ -1424,7 +1403,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
       })
 
       // ConfigForm may reject transport failures or explicitly refuse a write.
-      it.runIf(modernSettings)('keeps a failed save actionable and retries the draft', async () => {
+      it('keeps a failed save actionable and retries the draft', async () => {
         const { element, root } = mount('section')
         try {
           root.render(
@@ -1456,7 +1435,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
             'retry persists retained draft',
             () => settingsValue.conversationReviewCards === false && saveButton().disabled
           )
-          await settingsScope.unset('conversationReviewCards')
+          await configForm.unset('conversationReviewCards')
         } finally {
           settingsWriteFailure = undefined
           root.unmount()
@@ -1847,69 +1826,6 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
       })
     })
 
-    // Hosts up to 0.1.6-alpha.1 use a chain turnTail slot and settings.plugin.item.
-    it('registers the chain-contract turnTail and legacy settings item on older hosts', async () => {
-      const legacyEntries: Array<{ options: any; Component: any }> = []
-      const legacyInjectKeys: string[] = []
-      const legacyCtx: any = {
-        ...fakeCtx,
-        inject(services: string[], callback: (ctx: any) => unknown) {
-          const key = services.join(',')
-          if (key === 'configForms') return () => {}
-          if (key !== 'settingsScope' && key !== 'betterSidebar' && key !== 'sidebarRightTabs')
-            throw new Error(`unexpected ctx.inject(${JSON.stringify(services)})`)
-          return callback(legacyCtx)
-        },
-        slots: {
-          register(options: any, Component: any) {
-            // Hosts up to 0.1.6-alpha.1 reject a chain-slot registration without a selector.
-            if (options.name === 'conversation.chat.turnTail' && options.select === undefined)
-              throw new Error('chain slot "conversation.chat.turnTail" requires options.select')
-            legacyEntries.push({ options, Component })
-            return () => {}
-          },
-          inject(key: string, callback: () => unknown) {
-            legacyInjectKeys.push(key)
-            return fakeCtx.slots.inject(key, callback)
-          }
-        }
-      }
-      pluginExports.apply(legacyCtx)
-      const legacyTail = legacyEntries.find(
-        (entry) => entry.options.name === 'conversation.chat.turnTail'
-      )
-      expect(legacyTail?.options.select).toEqual(expect.any(Function))
-      expect(legacyTail?.options.priority).toBe(-10)
-      expect(legacyTail?.options).not.toHaveProperty('id')
-      const legacySettings = legacyEntries.find(
-        (entry) => entry.options.name === 'settings.plugin.item'
-      )
-      expect(legacySettings?.options.key).toBe('univer-office')
-      expect(legacyInjectKeys, 'legacy hosts probe both settings slots').toEqual(
-        expect.arrayContaining(['plugins.bundle.config', 'settings.plugin.item'])
-      )
-      // The chain host passes {...owner, matched}; the component resolves its own match from the
-      // owner turn and renders the same review cards.
-      const { element, root } = mount()
-      try {
-        root.render(
-          React.createElement(legacyTail!.Component, {
-            key: 'legacy',
-            ...tailProps,
-            ...ownerProps(3, [turnFile(DEMO_FILE, WORKTREE)]),
-            matched: { turn: 3, files: [turnFile(DEMO_FILE, WORKTREE)] }
-          })
-        )
-        await waitFor(
-          'chain 契约下预览卡片正常渲染',
-          () => element.querySelector('.uvf_panel') !== null
-        )
-      } finally {
-        root.unmount()
-        element.remove()
-      }
-    })
-
     describe('on-demand .univer file viewer', () => {
       let viewer: { element: HTMLElement; root: any }
       let key = 0
@@ -2065,10 +1981,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
           true
         )
         expect(settingsListeners.size, 'absent Settings attach no preferences').toBe(0)
-        context.provide(
-          modernSettings ? 'configForms' : 'settingsScope',
-          modernSettings ? fakeCtx.get('configForms') : fakeCtx.settingsScope
-        )
+        context.provide('configForms', fakeCtx.configForms)
         await waitFor('late Cordis settings attachment', () => settingsListeners.size === 1)
         expect([...liveEntries].some((entry) => entry.name === 'plugins.bundle.config')).toBe(true)
         await fiber.dispose()
