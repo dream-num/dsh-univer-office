@@ -352,6 +352,7 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
       running,
       chat: {
         timeline: {
+          turnOrder: [...turns.keys(), 3],
           turns: new Map([
             ...turns,
             [3, { data: { get: (key: string) => (key === 'univerTurn' ? { files } : undefined) } }]
@@ -1124,6 +1125,112 @@ export function defineClientSuite(settingsApi: SettingsApi): void {
           visibleFiles().includes('second.univer')
         )
         expect(visibleFiles()).not.toContain('demo.univer')
+      })
+
+      it.each(['file', 'worktree'] as const)(
+        'removes a deleted %s from live and replayed previews (#153)',
+        async (kind) => {
+          const survivor = 'wt-survivor'
+          worktrees = [wt('draft'), wt('draft', survivor)]
+          const files = [turnFile(DEMO_FILE, WORKTREE), turnFile(SECOND_FILE, survivor)]
+          const active = sessionWithFiles(files, true)
+          const replay = sessionWithFiles(
+            [],
+            true,
+            new Map([[2, active.chat.timeline.turns.get(3)]])
+          )
+          const names = () => qa('.uvf_windowFile').map((el) => el.textContent)
+          try {
+            render(sessionWithFiles([], false))
+            await waitFor('previous session windows unmounted', () => q('.uvf_win') === null)
+            render(active)
+            await waitFor('both live Viewers loaded', () => qa('.uvf_win iframe').length === 2)
+            const survivorFrame = qa('.uvf_win iframe')[1]
+            if (kind === 'file') missingFiles.add(DEMO_FILE)
+            else worktrees = [wt('draft', survivor)]
+            await waitFor(
+              'only the surviving window remains',
+              () => names().join() === 'second.univer'
+            )
+            expect(q('.uvf_win iframe')).toBe(survivorFrame)
+
+            // On re-entry a plain chat Turn can replay the old calls before the Host responds.
+            gatewayPhase = 'stopped'
+            stateRequests.length = 0
+            render(replay)
+            await waitFor('historical targets checked', () => stateRequests.includes(SECOND_FILE))
+            expect(names()).toEqual([])
+            gatewayPhase = 'running'
+            await waitFor(
+              'valid history restored on retry',
+              () => names().join() === 'second.univer'
+            )
+            const restoredFrame = q('.uvf_win iframe')
+            expect(restoredFrame).not.toBeNull()
+
+            missingFiles.delete(DEMO_FILE)
+            worktrees = [wt('draft', survivor), wt('draft', 'wt-replacement')]
+            render(
+              sessionWithFiles(
+                [turnFile(DEMO_FILE, 'wt-replacement')],
+                true,
+                new Map([[2, active.chat.timeline.turns.get(3)]])
+              ),
+              false
+            )
+            await waitFor(
+              'new write to the same path opens its replacement',
+              () => qa('.uvf_win iframe').length === 2
+            )
+            expect(
+              qa('.uvf_win iframe').includes(restoredFrame),
+              'surviving Viewer stays mounted'
+            ).toBe(true)
+          } finally {
+            missingFiles.delete(DEMO_FILE)
+            gatewayPhase = 'running'
+          }
+        }
+      )
+
+      it('keeps a pending file creation through a missing response and loads its new worktree (#153)', async () => {
+        worktrees = []
+        missingFiles.add(DEMO_FILE)
+        const creating = turnFile(DEMO_FILE, null, 'new', null, 'pending')
+        try {
+          stateRequests.length = 0
+          render(sessionWithFiles([creating], true))
+          await waitFor(
+            'pending creation survives a missing-file poll',
+            () =>
+              stateRequests.filter((file) => file === DEMO_FILE).length >= 3 &&
+              q('.uvf_win') !== null
+          )
+          missingFiles.delete(DEMO_FILE)
+          const completed = {
+            ...creating,
+            operations: creating.operations.map((op) => ({ ...op, phase: 'succeeded' }))
+          }
+          render(sessionWithFiles([completed], true), false)
+          await waitFor(
+            'trunk appears after creation',
+            () => q('.uvf_win iframe')?.getAttribute('src') === ZH_LIVE_TRUNK_URL
+          )
+          worktrees = [wt('draft')]
+          render(
+            sessionWithFiles(
+              [completed, turnFile(DEMO_FILE, WORKTREE, 'worktree', 'create')],
+              true
+            ),
+            false
+          )
+          await waitFor(
+            'fresh worktree supersedes the cached empty listing',
+            () => q('.uvf_win iframe')?.getAttribute('src') === ZH_DEFAULT_UNIT_URL
+          )
+        } finally {
+          missingFiles.delete(DEMO_FILE)
+        }
       })
 
       it('resolves a relative target against the session cwd', async () => {

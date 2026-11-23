@@ -360,6 +360,15 @@ describe('browser routes and tools', () => {
       ).toMatchObject({ status: 403, body: { code: 'SESSION_SCOPE_DENIED' } })
     })
 
+    it('reports a previously previewed file as missing after deletion (#153)', async () => {
+      const temporary = join(workspace, 'temporary.univer')
+      const url = `/univer-api/state?file=temporary.univer&sessionId=${SESSION}`
+      await writeFile(temporary, '')
+      expect((await json(url)).status).toBe(200)
+      await rm(temporary)
+      expect(await json(url)).toMatchObject({ status: 400, body: { code: 'INVALID_FILE_PATH' } })
+    })
+
     it('resolves a relative file inside the session workspace', async () => {
       const response = await json(`/univer-api/state?file=smoke.univer&sessionId=${SESSION}`)
       expect(response.status).toBe(200)

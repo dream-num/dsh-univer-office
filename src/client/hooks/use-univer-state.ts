@@ -8,11 +8,11 @@ import {
   startGateway
 } from '../api/univer-api.ts'
 
-/** Poll collaboration state for a stable list of files. */
+/** Report null only for a Host-confirmed missing file. Transient failures retry on the next poll. */
 export function useUniverStates(
   files: readonly string[],
   sessionId: SessionId,
-  intervalMs = 900
+  onObservation?: (file: string, state: FileState | null) => void
 ): {
   readonly states: Readonly<Record<string, FileState>>
   readonly missingFiles: ReadonlySet<string>
@@ -21,31 +21,34 @@ export function useUniverStates(
   const [states, setStates] = React.useState<Record<string, FileState>>({})
   const [missing, setMissing] = React.useState<Record<string, true>>({})
   const key = files.join('\u0000')
-  const previousQuery = React.useRef({ sessionId, files: new Set<string>() })
+  const previousSession = React.useRef(sessionId)
   React.useEffect(() => {
-    const trackedFiles = key === '' ? [] : key.split('\u0000')
-    const previous = previousQuery.current
-    previousQuery.current = { sessionId, files: new Set(trackedFiles) }
-    // Closing one window must not unmount the Viewers for files that are still open.
-    if (
-      previous.sessionId === sessionId &&
-      trackedFiles.length < previous.files.size &&
-      trackedFiles.every((file) => previous.files.has(file))
-    ) {
+    const tracked = new Set(key.split('\u0000'))
+    // Adding or retiring one target should preserve the other files' mounted Viewers.
+    if (previousSession.current === sessionId) {
       setStates((current) =>
-        Object.fromEntries(Object.entries(current).filter(([file]) => trackedFiles.includes(file)))
+        Object.fromEntries(Object.entries(current).filter(([file]) => tracked.has(file)))
       )
     } else {
       setStates({})
     }
+    previousSession.current = sessionId
     setMissing({})
-    if (trackedFiles.length === 0) return
+  }, [key, sessionId])
+
+  React.useEffect(() => {
+    if (key === '') return
+    const trackedFiles = key.split('\u0000')
     let active = true
+    let polling = false
     const poll = async (): Promise<void> => {
+      if (polling) return
+      polling = true
       for (const file of trackedFiles) {
         try {
           const state = await getFileState(file, sessionId)
           if (!active) return
+          onObservation?.(file, state)
           setStates((previous) => ({ ...previous, [file]: state }))
           setMissing((previous) => {
             if (previous[file] === undefined) return previous
@@ -56,6 +59,7 @@ export function useUniverStates(
         } catch (error) {
           if (!active) return
           if (isMissingUniverFile(error)) {
+            onObservation?.(file, null)
             setStates((previous) => {
               if (previous[file] === undefined) return previous
               const next = { ...previous }
@@ -68,9 +72,10 @@ export function useUniverStates(
           }
         }
       }
+      polling = false
     }
     void poll()
-    const timer = window.setInterval(() => void poll(), intervalMs)
+    const timer = window.setInterval(() => void poll(), 900)
     const onVisibility = (): void => {
       if (document.visibilityState === 'visible') void poll()
     }
@@ -80,7 +85,7 @@ export function useUniverStates(
       window.clearInterval(timer)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [key, sessionId, intervalMs])
+  }, [key, sessionId, onObservation])
   return {
     states,
     missingFiles: React.useMemo(() => new Set(Object.keys(missing)), [missing]),
