@@ -1,3 +1,4 @@
+import type { SessionPolicy } from '../service/session-file-scope.ts'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
 import { UniverError } from '../service/errors.ts'
@@ -14,7 +15,8 @@ const MAX_BODY_BYTES = 64 * 1024
 export function createUniverRouter(
   service: UniverService,
   sessions: SessionStore,
-  connection: ConnectionTrust
+  connection: ConnectionTrust,
+  sandbox?: () => SessionPolicy | undefined
 ) {
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     const rejection = connection.requestRejection(request)
@@ -44,7 +46,8 @@ export function createUniverRouter(
             service,
             sessions,
             url.searchParams.get('file'),
-            url.searchParams.get('sessionId')
+            url.searchParams.get('sessionId'),
+            sandbox
           )
         )
         return
@@ -53,7 +56,7 @@ export function createUniverRouter(
         sendJson(
           response,
           200,
-          await worktreeActionRoute(service, sessions, await readJsonBody(request))
+          await worktreeActionRoute(service, sessions, await readJsonBody(request), sandbox)
         )
         return
       }

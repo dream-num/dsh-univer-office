@@ -36,6 +36,7 @@ const external = [
   '@deepseek-ai/cordis',
   '@deepseek-ai/dsh-host-webserver',
   '@deepseek-ai/dsh-llm',
+  '@deepseek-ai/dsh-sandbox',
   '@deepseek-ai/dsh-session',
   '@deepseek-ai/dsh-settings',
   '@deepseek-ai/dsh-skill',

@@ -5,7 +5,7 @@
 ## 架构
 
 ```text
-Viewer 文档 → DSH 连接鉴权 → 会话工作区校验 → loopback Gateway
+Viewer 文档 → DSH 连接鉴权 → 会话写权限校验 → loopback Gateway
 Viewer 文件 API 与 WebSocket → DSH 连接鉴权 → loopback Gateway
 模型 → Tools → Host Provider → loopback Gateway
 Worker → loopback Gateway
@@ -42,7 +42,7 @@ DSH WebServer 的 upgrade 注册只支持精确路径，而 Gateway 的 WS 端�
    cookie）未通过。`browserAuth` 关闭的 loopback 部署自动放行，语义与 connection 自身一致。
    `/univer-api` 同样补装此门（此前只有会话范围检查，没有浏览器身份门）。
 2. **文档会话范围**：Viewer 文档请求携带 `?file=<gatewayKey>` 与 `?sessionId=<sid>`，
-   代理解码 fileKey 并确认该路径落在该 live session 的 `cwd` 内。`/univer-api` 继续执行
+   代理解码 fileKey 并确认该 live session 对原文件有写权限。`/univer-api` 继续执行
    session/workspace 校验。
 
 后续 `/uf` API 与 WS 隧道只复用 DSH 的浏览器鉴权，不设置或读取插件会话 cookie，也不重复
@@ -65,7 +65,7 @@ session/workspace 校验。DSH 桌面壳会删除响应的 Set-Cookie，并把�
 `computeFileState` 生成的 `viewerUrl`/`openUrl`/`worktreeUrl`/`mergeUrl`（含 unit 变体）改为
 同源相对路径 `/univer-viewer/?file=<key>`；`gateway` 字段继续返回 loopback origin（模型可见
 事实）。`/univer-api/state` 响应在路由层为所有投影 URL 追加 `&sessionId=<sid>`，用于 Viewer
-文档首次打开时的 workspace 校验。浏览器
+文档首次打开时的会话写权限校验。浏览器
 中的审阅卡片、实时浮窗和文件树预览使用这些 URL；`univer_*` 工具不消费
 这些 URL。Client 只把 URL 当 opaque，不追加任何非呈现参数。
 

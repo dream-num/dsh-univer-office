@@ -1,3 +1,4 @@
+import type { SessionPolicy } from '../service/session-file-scope.ts'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import http from 'node:http'
 import type { Duplex } from 'node:stream'
@@ -15,6 +16,7 @@ export interface ConnectionTrust {
 export interface ViewerProxyOptions {
   /** Resolves the loopback Gateway origin (starts it when `autoStartGateway` allows). */
   readonly gatewayOrigin: () => Promise<string>
+  readonly sandbox?: () => SessionPolicy | undefined
   readonly sessions: SessionStore
   readonly connection: ConnectionTrust
 }
@@ -88,7 +90,9 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
         reject(res, 403)
         return
       }
-      if (!(await isFileInSessionScope(decodeFileKey(file), sessionId, sessions))) {
+      if (
+        !(await isFileInSessionScope(decodeFileKey(file), sessionId, sessions, options.sandbox))
+      ) {
         reject(res, 403)
         return
       }
@@ -303,10 +307,11 @@ function isGatewayFileKey(value: string): boolean {
 async function isFileInSessionScope(
   path: string,
   sessionId: string,
-  sessions: SessionStore
+  sessions: SessionStore,
+  sandbox?: () => SessionPolicy | undefined
 ): Promise<boolean> {
   try {
-    await resolveAuthorizedFile(path, sessionId, sessions)
+    await resolveAuthorizedFile(path, sessionId, sessions, 'write', sandbox)
     return true
   } catch {
     return false
