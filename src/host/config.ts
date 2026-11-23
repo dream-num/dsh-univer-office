@@ -1,3 +1,4 @@
+import type { Volatile } from '@deepseek-ai/cordis'
 import { isAbsolute, join, resolve } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 import { DEFAULT_UNIVER_SETTINGS } from '../shared/settings.ts'
@@ -6,11 +7,11 @@ import { resolveDshHome } from './dsh-home.ts'
 const DEFAULT_UNIT_CONTENT_RUNTIME_MAX_ENTRIES = 50
 
 /** Configuration shared by the Univer service provider and its consumers. */
-export interface Config {
-  /** Live browser preference; modern DSH owns its resolved value. */
-  autoOpenLivePreview?: boolean
-  /** Live browser preference; modern DSH owns its resolved value. */
-  conversationReviewCards?: boolean
+export interface Config<Preference extends boolean | Volatile<boolean> = boolean> {
+  /** Live browser preference; DSH owns its resolved value. */
+  autoOpenLivePreview?: Preference
+  /** Live browser preference; DSH owns its resolved value. */
+  conversationReviewCards?: Preference
   /** Initial loopback port used by the bundled Gateway; occupied ports advance by one. */
   gatewayPort?: number
   /** Start the bundled Gateway when file state is first requested. */
@@ -117,21 +118,13 @@ export const DEFAULT_ACTIVATION_SKILLS: readonly string[] = [
   'univer-slide'
 ]
 
-/**
- * Declare live fields using the serialized metadata understood by DSH 0.1.7+.
- * Older schemastery accepts this metadata without requiring its new volatile()
- * builder; legacy Hosts continue to own preferences through settings.register.
- */
-function livePreference(value: boolean): z<boolean> {
-  const field = z.boolean().default(value)
-  Object.assign(field.meta, { volatile: true })
-  return field
-}
-
 /** Cordis configuration schema. */
-export const Config: z<Config> = z.object({
-  autoOpenLivePreview: livePreference(DEFAULT_UNIVER_SETTINGS.autoOpenLivePreview),
-  conversationReviewCards: livePreference(DEFAULT_UNIVER_SETTINGS.conversationReviewCards),
+export const Config: z<Config, Config<Volatile<boolean>>> = z.object({
+  autoOpenLivePreview: z.boolean().default(DEFAULT_UNIVER_SETTINGS.autoOpenLivePreview).volatile(),
+  conversationReviewCards: z
+    .boolean()
+    .default(DEFAULT_UNIVER_SETTINGS.conversationReviewCards)
+    .volatile(),
   gatewayPort: z.natural().max(65535).default(9080),
   autoStartGateway: z.boolean().default(true),
   gatewayStartupTimeoutMs: z.natural().default(10_000),
@@ -160,7 +153,7 @@ export const Config: z<Config> = z.object({
 })
 
 /** Apply defaults and reject configuration that cannot run. */
-export function resolveConfig(config: Config = {}): ResolvedConfig {
+export function resolveConfig(config: Config<boolean | Volatile<boolean>> = {}): ResolvedConfig {
   const browserExecutablePath = resolveBrowserExecutablePath(config.browserExecutablePath)
   const resolved: ResolvedConfig = {
     gatewayPort: config.gatewayPort ?? 9080,

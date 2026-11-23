@@ -1,6 +1,6 @@
 // Real DSH Profile settings in a temporary deployment: bundle compatibility, activation, live
 // update, persistence across restarts, stale-write rejection, reset, and teardown. Runs only
-// against an independently installed DSH 0.1.7+ package named by UNIVER_DSH_RUNTIME_ROOT, and
+// against an independently installed supported DSH package named by UNIVER_DSH_RUNTIME_ROOT, and
 // never changes that installation's own profile.
 import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
@@ -95,6 +95,20 @@ describe.skipIf(runtime === undefined)('Host settings in a real DSH Profile', ()
       await ctx?.fiber.dispose()
     } finally {
       if (dir !== undefined) await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects the retired DSH releases at the bundle compatibility gate', async () => {
+    const req = createRequire(join(runtime!, 'package.json'))
+    const { evaluatePluginCompatibility } = await import(
+      pathToFileURL(req.resolve('@deepseek-ai/dsh-app-boot')).href
+    )
+    const manifest = JSON.parse(await readFile(join(REPO_ROOT, 'package.json'), 'utf8'))
+    for (const version of ['0.1.5-rc.3', '0.1.5', '0.1.7-rc.1', '0.1.7']) {
+      expect(evaluatePluginCompatibility(manifest, {}, version)).toMatchObject({
+        runtimeVersion: version,
+        exempted: false
+      })
     }
   })
 

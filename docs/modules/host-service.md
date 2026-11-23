@@ -1,6 +1,6 @@
 # Host 服务
 
-DSH 以裸包名挂载根 Cordis 插件，从包清单发现浏览器入口。根插件挂载 Provider、webServer 和 Settings，并按配置挂载 Tools 和 Skill Provider，各自的注册与监听随所属 fiber 释放。参见[根插件](../../src/host/index.ts)和[服务定义](../../src/host/service/univer-service.ts)。
+DSH 以裸包名挂载根 Cordis 插件，从包清单发现浏览器入口。根插件挂载 Provider 和 webServer，并按配置挂载 Tools 和 Skill Provider，各自的注册与监听随所属 fiber 释放。参见[根插件](../../src/host/index.ts)和[服务定义](../../src/host/service/univer-service.ts)。
 
 ## 服务边界
 

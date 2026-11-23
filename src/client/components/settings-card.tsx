@@ -2,11 +2,11 @@ import * as React from 'react'
 import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { DEFAULT_UNIVER_SETTINGS, type UniverSettings } from '../../shared/settings.ts'
-import type { UniverSettingsForm, UniverSettingsSnapshot } from '../settings/settings-contract.ts'
+import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { UniverLocaleKey } from '../locales/zh.ts'
 
 interface UniverSettingsCardInjected {
-  readonly settings: UniverSettingsForm
+  readonly settings: ConfigForm<UniverSettings>
 }
 
 type UniverSettingsCardProps = PropsRuntime<'plugins.bundle.config'> &
@@ -42,9 +42,7 @@ const BOOLEAN_FIELDS: readonly BooleanSettingField[] = [
 ]
 
 /**
- * Univer Office configuration contributed to this package's own Plugins page
- * (DSH 0.1.6-alpha.2+) and to the retired settings.plugin.item slot on older
- * hosts, which pass no `view` and receive the page form directly.
+ * Univer Office configuration on the Plugins page.
  *
  * Every switch shares one draft: edits accumulate per field and a single Save
  * commits them together, so a user can flip both and still Discard once.
@@ -196,7 +194,10 @@ export function UniverSettingsCard(props: UniverSettingsCardProps): React.ReactN
 }
 
 /** The schema default for one field, used when a Reset is committed. */
-function fallbackValue(snapshot: UniverSettingsSnapshot, field: BooleanSettingKey): boolean {
+function fallbackValue(
+  snapshot: ConfigFormSnapshot<UniverSettings>,
+  field: BooleanSettingKey
+): boolean {
   const base =
     typeof snapshot.base === 'object' && snapshot.base !== null && !Array.isArray(snapshot.base)
       ? (snapshot.base as Record<string, unknown>)[field]

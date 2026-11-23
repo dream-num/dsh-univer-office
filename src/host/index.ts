@@ -1,8 +1,7 @@
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context, Volatile } from '@deepseek-ai/cordis'
 import { resolveConfig } from './config.ts'
 import type { Config as UniverConfig } from './config.ts'
 import * as provider from './provider/plugin.ts'
-import * as settings from './settings/plugin.ts'
 import * as skills from './skills/plugin.ts'
 import { runHostTelemetry } from './telemetry/product-telemetry.ts'
 import * as tools from './tools/plugin.ts'
@@ -34,12 +33,11 @@ export * from '../shared/wire/viewer.ts'
 export const name = 'dsh-univer-office'
 
 /** Compose the Univer Provider and its Web/Tools Consumers. */
-export function apply(ctx: Context, config: UniverConfig = {}): void {
+export function apply(ctx: Context, config: UniverConfig<Volatile<boolean>> = {}): void {
   const resolved = resolveConfig(config)
   // Fire-and-forget: bounded by an internal timeout and never throws, so it
   // can neither delay activation nor leave work for unload to settle.
   void runHostTelemetry({ telemetryEnabled: resolved.telemetry })
-  ctx.plugin(settings)
   ctx.plugin(provider, resolved)
   ctx.plugin(webServer)
   if (resolved.tools) ctx.plugin(tools, resolved)

@@ -1,7 +1,7 @@
-import type { UniverSettingsForm } from './settings-contract.ts'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { UniverSettings } from '../../shared/settings.ts'
 
-/** Presentation switches the browser surfaces read from the DSH Settings scope. */
+/** Presentation switches the browser surfaces read from the DSH configuration form. */
 export interface UniverPreferencesState {
   /** Live floating window while the agent edits a document. */
   readonly livePreview: boolean
@@ -22,7 +22,7 @@ const PREFERENCES_SUPPRESSED: UniverPreferencesState = {
 }
 
 /**
- * Reactive projection of the optional DSH Settings scope.
+ * Reactive projection of the optional DSH configuration form.
  *
  * A surface the user turned off must not flash before its durable value loads,
  * so `loading` resolves every switch to off while a settings document that
@@ -34,7 +34,7 @@ export class UniverPreferences {
   /**
    * Starts at the product defaults: a host with no settings service never calls
    * {@link attach}, and an absent optional capability must not disable surfaces.
-   * Only a scope that reports `loading` suppresses them.
+   * Only a form that reports `loading` suppresses them.
    */
   private state: UniverPreferencesState = PREFERENCES_DEFAULT
   private readonly listeners = new Set<() => void>()
@@ -46,10 +46,10 @@ export class UniverPreferences {
     return () => this.listeners.delete(listener)
   }
 
-  /** Attach one Settings scope and return its detach for the owning fiber. */
-  attach(scope: UniverSettingsForm): () => void {
-    const sync = (): void => this.publish(project(scope.getSnapshot()))
-    const dispose = scope.subscribe(sync)
+  /** Attach one configuration form and return its detach for the owning fiber. */
+  attach(form: ConfigForm<UniverSettings>): () => void {
+    const sync = (): void => this.publish(project(form.getSnapshot()))
+    const dispose = form.subscribe(sync)
     sync()
     return () => {
       dispose()

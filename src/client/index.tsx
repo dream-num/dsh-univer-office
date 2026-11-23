@@ -6,8 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
-import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
-import { UNIVER_CONFIG_ENTRY_ID, UNIVER_SETTINGS_NAMESPACE } from '../shared/settings.ts'
+import { UNIVER_CONFIG_ENTRY_ID, type UniverSettings } from '../shared/settings.ts'
 import { betterSidebarOf } from './better-sidebar.ts'
 import { PreviewCard } from './components/preview-card.tsx'
 import { UniverSettingsCard } from './components/settings-card.tsx'
@@ -18,15 +17,10 @@ import {
   UniverSidebarTabBody
 } from './components/univer-sidebar-tab.tsx'
 import { UniverDock } from './components/univer-dock.tsx'
-import { selectUniverTurn, univerTurnDefinition } from './conversation/univer-turn-definition.ts'
+import { univerTurnDefinition } from './conversation/univer-turn-definition.ts'
 import { en, UNIVER_LOCALE_NAMESPACE, zh } from './locales/index.ts'
 import { fileAddressBasename, parseFileAddress } from './resource-address.ts'
 import { sidebarRightTabsOf } from './sidebar-right.ts'
-import type {
-  UniverConfigForms,
-  UniverSettingsForm,
-  UniverSettingsScopeBinder
-} from './settings/settings-contract.ts'
 import { UniverPreferences } from './settings/univer-preferences.ts'
 import { settingsStyles } from './styles/settings.ts'
 import { worktreeStyles } from './styles/worktree.ts'
@@ -58,39 +52,17 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(UNIVER_LOCALE_NAMESPACE, { zh, en }), 'univer: dictionaries')
   ctx.effect(
     () =>
-      ctx.slots.inject('conversation.chat.turnTail', () => {
-        try {
-          return ctx.slots.register(
-            {
-              name: 'conversation.chat.turnTail',
-              // List-slot contract (DSH 0.1.6-alpha.2): a fresh id contributes
-              // an entry; the entry component resolves its own Turn match
-              // because list slots inject the owner props instead of a chain
-              // `matched`.
-              id: 'univer-turn-preview',
-              locale: UNIVER_LOCALE_NAMESPACE,
-              inject: () => ({ getViewerLocale, preferences })
-            },
-            PreviewCard
-          )
-        } catch (error) {
-          // Hosts up to 0.1.6-alpha.1 declare turnTail as a chain slot and
-          // reject registrations without a selector. PreviewCard reads only
-          // the owner props, so the same component serves both contracts.
-          if (!(error instanceof Error) || !error.message.includes('requires options.select'))
-            throw error
-          return untypedSlots(ctx).register(
-            {
-              name: 'conversation.chat.turnTail',
-              priority: -10,
-              locale: UNIVER_LOCALE_NAMESPACE,
-              select: selectUniverTurn,
-              inject: () => ({ getViewerLocale, preferences })
-            },
-            PreviewCard
-          )
-        }
-      }),
+      ctx.slots.inject('conversation.chat.turnTail', () =>
+        ctx.slots.register(
+          {
+            name: 'conversation.chat.turnTail',
+            id: 'univer-turn-preview',
+            locale: UNIVER_LOCALE_NAMESPACE,
+            inject: () => ({ getViewerLocale, preferences })
+          },
+          PreviewCard
+        )
+      ),
     'univer: turn preview'
   )
   ctx.effect(
@@ -124,50 +96,21 @@ export function apply(ctx: ClientContext): void {
   ctx.inject(['betterSidebar'], (sidebarCtx: ClientContext) => {
     sidebarCtx.effect(() => registerUniverFileViewer(sidebarCtx), 'univer: univer file viewer')
   })
-  ctx.inject(['settingsScope'], (settingsCtx: ClientContext) => {
-    // DSH 0.1.6 and earlier; current hosts provide configForms instead.
-    const scope = settingsCtx.get('settingsScope') as UniverSettingsScopeBinder
-    registerSettings(settingsCtx, preferences, scope.bind({ namespace: UNIVER_SETTINGS_NAMESPACE }))
-  })
   ctx.inject(['configForms'], (settingsCtx: ClientContext) => {
-    // The bundle patch owns this entry id; modern DSH projects its live Config.
-    const forms = settingsCtx.get('configForms') as UniverConfigForms
-    registerSettings(settingsCtx, preferences, forms.get(UNIVER_CONFIG_ENTRY_ID))
+    const settings = settingsCtx.configForms.get<UniverSettings>(UNIVER_CONFIG_ENTRY_ID)
+    settingsCtx.effect(() => preferences.attach(settings), 'univer: presentation preferences')
+    settingsCtx.slots.inject('plugins.bundle.config', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'plugins.bundle.config',
+          key: 'dsh-univer-office',
+          locale: UNIVER_LOCALE_NAMESPACE,
+          inject: () => ({ settings })
+        },
+        UniverSettingsCard
+      )
+    )
   })
-}
-
-function registerSettings(
-  settingsCtx: ClientContext,
-  preferences: UniverPreferences,
-  settings: UniverSettingsForm
-): void {
-  settingsCtx.effect(() => preferences.attach(settings), 'univer: presentation preferences')
-  // The bundle configuration section of this package's own Plugins page
-  // (DSH 0.1.6-alpha.2+). Hosts that retired settings.plugin.item never
-  // declare the legacy slot below, and hosts without the Plugins page never
-  // declare this one, so exactly one contribution runs per host.
-  settingsCtx.slots.inject('plugins.bundle.config', () =>
-    settingsCtx.slots.register(
-      {
-        name: 'plugins.bundle.config',
-        key: 'dsh-univer-office',
-        locale: UNIVER_LOCALE_NAMESPACE,
-        inject: () => ({ settings })
-      },
-      UniverSettingsCard
-    )
-  )
-  untypedSlots(settingsCtx).inject('settings.plugin.item', () =>
-    untypedSlots(settingsCtx).register(
-      {
-        name: 'settings.plugin.item',
-        key: UNIVER_SETTINGS_NAMESPACE,
-        locale: UNIVER_LOCALE_NAMESPACE,
-        inject: () => ({ settings })
-      },
-      UniverSettingsCard
-    )
-  )
 }
 
 /**
@@ -234,13 +177,7 @@ function registerUniverFileViewer(ctx: ClientContext): () => void {
   })
 }
 
-/**
- * Type-erased view of the slots service for the seats the installed SlotMap
- * does not declare: the legacy surfaces the alpha.2 contract retired (the
- * `settings.plugin.item` slot and the chain-kind turnTail registration), and
- * the native right-Sidebar tab seat, which ships no declarations this package
- * can depend on. The erased names exist only inside these calls.
- */
+/** The native right-Sidebar tab seat ships no SlotMap declaration. */
 interface UntypedSlots {
   /**
    * Invoke `callback` once the named seat exists. Returns the callback's
