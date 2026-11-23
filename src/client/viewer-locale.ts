@@ -13,10 +13,11 @@ export function viewerLocaleOf(locale: LocaleId): ViewerLocale {
   return locale === 'zh' ? 'zh-CN' : 'en-US'
 }
 
-/** Add the active Viewer locale without reconstructing the Host-owned target. */
-export function localizeViewerUrl(url: string, locale: ViewerLocale): string {
+/** Add Viewer presentation parameters to the Host-owned target. */
+export function localizeViewerUrl(url: string, locale: ViewerLocale, surface?: 'floating'): string {
   // Host-projected Viewer targets are same-origin relative paths.
   const target = new URL(url, window.location.origin)
   target.searchParams.set('lang', locale)
+  if (surface !== undefined) target.searchParams.set('surface', surface)
   return target.toString()
 }

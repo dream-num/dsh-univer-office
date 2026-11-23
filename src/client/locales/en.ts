@@ -23,7 +23,7 @@ export const en = {
   'dock.expand': 'Expand',
   'dock.maximize': 'Maximize',
   'dock.restore': 'Restore',
-  'dock.close': 'Close',
+  'dock.close': 'Hide this file’s live preview for this session',
   'dock.gatewayDown': 'Univer Gateway is not running; live preview is unavailable',
   'dock.startGateway': 'Start Gateway',
   'dock.mergeTitle': 'Merge preview',

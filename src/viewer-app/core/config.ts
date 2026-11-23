@@ -38,6 +38,13 @@ export interface WriteLocationOptions {
   lang?: string
 }
 
+/** The floating window can show either a standalone trunk route or an embedded worktree route. */
+export function isFloatingPreview(): boolean {
+  return (
+    window.parent !== window && new URLSearchParams(location.search).get('surface') === 'floating'
+  )
+}
+
 /** Read the current view from the address bar. No file is a real "nothing selected" state. */
 export function readLocation(): AppLocation {
   const p = new URLSearchParams(location.search)
@@ -90,6 +97,7 @@ export function writeLocation(loc: WriteLocationOptions): void {
   if (sessionId !== null) {
     p.set('sessionId', sessionId)
   }
+  if (isFloatingPreview()) p.set('surface', 'floating')
   history.replaceState(null, '', `${location.pathname}?${p.toString()}`)
 }
 

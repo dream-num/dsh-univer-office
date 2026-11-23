@@ -21,7 +21,7 @@ export const zh = {
   'dock.expand': '展开',
   'dock.maximize': '放大',
   'dock.restore': '还原',
-  'dock.close': '关闭',
+  'dock.close': '在本会话中关闭此文件的实时浮窗',
   'dock.gatewayDown': 'Univer Gateway 未运行，无法实时预览',
   'dock.startGateway': '启动 Gateway',
   'dock.mergeTitle': '合并预览',

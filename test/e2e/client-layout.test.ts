@@ -61,12 +61,13 @@ describe('review and window layout in a real browser', () => {
           document.head.append(style)
           const root = createRoot(document.getElementById('root'))
           window.unmountReview = () => root.unmount()
-          const floating = new URLSearchParams(location.search).has('floating')
+          const params = new URLSearchParams(location.search)
+          const floating = params.has('floating')
           root.render(React.createElement(React.StrictMode, null,
             React.createElement(floating ? WorktreeWindow : ReviewPanel, {
-              file: 'example.univer', worktreeId: null, preferredUnitId: null,
+              file: params.get('file') ?? 'example.univer', worktreeId: null, preferredUnitId: null,
               stackIndex: 0, onDismiss: () => root.unmount(),
-              historical: false, viewerLocale: 'en-US', t: key => key,
+              historical: false, viewerLocale: 'en-US', t: key => key === 'dock.currentVersion' ? 'Trunk' : key,
               state: {ok: true, file: 'example.univer', gateway: null,
                 gatewayRunning: true, viewerUrl: '/frame', worktrees: []}
             })))
@@ -198,6 +199,69 @@ describe('review and window layout in a real browser', () => {
       }
     }
   )
+
+  it('fits the folded header to its content and restores resized and maximized bounds (#153)', async () => {
+    const page = await open({ floating: '', clearance: 40 }, 1280)
+    try {
+      await page.waitForSelector('.uvf_win')
+      const bounds = () =>
+        page.$eval('.uvf_win', (el) => {
+          const { top, right, width, height } = el.getBoundingClientRect()
+          return { top, right, width, height }
+        })
+      const fold = () => page.click('[data-window-action=fold]')
+      const handle = (await (await page.$('[data-direction=sw]'))!.boundingBox())!
+      await page.mouse.move(handle.x + 4, handle.y + 4)
+      await page.mouse.down()
+      await page.mouse.move(handle.x - 116, handle.y + 84)
+      await page.mouse.up()
+      const expanded = await bounds()
+      expect(expanded.width).toBe(680)
+      expect(expanded.height).toBe(500)
+      for (const maximized of [false, true]) {
+        if (maximized) await page.click('[data-window-action=maximize]')
+        const before = await bounds()
+        await fold()
+        const compact = await bounds()
+        expect(compact.height).toBe(48)
+        expect(compact.width).toBeLessThan(expanded.width)
+        expect(compact.right).toBe(before.right)
+        expect(compact.top).toBe(before.top)
+        await fold()
+        expect(await bounds()).toEqual(before)
+      }
+      await page.click('[data-window-action=maximize]')
+      expect(await bounds()).toEqual(expanded)
+    } finally {
+      await page.close()
+    }
+  })
+
+  it('sizes a folded window to the filename and truncates long names without moving its controls (#153)', async () => {
+    const measure = async (file: string) => {
+      const page = await open({ floating: '', file }, 1280)
+      try {
+        await page.click('[data-window-action=fold]')
+        return await page.$eval('.uvf_win_folded', (el) => {
+          const filename = el.querySelector<HTMLElement>('.uvf_windowFile')!
+          const close = el.querySelector('[data-window-action=close]')!.getBoundingClientRect()
+          return {
+            width: el.getBoundingClientRect().width,
+            closeX: close.x,
+            truncated: filename.scrollWidth > filename.clientWidth
+          }
+        })
+      } finally {
+        await page.close()
+      }
+    }
+    const short = await measure('A.univer')
+    const long = await measure('quarterly-forecast-'.repeat(8) + '.univer')
+    expect(short.truncated).toBe(false)
+    expect(long.truncated).toBe(true)
+    expect(long.width).toBeGreaterThan(short.width)
+    expect(long.closeX).toBe(short.closeX)
+  })
 
   it.each(TITLEBARS)(
     'keeps the floating window below a $clearance px title bar at $width px',

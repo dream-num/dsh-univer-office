@@ -1,5 +1,6 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { ConversationNodeDefinition } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
@@ -41,6 +42,7 @@ interface UiConversationEvents {
 export function apply(ctx: ClientContext): void {
   const getViewerLocale = (): ViewerLocale => viewerLocaleOf(ctx.locale.getSnapshot().active)
   const preferences = new UniverPreferences()
+  const dismissedFiles = new Map<SessionId, Set<string>>()
   injectStyles('dsh-univer-office/styles', worktreeStyles)
   injectStyles('dsh-univer-office/settings-styles', settingsStyles)
   const uiConversation = ctx.get('uiConversation') as { events: UiConversationEvents } | undefined
@@ -100,7 +102,7 @@ export function apply(ctx: ClientContext): void {
             id: 'univer-dock',
             order: 400,
             locale: UNIVER_LOCALE_NAMESPACE,
-            inject: () => ({ getViewerLocale, preferences })
+            inject: () => ({ getViewerLocale, preferences, dismissedFiles })
           },
           UniverDock
         )
