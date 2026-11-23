@@ -9,7 +9,7 @@ This file defines repository-specific instructions for `dsh-univer-office`, an i
 - Define each contract in one place. Keep module details in `docs/modules/`, deployment and release details in `docs/operations/`, and package-specific formats and APIs in the package README. Link across boundaries. If an implementation diverges from the documented design, identify the discrepancy explicitly until it is resolved.
 - Keep standing development rules and commands in this file.
 - Keep user-visible capabilities, configuration, and limitations synchronized in both [`README.md`](README.md) and [`README.zh-CN.md`](README.zh-CN.md).
-- Keep model workflows in `skills/`. Do not duplicate tool schemas or step-by-step agent workflows elsewhere.
+- Keep end-user DSH model workflows in `skills/`. Repository-only contributor skills live in `.agents/skills/`. Do not duplicate tool schemas or step-by-step agent workflows elsewhere.
 - Describe only the current implementation. Do not preserve prototype behavior unless it remains a documented product contract.
 
 ## 2. Commands and validation
@@ -49,6 +49,8 @@ Choose the narrowest validation that proves the change. Run one file with `pnpm 
 | Import or export fidelity                                                                     | Build every affected application | `test/integration/exchange.test.ts`                                      |
 | Gateway, Worker, persistence, worktree lifecycle, Render Machine, or a cross-process protocol | Build every affected application | `pnpm run test:integration`                                              |
 | Cross-layer, SDK upgrade, or release change                                                   | None separately                  | `pnpm test`                                                              |
+
+When a task calls for real-user acceptance in an installed DSH environment, use the repository skill [dsh-univer-acceptance](.agents/skills/dsh-univer-acceptance/SKILL.md). Cover Sheet, Doc, and Slide by default. Narrow the scope when the user specifies a format or workflow.
 
 For DSH compatibility changes, build `lib/` first, then point `UNIVER_DSH_RUNTIME_ROOT` at an independently installed target DSH package: `test/integration/client/` then checks that release's Cordis lifecycle, and `test/integration/host-settings-profile.test.ts` (skipped without the variable) checks real Profile settings, live updates, and persistence across restarts in a temporary deployment.
 
