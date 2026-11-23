@@ -101,6 +101,7 @@ Viewer 选择由投影 scope 与权威状态共同决定：
 
 - `draft` 或 `ready` worktree 继续打开；
 - `merged` 或 `discarded` worktree 清除打开意图，不再出现；
+- Host 报告文件路径无效，或最新文件状态中已没有目标 worktree 时，关闭对应浮窗并释放名额。同一路径后续有新的有效修改时可重新开窗；
 - 查询暂时失败时保留打开意图并等待重试，不能把失败当作终态；
 - `univer_new` 拉起的文件浮窗在没有 worktree 时可继续展示 Trunk；后续创建 worktree 时原位升级到该 worktree。
 
@@ -108,7 +109,7 @@ Viewer 选择由投影 scope 与权威状态共同决定：
 
 同一文件共用一个浮窗，写入或生命周期操作可原位更新其 worktree。最多同时打开三个文件，最小化仍占名额。满额时跳过新文件，保留已有窗口。浮窗用展示参数 `surface=floating` 标记 Viewer，各类 Unit 在主线、worktree 和合入预览中均隐藏编辑 Ribbon。最小化时标题栏按内容收紧，展开后恢复原来的大小或最大化状态。
 
-当前 [UniverDock](../../src/client/components/univer-dock.tsx) 按会话挂载，按文件保存打开的目标，并用组件内的 callId 集合识别已处理的操作。它只在会话运行且实时预览开启时显示窗口和轮询状态。重新挂载时会再次扫描会话历史，并跳过本会话已关闭的文件。Host 报告文件或 worktree 已消失时，浮窗也可能残留。相关偏差见 [#153](https://github.com/dream-num/dsh-univer-office/issues/153)。
+当前 [UniverDock](../../src/client/components/univer-dock.tsx) 按会话挂载，按文件保存打开的目标，并用组件内的 callId 集合识别已处理的操作。它只在会话运行且实时预览开启时显示窗口和轮询状态。重新挂载时会再次扫描会话历史，并跳过本会话已关闭的文件。仅由历史回合触发的目标等待 Host 确认仍存在且可预览后再显示。当前回合正在执行的 `univer_new` 可以先展示加载状态，文件创建完成后再校验。
 
 ## 设置与文件树
 

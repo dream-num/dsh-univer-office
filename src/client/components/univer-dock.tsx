@@ -5,6 +5,7 @@ import type { ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { FileState } from '../../shared/wire/state.ts'
 import {
   opensFloatingWindow,
   turnFilesOfTimeline,
@@ -25,6 +26,7 @@ export type UniverDockProps = PropsRuntime<'conversation.input.dock'> & UniverDo
 const MAX_WINDOWS = 3
 
 interface OpenWindow {
+  readonly callId: string
   readonly file: string
   readonly worktreeId: string | null
   readonly preferredUnitId: string | null
@@ -57,6 +59,18 @@ function UniverSessionDock(
   const turnFiles = React.useMemo(
     () => turnFilesOfTimeline(props.timeline, props.cwd),
     [props.timeline, props.cwd]
+  )
+  const latestTurn = props.timeline?.turnOrder.at(-1)
+  const latestFiles =
+    latestTurn === undefined
+      ? undefined
+      : props.timeline?.turns.get(latestTurn)?.data.get('univerTurn')?.files
+  const currentCalls = React.useMemo(
+    () =>
+      new Map(
+        latestFiles?.flatMap(({ operations }) => operations.map((op) => [op.callId, op] as const))
+      ),
+    [latestFiles]
   )
   const [open, setOpen] = React.useState<Record<string, OpenWindow>>({})
   const seen = React.useRef(new Set<string>())
@@ -92,32 +106,35 @@ function UniverSessionDock(
     })
   }, [turnFiles, livePreviewEnabled, dismissedFiles, sessionId])
 
-  const files = Object.keys(open)
+  // Rebind when a file switches worktrees. An older, in-flight listing cannot retire its successor.
+  const reconcile = React.useCallback(
+    (file: string, state: FileState | null) => {
+      const target = open[file]
+      if (target === undefined) return
+      const call = currentCalls.get(target.callId)
+      if (state === null && call?.name === 'new' && call.phase === 'pending') return
+      if (state !== null && isLiveTarget(target, state)) return
+      setOpen((previous) => {
+        if (previous[file] !== target) return previous
+        const next = { ...previous }
+        delete next[file]
+        return next
+      })
+    },
+    [open, currentCalls]
+  )
   const { states } = useUniverStates(
-    props.running && livePreviewEnabled ? files : [],
-    props.sessionId
+    props.running && livePreviewEnabled ? Object.keys(open) : [],
+    props.sessionId,
+    reconcile
   )
 
-  React.useEffect(() => {
-    setOpen((previous) => {
-      let changed = false
-      const next = { ...previous }
-      for (const target of Object.values(previous)) {
-        if (target.worktreeId === null) continue
-        const worktree = states[target.file]?.worktrees.find(
-          (entry) => entry.worktreeId === target.worktreeId
-        )
-        if (worktree?.status === 'merged' || worktree?.status === 'discarded') {
-          delete next[target.file]
-          changed = true
-        }
-      }
-      return changed ? next : previous
-    })
-  }, [states])
-
   if (!props.running || !livePreviewEnabled) return <></>
-  const windows = Object.values(open)
+  const windows = Object.values(open).filter((target) => {
+    if (currentCalls.has(target.callId)) return true
+    const state = states[target.file]
+    return state !== undefined && isLiveTarget(target, state)
+  })
   if (windows.length === 0) return <></>
   // The input dock renders inside a translucent, non-draggable container.
   // Portaling avoids inheriting that container's opacity and hit-testing.
@@ -151,7 +168,16 @@ function UniverSessionDock(
 }
 
 function openWindowOf(operation: UniverTurnOperation, file: string): OpenWindow | null {
-  if (operation.name === 'new') return { file, worktreeId: null, preferredUnitId: operation.unitId }
-  if (operation.worktreeId === null) return null
-  return { file, worktreeId: operation.worktreeId, preferredUnitId: operation.unitId }
+  const worktreeId = operation.name === 'new' ? null : operation.worktreeId
+  if (operation.name !== 'new' && worktreeId === null) return null
+  return { callId: operation.callId, file, worktreeId, preferredUnitId: operation.unitId }
+}
+
+function isLiveTarget(target: OpenWindow, state: FileState): boolean {
+  if (target.worktreeId === null) return true
+  return state.worktrees.some(
+    (entry) =>
+      entry.worktreeId === target.worktreeId &&
+      (entry.status === 'draft' || entry.status === 'ready')
+  )
 }
