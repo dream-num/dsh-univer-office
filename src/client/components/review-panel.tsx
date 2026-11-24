@@ -4,6 +4,7 @@ import type { FileState, WorktreeState, WorktreeStatus } from '../../shared/wire
 import { basename } from '../conversation/univer-turn-definition.ts'
 import { localizeViewerUrl } from '../viewer-locale.ts'
 import type { ViewerLocale } from '../viewer-locale.ts'
+import { PreviewNotice } from './preview-notice.tsx'
 import { UnitChips, unitViewerUrl } from './unit-chips.tsx'
 
 type CardStatus = WorktreeStatus | 'trunk' | 'loading' | 'unavailable'
@@ -12,6 +13,7 @@ type CardStatus = WorktreeStatus | 'trunk' | 'loading' | 'unavailable'
 export function ReviewPanel(props: {
   readonly file: string
   readonly state: FileState | undefined
+  readonly error: Error | undefined
   readonly worktreeId: string | null
   readonly preferredUnitId: string | null
   readonly historical: boolean
@@ -32,7 +34,9 @@ export function ReviewPanel(props: {
       : props.state?.worktrees.find((entry) => entry.worktreeId === props.worktreeId)
   const status: CardStatus =
     props.state === undefined
-      ? 'loading'
+      ? props.error === undefined
+        ? 'loading'
+        : 'unavailable'
       : props.worktreeId === null
         ? 'trunk'
         : (worktree?.status ?? 'unavailable')
@@ -158,7 +162,14 @@ export function ReviewPanel(props: {
           <UnitChips units={units} selected={selectedUnit} t={props.t} onSelect={setSelected} />
           {url === undefined ? (
             <div className="uvf_panelUnavailable">
-              {props.t(status === 'loading' ? 'dock.loading' : 'dock.unavailable')}
+              {open ? (
+                <PreviewNotice
+                  t={props.t}
+                  error={props.error}
+                  loading={status === 'loading'}
+                  gatewayStopped={props.state?.gatewayRunning === false}
+                />
+              ) : null}
             </div>
           ) : open ? (
             // Every mounted Viewer is a live collaboration client, so a folded

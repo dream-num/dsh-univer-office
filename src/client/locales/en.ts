@@ -38,6 +38,12 @@ export const en = {
   'dock.currentVersion': 'Current version',
   'dock.loading': 'Loading',
   'dock.unavailable': 'Unavailable',
+  'viewer.scopeDenied':
+    'This session cannot read the file. Open the preview in a session with access.',
+  'viewer.routeMissing':
+    'Univer API route not found. Check the host and plugin route configuration.',
+  'viewer.requestFailed': 'Could not load the preview.',
+  'viewer.statusFailed': 'Could not check the Gateway status.',
   'viewer.missing': 'This file is no longer in the current session workspace',
   'dock.notReady': 'Submit this modification for confirmation before merging or discarding it',
   'dock.merge': 'Merge into current version',

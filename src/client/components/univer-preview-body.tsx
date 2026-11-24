@@ -1,11 +1,10 @@
 import * as React from 'react'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { useUniverFileView } from '../hooks/use-univer-file-view.ts'
-import type { UniverFileView } from '../hooks/use-univer-file-view.ts'
+import { useUniverStates } from '../hooks/use-univer-state.ts'
 import { useUniverLocale } from '../hooks/use-univer-locale.ts'
 import { localizeViewerUrl } from '../viewer-locale.ts'
+import { PreviewNotice } from './preview-notice.tsx'
 
 /**
  * The on-demand `.univer` preview body, shared by every entry point that opens
@@ -26,21 +25,21 @@ export function UniverPreviewBody(props: {
   const { t, viewerLocale } = useUniverLocale(props.ctx)
   // Entry points hand over the wire session id; branding it is this plugin's
   // client-side boundary conversion (the brand has no runtime representation).
-  const view = useUniverFileView(props.path, props.sessionId as SessionId)
-  const target = view.kind === 'ready' ? (view.state.viewerUrl ?? undefined) : undefined
+  const observation = useUniverStates([props.path], props.sessionId as SessionId)[props.path]
+  const target = observation?.state?.viewerUrl ?? undefined
   const url = target === undefined ? undefined : localizeViewerUrl(target, viewerLocale)
 
   return (
     <div className="uvf_fileView" data-surface={props.surface}>
       <div className="uvf_viewerShell">
         {url === undefined ? (
-          <div className="uvf_note" data-file-view={view.kind}>
-            <span>{noteLabel(view.kind, t)}</span>
-            {view.kind === 'gateway' ? (
-              <button type="button" onClick={() => void view.start()}>
-                {t('dock.startGateway')}
-              </button>
-            ) : null}
+          <div className="uvf_note">
+            <PreviewNotice
+              t={t}
+              error={observation?.error}
+              gatewayStopped={observation?.state?.gatewayRunning === false}
+              loading={observation?.state === undefined}
+            />
           </div>
         ) : (
           <iframe className="uvf_frame" src={url} title={props.title} />
@@ -48,10 +47,4 @@ export function UniverPreviewBody(props: {
       </div>
     </div>
   )
-}
-
-function noteLabel(kind: UniverFileView['kind'], t: TranslateNS<'univer'>): string {
-  if (kind === 'missing') return t('viewer.missing')
-  if (kind === 'gateway') return t('dock.gatewayDown')
-  return t('dock.loading')
 }
