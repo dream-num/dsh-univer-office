@@ -98,6 +98,8 @@ export interface ExportUnitContentRequest extends ScopedFileRequest {
   readonly outputWorkspace?: FileScope
   readonly unitId: UnitId
   readonly worktreeId?: WorktreeId
+  readonly worksheetId?: string
+  readonly tableId?: string
 }
 
 /** Request for deterministic Slide layout analysis. */

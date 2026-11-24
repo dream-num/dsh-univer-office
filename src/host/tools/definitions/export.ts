@@ -27,6 +27,16 @@ export function exportTool(ctx: Context, timeoutMs: number) {
         required: true,
         description: 'Explicit Unit id from univer_status.'
       },
+      worksheetId: {
+        type: 'string',
+        description:
+          'Worksheet ID for CSV/TSV export from a Sheet Unit. Required when the workbook has multiple worksheets.'
+      },
+      tableId: {
+        type: 'string',
+        description:
+          'Table ID for CSV/TSV export from a Base Unit. Required when the Base has multiple tables.'
+      },
       worktreeId: { type: 'string', description: 'Optional worktree scope; omit to export trunk.' }
     },
     output: operationOutput,
@@ -41,6 +51,8 @@ export function exportTool(ctx: Context, timeoutMs: number) {
           workspace: target.workspace,
           file: target.path,
           output: output.path,
+          ...(args.worksheetId === undefined ? {} : { worksheetId: args.worksheetId }),
+          ...(args.tableId === undefined ? {} : { tableId: args.tableId }),
           unitId: unitId(args.unitId),
           ...(args.worktreeId === undefined ? {} : { worktreeId: worktreeId(args.worktreeId) })
         },

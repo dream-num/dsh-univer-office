@@ -142,6 +142,8 @@ export class UnitContentOperations {
       {
         ...target,
         operation: 'export',
+        ...(request.worksheetId === undefined ? {} : { worksheetId: request.worksheetId }),
+        ...(request.tableId === undefined ? {} : { tableId: request.tableId }),
         outputPath: resolveExportFile(request.output)
       },
       signal

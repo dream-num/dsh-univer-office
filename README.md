@@ -159,7 +159,7 @@ DSH selects these tools automatically; you normally do not need to call them man
 | `univer_import` | Import an Office file into a `.univer` file; docx keeps its page setup by default, `docType` selects traditional (default) or modern |
 | `univer_inspect` | Read document structure or a selected Sheet range |
 | `univer_execute` | Read or edit content through the Univer API |
-| `univer_export` | Export Sheet, Doc, Slide, or Base content |
+| `univer_export` | Export Sheet, Doc, Slide, or Base content. CSV/TSV exports one worksheet or Base table. If the Unit contains several, specify `worksheetId` or `tableId`. |
 | `univer_lint` | Find off-page, overflowing, and overlapping Slide text |
 | `univer_compile_svg` | Add an SVG layout to a Slide with measured text |
 | `univer_screenshot` | Render supported content as PNG images for review |

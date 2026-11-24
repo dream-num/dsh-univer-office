@@ -18,6 +18,8 @@ Unit 的检查、执行和 render-source 读取（lint、截图与 PDF 打印的
 
 工具导入时，一次性 Unit Content Worker 将源文件转换为快照，Provider 再通过 Gateway 在目标 draft worktree 创建 Unit。导出时，Worker 加载指定主线或 worktree 的 Unit 并写出目标文件。Worker 在完成或取消后退出。
 
+CSV/TSV 每个文件对应一张工作表或 Base 数据表。Worker 在已拉取的 Unit 快照中解析 `worksheetId` 或 `tableId`。只有一张表时自动选取，多张表时要求指定 ID。选择失败时在写入目标文件前返回错误。
+
 Doc/DOCX、Sheet/XLSX 和 Slide/PPTX 的 Unit 导出共用 Exchange 的 `files.load` 解析当前 Unit 的 UUID 资源；URL 图片沿用 Collaboration Exchange Service 的透明占位图策略。Base 和 CSV/TSV 不传资源回调。Worker 从当前文件和 worktree（或 trunk）的 `universer-api/file/<id>/content?source=3&assign=<unitId>` 取回字节；Ribbon 的 trunk Unit 导出直接调用相同的 Gateway 资产读取逻辑。Gateway 按资产所属 Unit 和 worktree 可见性校验读取。上传的 JSON 快照不获得本地资产读取权限。
 
 Viewer 内交互式导入导出使用 [Gateway 的 trunk exchange 协议](gateway.md)。工具路径的行为验证见 [Unit 内容测试](../../test/integration/unit-content.test.ts)和[格式往返测试](../../test/integration/exchange.test.ts)。
