@@ -159,7 +159,7 @@ DSH 会自动选择这些工具，日常使用不需要手动调用。它们在�
 | `univer_import` | 把 Office 文件导入 `.univer` 文件；docx 默认保留页面设置，`docType` 可选 traditional（默认）或 modern |
 | `univer_inspect` | 读取文档结构或指定 Sheet 范围 |
 | `univer_execute` | 通过 Univer API 读取或编辑内容 |
-| `univer_export` | 导出 Sheet、Doc、Slide 或多维表格内容。CSV/TSV 每次导出一张工作表或数据表。Unit 含多张表时，使用 `worksheetId` 或 `tableId` 指定目标。 |
+| `univer_export` | 导出 Sheet、Doc、Slide 或多维表格内容 |
 | `univer_lint` | 检查 Slide 文字越界、溢出和重叠 |
 | `univer_compile_svg` | 将 SVG 布局按文字度量添加到 Slide |
 | `univer_screenshot` | 把支持的内容渲染为 PNG 图片供审阅 |
