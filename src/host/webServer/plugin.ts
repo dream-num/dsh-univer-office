@@ -3,7 +3,8 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-session'
 import type {} from '../service/univer-service.ts'
 import { createUniverRouter } from './router.ts'
-import { createViewerProxy, type ConnectionTrust } from './viewer-proxy.ts'
+import { requiredAdmission, type ConnectionTrust } from './connection-trust.ts'
+import { createViewerProxy } from './viewer-proxy.ts'
 
 /** Services required by the browser API consumer. */
 export const inject = ['univer', 'webServer', 'sessions', 'connection']
@@ -16,6 +17,7 @@ export function apply(ctx: Context): void {
   ctx.effect(
     () =>
       ctx.webServer.register({
+        ...requiredAdmission,
         kind: 'prefix',
         path: '/univer-api',
         handler: createUniverRouter(ctx.univer, ctx.sessions, connection, sandbox)
@@ -35,12 +37,22 @@ export function apply(ctx: Context): void {
     })
     const disposers = [
       ctx.webServer.register({
+        ...requiredAdmission,
         kind: 'prefix',
         path: '/univer-viewer',
         handler: proxy.httpHandler
       }),
-      ctx.webServer.register({ kind: 'prefix', path: '/uf', handler: proxy.httpHandler }),
-      ctx.webServer.registerUpgrade({ path: '/univer-viewer/ws', handler: proxy.upgradeHandler })
+      ctx.webServer.register({
+        ...requiredAdmission,
+        kind: 'prefix',
+        path: '/uf',
+        handler: proxy.httpHandler
+      }),
+      ctx.webServer.registerUpgrade({
+        ...requiredAdmission,
+        path: '/univer-viewer/ws',
+        handler: proxy.upgradeHandler
+      })
     ]
     return () => {
       proxy.dispose()

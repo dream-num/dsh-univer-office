@@ -36,11 +36,11 @@ DSH WebServer 的 upgrade 注册只支持精确路径，而 Gateway 的 WS 端�
 
 ## 浏览器鉴权与文档范围校验
 
-1. **浏览器身份（`connection` 服务）**：每个路由（含 upgrade）先调
-   `connection.requestRejection(req)`——返回 403 表示 Host/Origin fence（`trustedHosts`、
-   DNS rebinding 防护）拒绝，401 表示 DSH 浏览器鉴权（launch token → `dsh-auth-*` 签名
-   cookie）未通过。`browserAuth` 关闭的 loopback 部署自动放行，语义与 connection 自身一致。
-   `/univer-api` 同样补装此门（此前只有会话范围检查，没有浏览器身份门）。
+1. **浏览器身份**：所有 HTTP 路由和 WebSocket upgrade 都注册为 `auth: 'required'`。
+   DSH 0.2.3-alpha.2 的 WebServer 在分发前完成来源和身份校验，将已认证的 Peer 传给 handler。
+   插件检查 Peer 的生命周期信号。旧版 DSH 调用 handler 时不传 Peer，由插件调用
+   `connection.requestRejection(req)` 执行宿主的来源和身份校验，并保留其 401/403 结果。
+   若两个入口均不可用或 Peer 已失效，插件返回 401。
 2. **文档会话范围**：Viewer 文档请求携带 `?file=<gatewayKey>` 与 `?sessionId=<sid>`，
    代理解码 fileKey 并确认该 live session 对原文件有写权限。`/univer-api` 继续执行
    session/workspace 校验。

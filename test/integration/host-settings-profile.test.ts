@@ -80,7 +80,9 @@ describe.skipIf(runtime === undefined)('Host settings in a real DSH Profile', ()
       home: join(dir, 'home'),
       cwd: dir,
       startedBundles: ['dsh-univer-office'],
+      // DSH 0.2.2 consumes inline overlays; 0.2.3 loads them from paths.
       overlays: [],
+      overlayPaths: [],
       telemetryDisabledEnv: '1'
     }
     start = () =>

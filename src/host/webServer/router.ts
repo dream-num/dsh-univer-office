@@ -3,7 +3,11 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
 import { UniverError } from '../service/errors.ts'
 import type { UniverService } from '../service/univer-service.ts'
-import type { ConnectionTrust } from './viewer-proxy.ts'
+import {
+  browserRequestRejection,
+  type AdmittedPeer,
+  type ConnectionTrust
+} from './connection-trust.ts'
 import { gatewayStartRoute } from './routes/gateway.ts'
 import { stateRoute } from './routes/state.ts'
 import { statusRoute } from './routes/status.ts'
@@ -18,8 +22,12 @@ export function createUniverRouter(
   connection: ConnectionTrust,
   sandbox?: () => SessionPolicy | undefined
 ) {
-  return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
-    const rejection = connection.requestRejection(request)
+  return async (
+    request: IncomingMessage,
+    response: ServerResponse,
+    peer?: AdmittedPeer
+  ): Promise<void> => {
+    const rejection = browserRequestRejection(connection, request, peer)
     if (rejection !== undefined) {
       sendJson(response, rejection, {
         ok: false,

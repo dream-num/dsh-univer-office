@@ -47,6 +47,55 @@ describe('same-origin Viewer proxy', () => {
     await gateway?.dispose()
   })
 
+  it('uses the live peer supplied to HTTP and upgrade handlers by DSH 0.2.3 (#179)', async () => {
+    const sessions = {
+      get: (id: string) => (id === SESSION ? { header: { cwd: gateway.workspace } } : undefined)
+    }
+    const router = gateway.plugin.createUniverRouter(gateway.service, sessions, {})
+    const viewer = gateway.plugin.createViewerProxy({
+      sessions,
+      connection: {},
+      gatewayOrigin: async () => gateway.origin
+    })
+    const lifetime = new AbortController()
+    let peer: { signal: AbortSignal } | undefined
+    const host = createServer(async (req, res) => {
+      const handler = req.url?.startsWith('/univer-api/') ? router : viewer.httpHandler
+      try {
+        await handler(req, res, peer)
+      } catch {
+        // Match the DSH WebServer fallback for a rejected handler.
+        res.writeHead(400).end()
+      }
+    })
+    host.on('upgrade', (req, socket, head) => viewer.upgradeHandler(req, socket, head, peer))
+    try {
+      const origin = `http://127.0.0.1:${await listen(host)}`
+      const state = new URL('/univer-api/state', origin)
+      state.search = new URLSearchParams({ file: gateway.file, sessionId: SESSION }).toString()
+      expect((await fetch(state)).status).toBe(401)
+      peer = { signal: lifetime.signal }
+      const response = await fetch(state)
+      expect(response.status).toBe(200)
+      expect(await response.json()).toMatchObject({ file: gateway.file })
+      state.searchParams.set('file', import.meta.filename)
+      expect((await fetch(state)).status).toBe(403)
+      const config = new URL('/univer-viewer/runtime-config', origin)
+      expect((await fetch(config)).status).toBe(200)
+      const client = new WebSocket(eventsTunnel().replace(proxyOrigin, origin))
+      await new Promise<void>((resolve, reject) => {
+        client.once('error', reject)
+        client.once('open', () => client.close())
+        client.once('close', () => resolve())
+      })
+      lifetime.abort()
+      expect((await fetch(config)).status).toBe(401)
+    } finally {
+      viewer.dispose()
+      await closeServer(host)
+    }
+  })
+
   it('mounts the Viewer under the shared base for direct Gateway access', async () => {
     const mount = await fetch(`${gateway.origin}/univer-viewer/`)
     expect(mount.ok).toBe(true)
