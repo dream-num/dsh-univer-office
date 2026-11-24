@@ -13,6 +13,8 @@ Provider 授权目标文件和输出路径，通过 [Unit 内容模块](unit-con
 | PNG 截图 | 支持 Sheet 范围、Doc/Slide 页面、Slide 联系表及 Board 区域与元素聚焦。限制页数和像素，PNG 写入会话可写目录。 |
 | PDF 打印 | 对 Sheet、Doc、Slide 或 Board 生成 PDF，输出到会话可写路径。 |
 
+Host 构建将渲染 SDK 的 Puppeteer 启动入口接到[浏览器适配器](../../src/host/provider/render-browser.ts)。每次启动使用独立的临时配置目录。Puppeteer 负责关闭浏览器，随后 Host 用独立子进程删除该目录。如果删除失败或超过 8 秒，Host 记录警告；超时的清理进程退出后，SDK 继续关闭页面服务并返回原有的渲染结果或错误。
+
 ## 附件与验证
 
 截图工具检查模型的图片输入能力、DSH attachment 服务和输出限制。读取 PNG 前再次校验实际输出路径，结构化结果保留文件与图片元数据。只有确实检查了图片才可报告视觉验证；结构回读与 Slide 布局检查各自验证数据和布局。端到端行为见[渲染集成测试](../../test/integration/render.test.ts)。
