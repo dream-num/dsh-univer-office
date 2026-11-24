@@ -1,4 +1,4 @@
-import type { ImportDocType, JsonValue } from '../../service/types.ts'
+import type { ExportUnitContentRequest, ImportDocType, JsonValue } from '../../service/types.ts'
 
 /** Unit and collaboration scope passed to the package-local worker. */
 export interface UnitContentWorkerTarget {
@@ -43,7 +43,11 @@ export type UnitContentWorkerRequest =
       readonly code: string
       readonly worktreeId: string
     })
-  | (UnitContentWorkerTarget & { readonly operation: 'export'; readonly outputPath: string })
+  | (UnitContentWorkerTarget &
+      Pick<ExportUnitContentRequest, 'worksheetId' | 'tableId'> & {
+        readonly operation: 'export'
+        readonly outputPath: string
+      })
   | (UnitContentWorkerTarget & { readonly operation: 'render-source' })
   | {
       readonly operation: 'import'

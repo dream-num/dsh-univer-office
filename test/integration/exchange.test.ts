@@ -43,11 +43,16 @@ describe('import and export through the bundled exchange', () => {
     })
     return imported.result
   }
-  const exportUnit = async (unitId: string, name: string, draft = worktreeId) => {
+  const exportUnit = async (
+    unitId: string,
+    name: string,
+    options: { worktreeId?: string; worksheetId?: string; tableId?: string } = {}
+  ) => {
     const output = join(gateway.workspace, name)
     await gateway.service.exportUnitContent({
       ...gateway.scoped,
-      worktreeId: draft,
+      worktreeId,
+      ...options,
       unitId,
       output,
       outputWorkspace: gateway.workspace
@@ -251,7 +256,7 @@ describe('import and export through the bundled exchange', () => {
           value: true
         })
         expectPicture(
-          await readFile(await exportUnit(unitId, `draft.${format}`, draft)),
+          await readFile(await exportUnit(unitId, `draft.${format}`, { worktreeId: draft })),
           folder,
           png
         )
@@ -385,22 +390,81 @@ describe('import and export through the bundled exchange', () => {
     })
   })
 
+  describe('delimited exports (#103)', () => {
+    it.each([
+      ['csv', ','],
+      ['tsv', '\t']
+    ])(
+      'exports one worksheet to %s and selects by ID in a multi-sheet Unit',
+      async (ext, delimiter) => {
+        const unit = await gateway.createUnit(worktreeId, 'sheet', 'Orders')
+        const written = await gateway.execute(
+          worktreeId,
+          unit,
+          `workbook.getActiveSheet().getRange('A1:C2').setValues([
+             ['商品','数量','小计'], ['茶,包',3,{ f: '=B2*2' }]
+           ]); return true;`
+        )
+        expect(written.committed).toBe(true)
+        const output = await exportUnit(unit, `orders.${ext}`)
+        const lines = async () => (await readFile(output, 'utf8')).trim().split(/\r?\n/u)
+        const firstRows = [
+          ['商品', '数量', '小计'].join(delimiter),
+          [ext === 'csv' ? '"茶,包"' : '茶,包', '3', '6'].join(delimiter)
+        ]
+        expect(await lines()).toEqual(firstRows)
+
+        const second = await gateway.execute(
+          worktreeId,
+          unit,
+          `const sheet = workbook.insertSheet('Returns'); sheet.getRange('A1:B1').setValues([['退货',2]]); return sheet.getSheetId();`
+        )
+        expect(second).toMatchObject({ committed: true, value: expect.any(String) })
+        await expect(exportUnit(unit, `orders.${ext}`)).rejects.toThrow(/worksheetId/u)
+        await expect(exportUnit(unit, `orders.${ext}`, { worksheetId: 'missing' })).rejects.toThrow(
+          /worksheetId/u
+        )
+        expect(await lines()).toEqual(firstRows)
+        await exportUnit(unit, `orders.${ext}`, { worksheetId: second.value })
+        expect(await lines()).toEqual([`退货${delimiter}2`])
+      }
+    )
+
+    it.each(['csv', 'tsv'])(
+      'exports one Base table to %s and selects by ID in a multi-table Unit',
+      async (ext) => {
+        const unit = await gateway.createUnit(worktreeId, 'base', 'Stock')
+        const written = await gateway.execute(
+          worktreeId,
+          unit,
+          `const table = base.getTableById('table-1'); table.addRecords([{ values: { [table.getPrimaryFieldId()]: '铅笔' } }]); return true;`
+        )
+        expect(written.committed).toBe(true)
+        const output = await exportUnit(unit, `stock.${ext}`)
+        expect(await readFile(output, 'utf8')).toContain('铅笔')
+
+        const second = await gateway.execute(
+          worktreeId,
+          unit,
+          `const table = base.insertTable('Supplies'); table.addRecords([{ values: { [table.getPrimaryFieldId()]: '钢笔' } }]); return table.getId();`
+        )
+        expect(second).toMatchObject({ committed: true, value: expect.any(String) })
+        await expect(exportUnit(unit, `stock.${ext}`)).rejects.toThrow(/tableId/u)
+        await exportUnit(unit, `stock.${ext}`, { tableId: second.value })
+        const text = await readFile(output, 'utf8')
+        expect(text).toContain('钢笔')
+        expect(text).not.toContain('铅笔')
+      }
+    )
+  })
+
   // Known exchange defects. Each `it.fails` body holds only the defective step, and its setup
   // runs in hooks that must pass, so an unrelated breakage cannot satisfy it. When an SDK
   // upgrade fixes a defect, its test turns red: flip it to `it` and close the issue.
   describe('known exchange issues', () => {
-    let csvSheet: string
     let headingDoc: string
 
     beforeAll(async () => {
-      csvSheet = await gateway.createUnit(worktreeId, 'sheet', 'CSV')
-      const sheetWrite = await gateway.execute(
-        worktreeId,
-        csvSheet,
-        `workbook.getActiveSheet().getRange('A1:B2').setValues([['a','b'],[1,2]]); return 1`
-      )
-      expect(sheetWrite.committed).toBe(true)
-
       headingDoc = await gateway.createUnit(worktreeId, 'doc', 'Headings')
       // NamedStyleType.HEADING_1 is 4 in @univerjs/core.
       const headingWrite = await gateway.execute(
@@ -412,11 +476,6 @@ describe('import and export through the bundled exchange', () => {
          return updated;`
       )
       expect(headingWrite).toMatchObject({ committed: true, value: true })
-    })
-
-    it.fails('exports a Sheet Unit to CSV (#103)', async () => {
-      const output = await exportUnit(csvSheet, 'sheet.csv')
-      expect(await readFile(output, 'utf8')).toContain('a,b')
     })
 
     it.fails('writes heading paragraph styles for API-authored headings (#105)', async () => {

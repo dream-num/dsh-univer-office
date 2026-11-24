@@ -1,6 +1,6 @@
 import { extname, isAbsolute } from 'node:path'
 import type { ContentInspectionQuery } from '@univer-cli/content-inspection'
-import type { UniverCollaborationRuntime } from '@univer-cli/univer-collaboration-runtime'
+import type { CollaborationUnitData } from '@univer-cli/univer-collaboration-runtime'
 import {
   DocxCompatibilityMode,
   ExchangeFormat,
@@ -64,6 +64,8 @@ interface ExecuteRequest extends BaseRequest {
 interface ExportRequest extends BaseRequest {
   readonly operation: 'export'
   readonly outputPath: string
+  readonly worksheetId?: string
+  readonly tableId?: string
 }
 
 interface RenderSourceRequest extends BaseRequest {
@@ -159,11 +161,8 @@ async function main(): Promise<JsonValue> {
   }
 }
 
-async function exportUnit(
-  request: ExportRequest,
-  unitData: Awaited<ReturnType<UniverCollaborationRuntime['exportUnitData']>>
-): Promise<void> {
-  const options = unitExportOptions(request.unitType, extname(request.outputPath).toLowerCase())
+async function exportUnit(request: ExportRequest, unitData: CollaborationUnitData): Promise<void> {
+  const options = unitExportOptions(request, unitData)
   const scopedOptions = withOfficeExportFiles(options, request.unitId, async (assetId) => {
     const url = new URL(
       `${unitGatewayBase(request)}/universer-api/file/${encodeURIComponent(assetId)}/content`
@@ -185,16 +184,39 @@ async function exportUnit(
   )
 }
 
-function unitExportOptions(unitType: UniverInstanceType, extension: string): ExportOptions {
+function unitExportOptions(request: ExportRequest, unitData: CollaborationUnitData): ExportOptions {
+  const { unitType, worksheetId, tableId } = request
+  const extension = extname(request.outputPath).toLowerCase()
+  const delimited = extension === '.csv' || extension === '.tsv'
+  if (worksheetId !== undefined && (!delimited || unitType !== UniverInstanceType.UNIVER_SHEET)) {
+    throw codedError('INVALID_ARGUMENT', 'worksheetId is only valid for Sheet CSV/TSV export.')
+  }
+  if (tableId !== undefined && (!delimited || unitType !== UniverInstanceType.UNIVER_BASE)) {
+    throw codedError('INVALID_ARGUMENT', 'tableId is only valid for Base CSV/TSV export.')
+  }
   switch (unitType) {
-    case UniverInstanceType.UNIVER_SHEET:
+    case UniverInstanceType.UNIVER_SHEET: {
+      const format = sheetLikeFormat(extension, 'Sheet')
+      const formulaCalculation = FormulaCalculationMode.FORCED
+      if (format === ExchangeFormat.XLSX) return { type: unitType, format, formulaCalculation }
+      const order = 'sheetOrder' in unitData ? unitData.sheetOrder : []
       return {
-        format: sheetLikeFormat(extension, 'Sheet'),
-        formulaCalculation: FormulaCalculationMode.FORCED,
-        type: unitType
-      } as ExportOptions
-    case UniverInstanceType.UNIVER_BASE:
-      return { format: sheetLikeFormat(extension, 'Base'), type: unitType } as ExportOptions
+        type: unitType,
+        format,
+        formulaCalculation,
+        csv: { worksheetId: selectCsvTarget(order, worksheetId, 'worksheetId') }
+      }
+    }
+    case UniverInstanceType.UNIVER_BASE: {
+      const format = sheetLikeFormat(extension, 'Base')
+      if (format === ExchangeFormat.XLSX) return { type: unitType, format }
+      const order = 'tableOrder' in unitData ? unitData.tableOrder : []
+      return {
+        type: unitType,
+        format,
+        csv: { tableId: selectCsvTarget(order, tableId, 'tableId') }
+      }
+    }
     case UniverInstanceType.UNIVER_DOC:
       requireExtension(extension, '.docx', 'Doc')
       return { format: ExchangeFormat.DOCX, type: unitType }
@@ -207,6 +229,23 @@ function unitExportOptions(unitType: UniverInstanceType, extension: string): Exp
         `Unit type ${String(unitType)} cannot be exported`
       )
   }
+}
+
+function selectCsvTarget(
+  order: readonly string[],
+  id: string | undefined,
+  field: 'worksheetId' | 'tableId'
+): string {
+  if (id !== undefined) {
+    if (order.includes(id)) return id
+    throw codedError('INVALID_ARGUMENT', `Unknown ${field} for this Unit.`)
+  }
+  if (order.length === 1 && order[0] !== undefined) return order[0]
+  if (order.length === 0) throw codedError('INVALID_ARGUMENT', 'This Unit has no tables to export.')
+  throw codedError(
+    'INVALID_ARGUMENT',
+    `CSV/TSV exports one table at a time. Specify ${field} for this Unit.`
+  )
 }
 
 function sheetLikeFormat(
@@ -286,7 +325,17 @@ function parseRequest(value: unknown): WorkerRequest {
   if (request.operation === 'export') {
     const outputPath = requiredString(request.outputPath, 'outputPath')
     if (!isAbsolute(outputPath)) invalidRequest('outputPath must be absolute')
-    return { ...base, operation: 'export', outputPath }
+    return {
+      ...base,
+      operation: 'export',
+      outputPath,
+      ...(request.worksheetId === undefined
+        ? {}
+        : { worksheetId: requiredString(request.worksheetId, 'worksheetId') }),
+      ...(request.tableId === undefined
+        ? {}
+        : { tableId: requiredString(request.tableId, 'tableId') })
+    }
   }
   if (request.operation === 'render-source') {
     return { ...base, operation: 'render-source' }

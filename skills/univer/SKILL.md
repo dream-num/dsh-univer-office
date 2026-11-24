@@ -118,7 +118,7 @@ Read only task assets inside the session workspace. Do not print or return the d
 ## Import and export
 
 - Import a local source directly from its original path, including outside the workspace when the DSH session policy is available. Relative paths start at the session cwd. Import writes the destination draft. Export, PDF, screenshot and resource export require writable destinations. In read-only mode, use status, inspect or lint. Opening a legacy `.univer` through these tools can upgrade the original file in place. Hosts without sandbox policy restrict all local paths to the workspace.
-- Export Sheet or Base to `.xlsx`, `.csv`, or `.tsv`; Doc to `.docx`; Slide to `.pptx`.
+- Export Sheet or Base to `.xlsx`, `.csv`, or `.tsv`; Doc to `.docx`; Slide to `.pptx`. For CSV/TSV, omit the selector if the Unit contains a single worksheet or Base table. When it contains several, inspect the Unit and pass the intended `worksheetId` (Sheet) or `tableId` (Base). Use one output file per selected table.
 - Board export is unsupported.
 - Export uses an explicit Unit and an explicit trunk or worktree scope. Recalculate formulas and finish readback before exporting.
 
