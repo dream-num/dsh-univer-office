@@ -58,7 +58,7 @@ Viewer 选择由投影 scope 与权威状态共同决定：
 | 加载中 | 同一卡片布局内的加载状态 |
 | worktree 不可用 | 同一卡片布局内的不可用状态 |
 
-状态加载失败时不得回退旧卡片。一般网络、Gateway 或授权失败仍使用同一卡片表达加载中或不可用；若 Host 以结构化 `INVALID_FILE_PATH` 明确确认文件已不存在，则不渲染卡片。这覆盖 Agent 在同一 Turn 中创建临时 `.univer`、完成排查后再通过 Bash 删除的场景，避免留下永久加载卡片。历史 Turn 也使用同一组件和布局，其 worktree 状态可由当前 `FileState` 校准。历史卡片展开后，Viewer 表达的是当前状态，不能表述为历史内容快照。
+状态加载失败时不得回退旧卡片。卡片、实时浮窗与文件侧栏共用文件查询诊断。Host 返回 `SESSION_SCOPE_DENIED` 时撤下旧 Viewer，提示在有权限的会话中打开；网络暂时中断时保留已挂载的 Viewer，没有 Viewer 时显示错误。下一次文件轮询成功后恢复预览。若 Host 以结构化 `INVALID_FILE_PATH` 明确确认文件已不存在，则不渲染卡片。这覆盖 Agent 在同一 Turn 中创建临时 `.univer`、完成排查后再通过 Bash 删除的场景，避免留下永久加载卡片。历史 Turn 也使用同一组件和布局，其 worktree 状态可由当前 `FileState` 校准。历史卡片展开后，Viewer 表达的是当前状态，不能表述为历史内容快照。
 
 ### 默认展开与全屏
 
@@ -122,7 +122,9 @@ Host 从根插件 `Config` 的 `volatile` 字段派生设置表单。Client 通�
 - **DSH 原生右栏**：`ctx.sidebarRightTabs.register` 注册自己的 tab 类型（自有 kind、`patterns: ['*.univer']`、`extension` 档、`canOpen` 只接受 session 作用域地址），正文注册在 keyed seat `sidebar.right.pane.tab`，通过 `useTabInfo().tab.contentId` 取得资源地址。地址语法（`dsh-resource://file/…`）由本包镜像实现：客户端 bundle 的 purity gate 禁止 value-import 未列出的 `@deepseek-ai/*` 包，生态做法同样是本地镜像。
 - **`dsh-better-sidebar`（可选）**：该插件以自有 editor 类型在**同档**用整地址模式 `dsh-resource://file/**` 接管文件地址。同档比模式长度，它的模式更长，所以在它存在时永远赢下 claim，地址进入它的 `matchFileViewer` 注册表；本插件因此在那里注册文件预览器（`fetchStrategy: 'none'`，声明 `.univer` 扩展名）。若缺这条注册，`.univer` 会落到它的 catch-all code viewer，即二进制当文本渲染。
 
-两条路径互不依赖：没有 `sidebarRightTabs` 时原生注册被跳过，没有 `betterSidebar` 时预览器注册被跳过，两者都不阻塞其余 Client 表面。两条路径共用同一个预览正文组件，因此加载态、Host 明确确认文件不存在、Gateway 未运行、Viewer 目标解析只实现一次。预览器声明 `fetchStrategy: 'none'`，因为 `.univer` 是二进制容器：任何按字节读取的策略都会落到通用下载面板，而 Viewer URL 只能由 Host 授权后投影。它复用回合卡片的同一份 `FileState` 轮询解析 Viewer 目标，以主线 URL 打开完整 Viewer，版本切换与 worktree 审阅统一由 Viewer 管理，外层不再维护版本选择或重复提供切换控件。完整 Viewer 首次打开未指定 worktree 或 Unit 的文件链接时，若主线没有 Unit，则按 worktree 列表顺序进入第一个 draft 或 ready worktree；没有活跃 worktree 时保留空状态，显式目标与 embedded scope 不受此默认导航影响；`useGatewayStatus` 额外暴露 Gateway 阶段，使未运行的 Gateway 变成可操作的启动入口而不是永久加载态。
+两条路径互不依赖：没有 `sidebarRightTabs` 时原生注册被跳过，没有 `betterSidebar` 时预览器注册被跳过，两者都不阻塞其余 Client 表面。两条路径共用同一个预览正文组件，因此加载态、Host 明确确认文件不存在、Gateway 未运行、Viewer 目标解析只实现一次。预览器声明 `fetchStrategy: 'none'`，因为 `.univer` 是二进制容器：任何按字节读取的策略都会落到通用下载面板，而 Viewer URL 只能由 Host 授权后投影。它复用回合卡片的同一份 `FileState` 轮询解析 Viewer 目标，以主线 URL 打开完整 Viewer，版本切换与 worktree 审阅统一由 Viewer 管理，外层不再维护版本选择或重复提供切换控件。完整 Viewer 首次打开未指定 worktree 或 Unit 的文件链接时，若主线没有 Unit，则按 worktree 列表顺序进入第一个 draft 或 ready worktree；没有活跃 worktree 时保留空状态，显式目标与 embedded scope 不受此默认导航影响。
+
+只有文件查询报告 `GATEWAY_UNAVAILABLE` 或文件状态明确标记 Gateway 未运行时，预览才查询 Gateway 状态。状态接口确认停止或启动失败后显示启动按钮；状态查询自身失败时显示错误并允许重新查询。诊断期间每两秒复查，启动失败时展示原因，Viewer 恢复或组件卸载后停止复查。
 
 Client 显式注入 `uiConversation` 后才注册回合定义；`configForms` 作为可选子 fiber 注入。缺少设置服务不得阻塞主 Client 激活，迟加载后订阅偏好，卸载时撤销订阅。
 

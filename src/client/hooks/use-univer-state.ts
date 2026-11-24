@@ -1,75 +1,61 @@
 import * as React from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { FileState } from '../../shared/wire/state.ts'
-import {
-  getFileState,
-  getUniverStatus,
-  isMissingUniverFile,
-  startGateway
-} from '../api/univer-api.ts'
+import { getFileState, isMissingUniverFile, UniverApiError } from '../api/univer-api.ts'
 
-/** Report null only for a Host-confirmed missing file. Transient failures retry on the next poll. */
+export interface FileObservation {
+  readonly state?: FileState
+  readonly error?: Error
+}
+
+/** Report null only for a Host-confirmed missing file. Other failures retry on the next poll. */
 export function useUniverStates(
   files: readonly string[],
   sessionId: SessionId,
   onObservation?: (file: string, state: FileState | null) => void
-): {
-  readonly states: Readonly<Record<string, FileState>>
-  readonly missingFiles: ReadonlySet<string>
-  readonly applyState: (state: FileState) => void
-} {
-  const [states, setStates] = React.useState<Record<string, FileState>>({})
-  const [missing, setMissing] = React.useState<Record<string, true>>({})
+): Readonly<Record<string, FileObservation>> {
+  const [cache, setCache] = React.useState<{
+    sessionId: SessionId
+    files: Readonly<Record<string, FileObservation>>
+  }>({ sessionId, files: {} })
   const key = files.join('\u0000')
-  const previousSession = React.useRef(sessionId)
   React.useEffect(() => {
-    const tracked = new Set(key.split('\u0000'))
-    // Adding or retiring one target should preserve the other files' mounted Viewers.
-    if (previousSession.current === sessionId) {
-      setStates((current) =>
-        Object.fromEntries(Object.entries(current).filter(([file]) => tracked.has(file)))
-      )
-    } else {
-      setStates({})
-    }
-    previousSession.current = sessionId
-    setMissing({})
-  }, [key, sessionId])
-
-  React.useEffect(() => {
-    if (key === '') return
-    const trackedFiles = key.split('\u0000')
-    let active = true
+    const trackedFiles = key === '' ? [] : key.split('\u0000')
+    const tracked = new Set(trackedFiles)
+    setCache((current) => ({
+      sessionId,
+      files:
+        current.sessionId === sessionId
+          ? Object.fromEntries(Object.entries(current.files).filter(([file]) => tracked.has(file)))
+          : {}
+    }))
+    if (trackedFiles.length === 0) return
+    const controller = new AbortController()
     let polling = false
     const poll = async (): Promise<void> => {
       if (polling) return
       polling = true
       for (const file of trackedFiles) {
         try {
-          const state = await getFileState(file, sessionId)
-          if (!active) return
+          const state = await getFileState(file, sessionId, controller.signal)
+          if (controller.signal.aborted) return
           onObservation?.(file, state)
-          setStates((previous) => ({ ...previous, [file]: state }))
-          setMissing((previous) => {
-            if (previous[file] === undefined) return previous
-            const next = { ...previous }
-            delete next[file]
-            return next
-          })
-        } catch (error) {
-          if (!active) return
-          if (isMissingUniverFile(error)) {
-            onObservation?.(file, null)
-            setStates((previous) => {
-              if (previous[file] === undefined) return previous
-              const next = { ...previous }
-              delete next[file]
-              return next
-            })
-            setMissing((previous) =>
-              previous[file] === true ? previous : { ...previous, [file]: true }
-            )
-          }
+          setCache((previous) => ({ sessionId, files: { ...previous.files, [file]: { state } } }))
+        } catch (cause) {
+          if (controller.signal.aborted) return
+          const error = cause instanceof Error ? cause : new Error(String(cause))
+          if (isMissingUniverFile(error)) onObservation?.(file, null)
+          // Keep a live editor mounted across a transport outage. A rejected file request
+          // invalidates the old Viewer URL, even if that file was previously authorized.
+          const rejected =
+            error instanceof UniverApiError && error.status >= 400 && error.status < 500
+          setCache((previous) => ({
+            sessionId,
+            files: {
+              ...previous.files,
+              [file]: rejected ? { error } : { ...previous.files[file], error }
+            }
+          }))
         }
       }
       polling = false
@@ -81,55 +67,10 @@ export function useUniverStates(
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => {
-      active = false
+      controller.abort()
       window.clearInterval(timer)
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [key, sessionId, onObservation])
-  return {
-    states,
-    missingFiles: React.useMemo(() => new Set(Object.keys(missing)), [missing]),
-    applyState: React.useCallback((state: FileState) => {
-      setStates((previous) => ({ ...previous, [state.file]: state }))
-      setMissing((previous) => {
-        if (previous[state.file] === undefined) return previous
-        const next = { ...previous }
-        delete next[state.file]
-        return next
-      })
-    }, [])
-  }
-}
-
-/** Gateway state and start action used by preview surfaces. */
-export function useGatewayStatus(): {
-  readonly phase: 'checking' | 'stopped' | 'starting' | 'running' | 'failed'
-  readonly start: () => Promise<void>
-} {
-  const [phase, setPhase] = React.useState<
-    'checking' | 'stopped' | 'starting' | 'running' | 'failed'
-  >('checking')
-  React.useEffect(() => {
-    let active = true
-    void getUniverStatus()
-      .then((status) => {
-        if (active) setPhase(status.gateway.phase)
-      })
-      .catch(() => {
-        if (active) setPhase('failed')
-      })
-    return () => {
-      active = false
-    }
-  }, [])
-  const start = React.useCallback(async () => {
-    setPhase('starting')
-    try {
-      const result = await startGateway()
-      setPhase(result.ok ? 'running' : 'failed')
-    } catch {
-      setPhase('failed')
-    }
-  }, [])
-  return { phase, start }
+  return cache.sessionId === sessionId ? cache.files : {}
 }

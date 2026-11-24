@@ -1,10 +1,11 @@
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { FileState, WorktreeStatus } from '../../shared/wire/state.ts'
-import { startGateway } from '../api/univer-api.ts'
+import { isMissingUniverFile } from '../api/univer-api.ts'
 import { basename } from '../conversation/univer-turn-definition.ts'
 import { localizeViewerUrl } from '../viewer-locale.ts'
 import type { ViewerLocale } from '../viewer-locale.ts'
+import { PreviewNotice } from './preview-notice.tsx'
 import { UnitChips, unitViewerUrl } from './unit-chips.tsx'
 
 interface ViewportSize {
@@ -34,6 +35,7 @@ const CASCADE_OFFSET = 24
 interface WorktreeWindowProps {
   readonly file: string
   readonly state: FileState | undefined
+  readonly error: Error | undefined
   readonly worktreeId: string | null
   readonly preferredUnitId: string | null
   readonly stackIndex: number
@@ -105,11 +107,23 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
           )
   const url =
     target === undefined ? undefined : localizeViewerUrl(target, props.viewerLocale, 'floating')
+  // The dock keeps a missing file open only while its creation is still in flight.
+  const error = isMissingUniverFile(props.error) ? undefined : props.error
   const title =
-    worktree?.name || worktree?.worktreeId || props.worktreeId || props.t('dock.currentVersion')
+    worktree?.name ||
+    worktree?.worktreeId ||
+    props.t(
+      props.worktreeId === null
+        ? 'dock.currentVersion'
+        : error === undefined
+          ? 'dock.loading'
+          : 'dock.unavailable'
+    )
   const status: WorktreeStatus | 'trunk' | 'loading' | 'unavailable' =
     props.state === undefined
-      ? 'loading'
+      ? error === undefined
+        ? 'loading'
+        : 'unavailable'
       : props.worktreeId === null
         ? 'trunk'
         : (worktree?.status ?? 'unavailable')
@@ -280,10 +294,12 @@ export function WorktreeWindow(props: WorktreeWindowProps): React.ReactElement {
         <div className="uvf_viewerShell">
           {url === undefined ? (
             <div className="uvf_note">
-              <span>{props.t('dock.gatewayDown')}</span>
-              <button type="button" onClick={() => void startGateway()}>
-                {props.t('dock.startGateway')}
-              </button>
+              <PreviewNotice
+                t={props.t}
+                error={error}
+                loading={status === 'loading'}
+                gatewayStopped={props.state?.gatewayRunning === false}
+              />
             </div>
           ) : (
             <iframe className="uvf_frame" src={url} title={title} />

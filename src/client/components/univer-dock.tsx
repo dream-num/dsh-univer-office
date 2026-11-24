@@ -123,7 +123,7 @@ function UniverSessionDock(
     },
     [open, currentCalls]
   )
-  const { states } = useUniverStates(
+  const observations = useUniverStates(
     props.running && livePreviewEnabled ? Object.keys(open) : [],
     props.sessionId,
     reconcile
@@ -132,7 +132,7 @@ function UniverSessionDock(
   if (!props.running || !livePreviewEnabled) return <></>
   const windows = Object.values(open).filter((target) => {
     if (currentCalls.has(target.callId)) return true
-    const state = states[target.file]
+    const state = observations[target.file]?.state
     return state !== undefined && isLiveTarget(target, state)
   })
   if (windows.length === 0) return <></>
@@ -144,7 +144,8 @@ function UniverSessionDock(
         <WorktreeWindow
           key={target.file}
           file={target.file}
-          state={states[target.file]}
+          state={observations[target.file]?.state}
+          error={observations[target.file]?.error}
           worktreeId={target.worktreeId}
           preferredUnitId={target.preferredUnitId}
           stackIndex={stackIndex}

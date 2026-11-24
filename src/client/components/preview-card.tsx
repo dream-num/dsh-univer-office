@@ -11,6 +11,7 @@ import {
   type UniverTurnFile,
   type UniverTurnMatch
 } from '../conversation/univer-turn-definition.ts'
+import { isMissingUniverFile } from '../api/univer-api.ts'
 import { useUniverStates } from '../hooks/use-univer-state.ts'
 import type { UniverPreferences } from '../settings/univer-preferences.ts'
 import type { ViewerLocaleInjected } from '../viewer-locale.ts'
@@ -55,7 +56,7 @@ function PreviewCardContent(
     () => resolveTurnFiles(props.matched.files, props.cwd),
     [props.matched.files, props.cwd]
   )
-  const { states, missingFiles } = useUniverStates(
+  const observations = useUniverStates(
     files.map((entry) => entry.file),
     props.sessionId
   )
@@ -68,14 +69,16 @@ function PreviewCardContent(
       {files.map((target) => {
         // Bash or another tool may remove a temporary file after its structured Univer operations.
         // The Host's current workspace state is authoritative, so no historical shell is rendered.
-        if (missingFiles.has(target.file)) return null
+        const observation = observations[target.file]
+        if (isMissingUniverFile(observation?.error)) return null
         const outcome = outcomeOfTurnFile(target)
         const worktreeId = outcome.primaryWorktreeId ?? pendingWorktree(target)
         return (
           <ReviewPanel
             key={target.file}
             file={target.file}
-            state={states[target.file]}
+            state={observation?.state}
+            error={observation?.error}
             worktreeId={worktreeId}
             preferredUnitId={outcome.preferredUnitId}
             historical={historical}

@@ -107,6 +107,10 @@ export function defineClientSuite(): void {
     const stateRequests: Array<string | null> = []
     /** Gateway phase the fake Host reports; a stopped Gateway cannot project Viewer URLs. */
     let gatewayPhase = 'running'
+    const deniedFiles = new Set<string>()
+    let statusReturnsHtml = false
+    let startFailure: string | undefined
+    let startRequests = 0
     const currentState = () => ({
       ok: true,
       file: DEMO_FILE,
@@ -414,7 +418,22 @@ export function defineClientSuite(): void {
     beforeAll(async () => {
       server = createServer(async (req, res) => {
         const url = new URL(req.url ?? '/', 'http://x')
+        if (req.method === 'POST' && url.pathname === '/univer-api/gateway/start') {
+          startRequests++
+          res.writeHead(200, { 'content-type': 'application/json' })
+          if (startFailure === undefined) {
+            gatewayPhase = 'running'
+            res.end(JSON.stringify({ ok: true, gateway: 'http://127.0.0.1:9123', reused: false }))
+          } else {
+            res.end(JSON.stringify({ ok: false, reason: startFailure }))
+          }
+          return
+        }
         if (req.method === 'GET' && url.pathname === '/univer-api/status') {
+          if (statusReturnsHtml) {
+            res.writeHead(502, { 'content-type': 'text/html' }).end('<html>Proxy error</html>')
+            return
+          }
           res.writeHead(200, { 'content-type': 'application/json' })
           res.end(
             JSON.stringify({
@@ -435,6 +454,17 @@ export function defineClientSuite(): void {
             return
           }
           stateRequests.push(file)
+          if (file !== null && deniedFiles.has(file)) {
+            res.writeHead(403, { 'content-type': 'application/json' })
+            res.end(
+              JSON.stringify({
+                ok: false,
+                code: 'SESSION_SCOPE_DENIED',
+                message: 'path is outside the session workspace'
+              })
+            )
+            return
+          }
           if (gatewayPhase !== 'running') {
             res.writeHead(503, { 'content-type': 'application/json' })
             res.end(
@@ -1185,6 +1215,7 @@ export function defineClientSuite(): void {
               stateRequests.filter((file) => file === DEMO_FILE).length >= 3 &&
               q('.uvf_win') !== null
           )
+          expect(q('.uvf_win .uvf_note')?.textContent).toBe(t('dock.loading'))
           missingFiles.delete(DEMO_FILE)
           const completed = {
             ...creating,
@@ -1263,6 +1294,35 @@ export function defineClientSuite(): void {
           'ready 后读取仍展示合并预览',
           () => q('.uvf_panelFrame')?.getAttribute('src') === ZH_FULL_DEFAULT_MERGE_URL
         )
+      })
+
+      it('replaces a revoked preview with the session access error and recovers on the next successful poll (#157)', async () => {
+        worktrees = [wt('draft')]
+        render(sessionWithTargets([{ file: DEMO_FILE, worktreeId: WORKTREE }], true))
+        await waitFor(
+          'both authorized previews open',
+          () => !!q('.uvf_win iframe') && !!q('.uvf_panelFrame')
+        )
+        deniedFiles.add(DEMO_FILE)
+        try {
+          await waitFor('both previews explain the denial', () =>
+            [q('.uvf_win .uvf_note'), q('.uvf_panelUnavailable')].every((note) =>
+              note?.textContent?.includes(t('viewer.scopeDenied'))
+            )
+          )
+          expect(q('.uvf_win iframe')).toBeNull()
+          expect(q('.uvf_panelFrame')).toBeNull()
+          expect(q('.uvf_win .uvf_note button')).toBeNull()
+          expect(q('.uvf_win')?.textContent).not.toContain(WORKTREE)
+        } finally {
+          deniedFiles.delete(DEMO_FILE)
+        }
+        await waitFor(
+          'authorization restored',
+          () => !!q('.uvf_win iframe') && !!q('.uvf_panelFrame')
+        )
+        render(sessionWithTargets([], false))
+        await waitFor('close both previews', () => !q('.uvf_win') && !q('.uvf_panel'))
       })
 
       it('opens a draft floating window with a live iframe and Unit chips', async () => {
@@ -1829,13 +1889,13 @@ export function defineClientSuite(): void {
     describe('on-demand .univer file viewer', () => {
       let viewer: { element: HTMLElement; root: any }
       let key = 0
-      const renderViewer = () =>
+      const renderViewer = (path = DEMO_FILE) =>
         viewer.root.render(
           React.createElement(fileViewer.component, {
             key: 'fv' + ++key,
             ctx: fakeCtx,
             scope: { sessionId: SESSION_ID, cwd: SESSION_CWD },
-            path: DEMO_FILE,
+            path,
             title: 'demo.univer',
             viewerId: fileViewer.id
           })
@@ -1887,6 +1947,73 @@ export function defineClientSuite(): void {
         expect(chips()).toHaveLength(0)
       })
 
+      it('explains a denied sidebar preview without offering to start the Gateway (#157)', async () => {
+        deniedFiles.add(DEMO_FILE)
+        try {
+          renderViewer()
+          await waitFor(
+            'file permission diagnostic',
+            () => viewer.element.textContent?.includes(t('viewer.scopeDenied')) === true
+          )
+          expect(viewer.element.querySelector('button')).toBeNull()
+        } finally {
+          deniedFiles.delete(DEMO_FILE)
+        }
+      })
+
+      it('identifies a non-JSON 404 from the file route (#157)', async () => {
+        renderViewer(join(SESSION_CWD, 'unrouted.univer'))
+        await waitFor(
+          'file route diagnostic',
+          () => viewer.element.textContent?.includes(t('viewer.routeMissing')) === true
+        )
+        expect(viewer.element.textContent).toContain('HTTP 404')
+        expect(viewer.element.querySelector('button')).toBeNull()
+      })
+
+      it('rechecks a non-JSON Gateway status and reports start failure before a successful retry (#157)', async () => {
+        gatewayPhase = 'stopped'
+        statusReturnsHtml = true
+        const before = startRequests
+        const button = () => viewer.element.querySelector('button')
+        try {
+          renderViewer()
+          await waitFor(
+            'HTTP status retained',
+            () => viewer.element.textContent?.includes('HTTP 502') === true
+          )
+          expect(button()?.textContent).toBe(t('refresh'))
+          button()?.click()
+          await waitFor(
+            'manual status retry returns the diagnostic',
+            () => button()?.textContent === t('refresh')
+          )
+          statusReturnsHtml = false
+          await waitFor(
+            'automatic status retry sees stopped Gateway',
+            () => button()?.textContent === t('dock.startGateway')
+          )
+          expect(startRequests).toBe(before)
+          startFailure = 'Gateway startup timed out'
+          button()?.click()
+          await waitFor(
+            'start error shown',
+            () => viewer.element.textContent?.includes('Gateway startup timed out') === true
+          )
+          startFailure = undefined
+          button()?.click()
+          await waitFor(
+            'preview recovers after successful start',
+            () => frameSrc() === withLang(TRUNK_URL, 'zh-CN')
+          )
+          expect(startRequests).toBe(before + 2)
+        } finally {
+          statusReturnsHtml = false
+          startFailure = undefined
+          gatewayPhase = 'running'
+        }
+      })
+
       it('explains a file the Host reports missing', async () => {
         missingFiles.add(DEMO_FILE)
         renderViewer()
@@ -1896,7 +2023,6 @@ export function defineClientSuite(): void {
         )
       })
 
-      // The shared Turn-preview poll swallows this failure, so the phase is reported separately.
       it('offers a start action for a stopped Gateway', async () => {
         gatewayPhase = 'stopped'
         renderViewer()
