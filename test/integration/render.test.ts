@@ -1,12 +1,15 @@
+import childProcess from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { readFile, stat, writeFile } from 'node:fs/promises'
+import { readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import { ToolCallId } from '@deepseek-ai/dsh-llm/brand'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import puppeteer, { launch } from 'puppeteer-core'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { renderBrowserPath } from '../support/browser.ts'
 import { startGateway, type GatewayHarness } from '../support/gateway.ts'
 
@@ -56,6 +59,61 @@ describe('rendering through the bundled render machine', () => {
       expect(image.mediaType).toBe('image/png')
       expect(image.data.length).toBeGreaterThan(0)
       expect((await stat(image.path)).size).toBeGreaterThan(0)
+    }
+  })
+
+  it('returns a screenshot and releases the render server when profile cleanup hangs (#150)', async () => {
+    let profile: string | undefined
+    let pageUrl: string | undefined
+    let chrome: ChildProcess | null = null
+    let cleaner: ChildProcess | undefined
+    const launched = vi.spyOn(puppeteer, 'launch').mockImplementationOnce(async (options) => {
+      const browser = await launch(options)
+      profile = options?.userDataDir
+      chrome = browser.process()
+      browser.on('targetchanged', (target) => {
+        if (target.type() === 'page') pageUrl = target.url()
+      })
+      return browser
+    })
+    const execFile = childProcess.execFile
+    const subprocess = vi
+      .spyOn(childProcess, 'execFile')
+      .mockImplementation((file, args, options, callback) => {
+        if (profile !== undefined && args?.at(-1) === profile) {
+          // Keep a real cleanup child alive until the production deadline kills it.
+          cleaner = execFile(file, ['-e', 'setInterval(() => {}, 60_000)'], options, callback)
+          return cleaner
+        }
+        return execFile(file, args, options, callback)
+      })
+    const warning = vi.spyOn(process, 'emitWarning')
+    try {
+      const screenshot = await gateway.service.screenshotUnit({
+        ...gateway.scoped,
+        worktreeId,
+        unitId: slide,
+        output: join(gateway.workspace, 'stuck-cleanup'),
+        outputWorkspace: gateway.workspace,
+        target: { kind: 'paged-unit', pages: [1] }
+      })
+      expect((await readFile(screenshot.result.images[0]!.path)).subarray(1, 4).toString()).toBe(
+        'PNG'
+      )
+      expect(chrome).not.toBeNull()
+      expect(chrome!.exitCode ?? chrome!.signalCode).not.toBeNull()
+      expect(cleaner?.killed).toBe(true)
+      expect(cleaner!.exitCode ?? cleaner!.signalCode).not.toBeNull()
+      expect(warning).toHaveBeenCalledWith(expect.any(String), {
+        code: 'UNIVER_RENDER_PROFILE_CLEANUP_FAILED'
+      })
+      expect(pageUrl).toMatch(/^http:\/\/127\.0\.0\.1:/u)
+      await expect(fetch(pageUrl!)).rejects.toThrow()
+    } finally {
+      warning.mockRestore()
+      subprocess.mockRestore()
+      launched.mockRestore()
+      if (profile !== undefined) await rm(profile, { recursive: true, force: true })
     }
   })
 

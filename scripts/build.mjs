@@ -14,6 +14,7 @@ import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { builtinModules, createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { build } from 'esbuild'
@@ -78,12 +79,25 @@ if (target === 'all' || target === 'lib') {
   await rm('lib', { recursive: true, force: true })
   await mkdir('lib', { recursive: true })
 
+  const renderRuntimeEntry = fileURLToPath(import.meta.resolve('@univer-cli/univer-render-runtime'))
   await build({
     entryPoints: ['src/host/index.ts'],
     outfile: 'lib/index.js',
     bundle: true,
     packages: 'bundle',
     external,
+    plugins: [
+      {
+        name: 'render-browser-profile',
+        setup(pluginBuild) {
+          pluginBuild.onResolve({ filter: /^puppeteer-core$/ }, ({ importer }) => {
+            if (importer === renderRuntimeEntry) {
+              return { path: resolve('src/host/provider/render-browser.ts') }
+            }
+          })
+        }
+      }
+    ],
     platform: 'node',
     target: 'node22',
     format: 'esm',
