@@ -7,12 +7,12 @@ import { WebSocket, WebSocketServer } from 'ws'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
 import type { ViewerRuntimeConfig } from '../../shared/wire/viewer.ts'
 import { VIEWER_BASE, VIEWER_RUNTIME_CONFIG, VIEWER_WS_TUNNEL } from '../../shared/wire/viewer.ts'
+import {
+  browserRequestRejection,
+  type AdmittedPeer,
+  type ConnectionTrust
+} from './connection-trust.ts'
 import { resolveAuthorizedFile } from './session-scope.ts'
-
-/** Trust surface consumed from the DSH `connection` service (its package is browser-side). */
-export interface ConnectionTrust {
-  requestRejection(request: { readonly headers: IncomingMessage['headers'] }): 401 | 403 | undefined
-}
 
 export interface ViewerProxyOptions {
   /** Resolves the loopback Gateway origin (starts it when `autoStartGateway` allows). */
@@ -24,9 +24,18 @@ export interface ViewerProxyOptions {
 
 export interface ViewerProxy {
   /** Serve one `/univer-viewer` or `/uf` browser request against the loopback Gateway. */
-  readonly httpHandler: (req: IncomingMessage, res: ServerResponse) => Promise<void>
+  readonly httpHandler: (
+    req: IncomingMessage,
+    res: ServerResponse,
+    peer?: AdmittedPeer
+  ) => Promise<void>
   /** Bridge one `/univer-viewer/ws?target=/uf/...` upgrade to the Gateway WebSocket. */
-  readonly upgradeHandler: (req: IncomingMessage, socket: Duplex, head: Buffer) => void
+  readonly upgradeHandler: (
+    req: IncomingMessage,
+    socket: Duplex,
+    head: Buffer,
+    peer?: AdmittedPeer
+  ) => void
   /** Close every live tunnel bridge; the plugin must call it on unload. */
   readonly dispose: () => void
 }
@@ -46,8 +55,12 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
   const wss = new WebSocketServer({ noServer: true })
   const bridges = new Set<() => void>()
 
-  const httpHandler = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    const rejection = connection.requestRejection(req)
+  const httpHandler = async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    peer?: AdmittedPeer
+  ): Promise<void> => {
+    const rejection = browserRequestRejection(connection, req, peer)
     if (rejection !== undefined) {
       reject(res, rejection)
       return
@@ -106,13 +119,18 @@ export function createViewerProxy(options: ViewerProxyOptions): ViewerProxy {
     await forwardToGateway(req, res, gatewayOrigin)
   }
 
-  const upgradeHandler = (req: IncomingMessage, socket: Duplex, head: Buffer): void => {
+  const upgradeHandler = (
+    req: IncomingMessage,
+    socket: Duplex,
+    head: Buffer,
+    peer?: AdmittedPeer
+  ): void => {
     const fail = (status: 401 | 403): void => {
       const reason = status === 401 ? 'unauthorized' : 'forbidden'
       socket.write(`HTTP/1.1 ${String(status)} ${reason}\r\nconnection: close\r\n\r\n`)
       socket.destroy()
     }
-    const rejection = connection.requestRejection(req)
+    const rejection = browserRequestRejection(connection, req, peer)
     if (rejection !== undefined) {
       fail(rejection)
       return
