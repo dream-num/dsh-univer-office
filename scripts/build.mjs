@@ -119,14 +119,13 @@ if (target === 'all' || target === 'lib') {
     'lib/worker-child.mjs'
   )
 
-  // Browser half: react stays external (the DSH client runtime provides it);
-  // everything else is inlined into the single client bundle.
+  // The DSH client runtime provides React and React DOM to the plugin.
   const client = await build({
     entryPoints: ['src/client/index.tsx'],
     bundle: true,
     write: false,
     packages: 'bundle',
-    external: ['react'],
+    external: ['react', 'react-dom'],
     platform: 'browser',
     target: 'es2022',
     format: 'cjs',

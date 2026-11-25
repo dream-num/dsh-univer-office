@@ -276,6 +276,7 @@ export function defineClientSuite(): void {
     let dom: any
     let document: Document
     let React: any
+    const requestedHostModules = new Set<string>()
     let createRoot: (element: Element) => any
     let pluginExports: any
     let dockEntry: any
@@ -573,8 +574,10 @@ export function defineClientSuite(): void {
       dom.window.__ModuleLoader__ = {
         load({ factory }: { factory: (require: (spec: string) => unknown) => unknown }) {
           pluginExports = factory((spec) => {
+            requestedHostModules.add(spec)
             if (spec === 'react') return React
             if (spec === 'react/jsx-runtime') return jsxRuntime
+            if (spec === 'react-dom') return repoRequire('react-dom')
             throw new Error(`unexpected require("${spec}")`)
           })
         }
@@ -593,6 +596,10 @@ export function defineClientSuite(): void {
     })
 
     describe('registration', () => {
+      it('loads React DOM from the DSH client runtime (#127)', () => {
+        expect(requestedHostModules).toContain('react-dom')
+      })
+
       it('registers through the window ModuleLoader', () => {
         expect(
           pluginExports,
