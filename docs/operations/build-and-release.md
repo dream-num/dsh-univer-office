@@ -12,6 +12,8 @@
 | Viewer 与 Render Machine | `artifacts/viewer/` 与 `artifacts/render-machine/` 下的 Vite 静态资源 |
 | 遥测 | `lib/telemetry-entry.js` 与包含版本、构建 commit、endpoint 的 `lib/build-info.json` |
 
+DSH Client 打包为单个 `lib/client.js`，通过宿主的 ModuleLoader 加载 `react` 和 `react-dom`。浮窗使用宿主提供的 `createPortal`。
+
 应用及共享渲染预设均从本仓库源码构建。Viewer、Render Machine、render preset 与 IMPORTRANGE 插件最初取自 `univer-cli`；交互式导入导出 UI 源自 univer-pro `v1.2.0` 的 `custom-import-export` 示例，按本仓库的依赖注入约定维护。`packages/unit-comparison-viewer` 与 CLI、Workspace 中的副本保持行为一致，并适配本仓库的 React 18 Host。
 
 发布包包含运行所需的 Gateway、Viewer、Unit Content Worker、Collaboration Runtime Worker、Office 转换器、平台依赖、Univer license 与 bundled Skills。Gateway、Worker、Viewer 和 Host 直接使用 manifest 中精确版本的 Univer SDK/API Reference packages；JavaScript SDK 被 bundle，平台原生 package 由包管理器为目标机器安装。发布时只打包从当前源码生成的运行产物。
