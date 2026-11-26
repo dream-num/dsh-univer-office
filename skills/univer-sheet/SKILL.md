@@ -47,9 +47,8 @@ Never write display text back as the stored value.
 
 - Ranges: `sheet.getRange("A1:C9")` or `getRange(row, col, numRows, numCols)`. Numeric rows and columns are zero-based.
 - Sheets: `getActiveSheet()`, `getSheetByName("Sheet1")`, `getSheets()`.
-- Use `getValue()` or `getValues()` for unformatted effective values, including calculated formula results. Rich text is returned as plain text by default.
-- Use `getDisplayValue()` or `getDisplayValues()` for formatted text (for example, `"25%"` for a stored value of `0.25`).
-- Use `getCellData()` or `getCellDatas()` for cell types, formulas, rich text, and styles. Use `getRawValues()` for stored values and `getFormula()` for formula source.
+- Authoritative reads: `getCellData()` / `getCellDatas()` for `v/t/f/s`; `getRawValues()` for unnormalized stored values.
+- Presentation reads: `getDisplayValues()` for visible text and `getFormula()` for formula source.
 - Writes: `setValue(cell)`, `setValues(grid)`, `setFormula("=…")`, `clearContent()`, and `clear()`.
 - Dimensions: `getLastRow()`, `getLastColumn()`, and `setRowCount(n)` before out-of-range writes.
 - Style: use explicit xlsx-safe colors in `#RRGGBB` or `rgb(r,g,b)` form.
@@ -118,6 +117,7 @@ workbook.getActiveSheet().getRange("A1").setRichTextValueForCell(rich);
 ## Failure prevention
 
 - Specify `t` for every non-formula cell written.
+- Do not use `getValue()` or `getValues()` for authoritative reads; formatted values and booleans can be converted.
 - Deep-copy complete cell data when copying formatted cells.
 - After importing csv or tsv, inspect every column's value type and formulas before computing. Mixed values can cause an entire column to import as text.
 - Sheet Unit name, worksheet name, and file name are different identifiers.
